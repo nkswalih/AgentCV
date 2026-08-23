@@ -140,7 +140,9 @@
   letter-spacing: 0.07em;
   margin: 0 0 4pt;
   padding-bottom: 2pt;
-  border-bottom: 0.5pt solid #7c8794;
+  /* Same ink as the text, not a grey: a parser-plain resume reads best when
+     its rules are as decisive as its type. */
+  border-bottom: 0.5pt solid #14181d;
 }
 
 /* -- ATS Modern: sans, left-aligned, one accent rule as the only colour -- */

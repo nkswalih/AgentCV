@@ -89,6 +89,7 @@ export const FONT_CHOICES: FontChoice[] = [
   { label: 'IBM Plex Sans', stack: "'IBM Plex Sans', sans-serif", kind: 'Sans', group: 'web' },
   { label: 'Cambria', stack: "Cambria, Georgia, serif", kind: 'Serif', group: 'web' },
   { label: 'Noto Serif', stack: "'Noto Serif', Georgia, serif", kind: 'Serif', group: 'web' },
+  { label: 'Cormorant Garamond', stack: "'Cormorant Garamond', Garamond, Georgia, serif", kind: 'Serif', group: 'web' },
   // Earlier defaults, kept so documents already using them still resolve.
   { label: 'Source Serif 4', stack: "'Source Serif 4', Georgia, serif", kind: 'Serif', group: 'web' },
   { label: 'Merriweather', stack: "'Merriweather', Georgia, serif", kind: 'Serif', group: 'web' },
