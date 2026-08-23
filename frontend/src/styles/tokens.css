@@ -49,7 +49,15 @@
   --r-md: 8px;
   --r-lg: 12px;
 
-  --pane-left: 286px;
+  /* One height for every real form control, and a smaller one for the inputs
+     that sit inline in a row (the resume name, section titles). Two sizes, used
+     consistently, is what keeps the panels from looking assembled by accident. */
+  --ctl-h: 34px;
+  --ctl-h-sm: 32px;
+
+  /* Wide enough for the section forms to live inline in the list, so editing
+     content never requires switching panes. */
+  --pane-left: 396px;
   --pane-right: 300px;
   --topbar-h: 54px;
 
@@ -76,6 +84,9 @@ body {
   font-size: var(--t-base);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
+  /* Nothing in this app is meant to scroll sideways. Vertical scrolling stays
+     available for the dashboard and the print route. */
+  overflow-x: hidden;
 }
 
 button,

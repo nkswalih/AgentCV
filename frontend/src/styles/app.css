@@ -68,7 +68,9 @@
   background: transparent;
   border: 1px solid transparent;
   border-radius: var(--r-sm);
-  padding: 5px 8px;
+  padding: 6px 9px;
+  min-height: var(--ctl-h-sm);
+  line-height: 1.35;
   font-size: var(--t-base);
   font-weight: 500;
   min-width: 180px;
@@ -188,6 +190,15 @@
   height: 26px;
 }
 
+/* Tiny reset button that lives inside a field's value readout. */
+.size-reset {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  font-size: 10px;
+  line-height: 1;
+}
+
 /* ----------------------------------------------------------------- shell -- */
 
 .shell {
@@ -214,6 +225,40 @@
 }
 .pane-right {
   border-left: 1px solid var(--ink-600);
+}
+
+/* Scrollbars.
+ *
+ * The right panel holds more controls than any laptop viewport is tall, so a
+ * vertical scrollbar there is honest, not a bug -- it just should not look like
+ * OS chrome pasted over the design. Thin, in-palette, transparent track. The
+ * stable gutter keeps the panel from shifting sideways when a section expands. */
+.pane,
+.stage {
+  scrollbar-width: thin;
+  scrollbar-color: var(--ink-600) transparent;
+  scrollbar-gutter: stable;
+}
+.pane::-webkit-scrollbar,
+.stage::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.pane::-webkit-scrollbar-track,
+.stage::-webkit-scrollbar-track {
+  background: transparent;
+}
+.pane::-webkit-scrollbar-thumb,
+.stage::-webkit-scrollbar-thumb {
+  background: var(--ink-600);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: 5px;
+}
+.pane:hover::-webkit-scrollbar-thumb,
+.stage:hover::-webkit-scrollbar-thumb {
+  background: var(--ink-500);
+  background-clip: content-box;
 }
 
 .pane-head {
@@ -333,13 +378,38 @@
   padding: 40px 48px 64px;
 }
 
-/* Wrapper is sized in unscaled page units; the transform below shrinks it to
-   fit the viewport without affecting the page's own layout maths. */
-.page-frame {
+/* Wrapper reserves the *scaled* footprint, so the shrunk page does not leave a
+   full-size hole of empty scroll area beneath it. */
+.page-scaler {
   position: relative;
   flex: none;
+}
+
+.page-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
   transform: scale(var(--preview-scale, 1));
-  transform-origin: top center;
+  transform-origin: top left;
+}
+
+/* Where Chromium will actually break the sheet. Shown only when content
+   overflows, so a one-page resume never sees it. */
+.page-break {
+  position: absolute;
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--magenta);
+  pointer-events: none;
+}
+.page-break-label {
+  position: absolute;
+  right: 0;
+  top: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  color: var(--magenta);
 }
 
 /* Crop marks -- four L-shaped corners offset off the paper edge, the way a
@@ -378,53 +448,6 @@
   border-right-width: 1px;
 }
 
-/* The signature element: a page-fill gauge. Every resume writer's real
-   question is "does this still fit on one page" -- this answers it live. */
-.gauge {
-  position: absolute;
-  top: 0;
-  right: -22px;
-  width: 4px;
-  height: 100%;
-  background: var(--ink-750);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.gauge-fill {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  background: var(--cyan);
-  transition: height 220ms var(--ease), background 220ms var(--ease);
-}
-.gauge[data-fit='tight'] .gauge-fill {
-  background: var(--ochre);
-}
-.gauge[data-fit='over'] .gauge-fill {
-  background: var(--magenta);
-}
-
-.gauge-label {
-  position: absolute;
-  top: 0;
-  right: -14px;
-  transform: rotate(90deg);
-  transform-origin: top right;
-  font-family: var(--font-mono);
-  font-size: 9px;
-  letter-spacing: 0.08em;
-  color: var(--text-lo);
-  white-space: nowrap;
-}
-.gauge[data-fit='over'] + .gauge-label,
-.gauge-label[data-fit='over'] {
-  color: var(--magenta);
-}
-.gauge-label[data-fit='tight'] {
-  color: var(--ochre);
-}
-
 .page-caption {
   position: absolute;
   bottom: -26px;
@@ -440,7 +463,9 @@
 .field {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;
+  /* Uniform, not generous. Consistency here is about every field using the same
+     step, and the right panel already has more controls than viewport. */
   margin-bottom: 12px;
 }
 
@@ -467,8 +492,12 @@
   background: var(--ink-800);
   border: 1px solid var(--ink-600);
   border-radius: var(--r-sm);
-  padding: 7px 9px;
+  padding: 7px 10px;
   font-size: var(--t-base);
+  /* Explicit height + line-height, so the text sits on the optical centre in
+     every control type rather than wherever the UA happens to put it. */
+  min-height: var(--ctl-h);
+  line-height: 1.35;
   width: 100%;
   transition: border-color 120ms var(--ease);
 }
@@ -501,6 +530,38 @@
   background-size: 5px 5px, 5px 5px;
   background-repeat: no-repeat;
   padding-right: 28px;
+}
+
+/* Joined row of choice buttons -- every option visible at once. The active
+   segment is the live cyan, matching the accent used across the shell. */
+.segmented {
+  display: flex;
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  background: var(--ink-800);
+  overflow: hidden;
+}
+.segmented-btn {
+  flex: 1;
+  min-height: var(--ctl-h-sm);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-mid);
+  font-size: var(--t-xs);
+  padding: 6px 4px;
+  cursor: pointer;
+  transition: color 120ms var(--ease), background-color 120ms var(--ease);
+}
+.segmented-btn + .segmented-btn {
+  border-left: 1px solid var(--ink-600);
+}
+.segmented-btn:hover {
+  color: var(--text-hi);
+}
+.segmented-btn[data-active='true'] {
+  background: var(--cyan-glow);
+  color: var(--cyan);
 }
 
 input[type='range'] {
@@ -638,6 +699,28 @@ input[type='range']::-moz-range-thumb {
   cursor: pointer;
 }
 
+/* One link entry: narrow label ("LinkedIn"), flexible URL, remove button. */
+.link-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.link-row .link-label {
+  width: 86px;
+  flex: none;
+}
+.link-row .input:not(.link-label) {
+  flex: 1;
+  min-width: 0;
+  min-height: 30px;
+  padding: 5px 8px;
+  font-size: var(--t-sm);
+}
+.link-row .btn-icon {
+  flex: none;
+}
+
 .hint {
   font-size: var(--t-xs);
   color: var(--text-lo);
@@ -659,6 +742,287 @@ input[type='range']::-moz-range-thumb {
   place-items: center;
   color: var(--text-mid);
   font-size: var(--t-md);
+}
+
+/* ---------------------------------------------------------- section editor -- */
+
+.section-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.section-card[data-dragging='true'] {
+  opacity: 0.72;
+}
+
+.item-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.section-title-input {
+  min-width: 0;
+  width: 100%;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  padding: 5px 7px;
+  min-height: var(--ctl-h-sm);
+  line-height: 1.35;
+  background: transparent;
+  color: inherit;
+  font-size: var(--t-base);
+  font-weight: 600;
+}
+.section-title-input:hover {
+  border-color: var(--ink-600);
+}
+.section-title-input:focus {
+  outline: none;
+  border-color: var(--cyan-dim);
+  background: var(--ink-850);
+}
+
+.section-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 2px 0 5px 17px;
+}
+
+/* Per-section presentation settings (currently skills only), shown above the
+   item list when the section is expanded. */
+.skills-settings {
+  border: 1px solid var(--ink-700);
+  border-radius: var(--r-sm);
+  background: var(--ink-850);
+  padding: 9px 10px 4px;
+  margin-bottom: 3px;
+}
+.skills-settings .field {
+  margin-bottom: 10px;
+}
+.skills-settings .hint {
+  margin: -6px 0 10px;
+}
+
+.item-card {
+  border: 1px solid var(--ink-700);
+  border-radius: var(--r-sm);
+  background: var(--ink-800);
+}
+.item-card[data-dragging='true'] {
+  opacity: 0.55;
+}
+
+.item-head {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 5px;
+}
+.item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-mid);
+  font-size: var(--t-sm);
+}
+
+.item-body {
+  border-top: 1px solid var(--ink-700);
+  padding: 10px;
+}
+.item-body .field:last-child {
+  margin-bottom: 0;
+}
+
+.add-item {
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.add-section-block {
+  margin-top: 7px;
+  padding-top: 12px;
+  border-top: 1px solid var(--ink-700);
+}
+
+.bullet-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.bullet-row {
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+}
+.bullet-dot {
+  flex: none;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--cyan);
+  margin-top: 11px;
+}
+.bullet-input {
+  flex: 1;
+  min-width: 0;
+  min-height: 42px;
+}
+.bullet-row .btn-icon {
+  flex: none;
+  margin-top: 3px;
+}
+
+.style-section {
+  padding-bottom: 4px;
+}
+.style-section + .style-section {
+  padding-top: 12px;
+  border-top: 1px solid var(--ink-700);
+}
+.style-section-title {
+  margin-bottom: 10px;
+}
+
+.photo-control {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.photo-thumb,
+.photo-empty {
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--ink-500);
+}
+.photo-empty {
+  display: grid;
+  place-items: center;
+  color: var(--text-lo);
+  font-size: 9px;
+  background: var(--ink-750);
+}
+.photo-control .hint {
+  margin: 5px 0 0;
+}
+.upload-error {
+  margin: 5px 0 0;
+  color: var(--magenta);
+  font-size: var(--t-xs);
+}
+
+/* miniature template previews -- schematic rather than decorative */
+.template-mini {
+  display: block;
+  position: relative;
+  height: 58px;
+  margin: 7px 9px;
+  background: #fff;
+  overflow: hidden;
+}
+.mini-name,
+.mini-rule,
+.mini-lines,
+.mini-lines::before,
+.mini-lines::after {
+  position: absolute;
+  display: block;
+  left: 16px;
+  right: 12px;
+  height: 3px;
+  background: #27303a;
+}
+.mini-name {
+  top: 12px;
+  right: 46px;
+  height: 5px;
+}
+.mini-rule {
+  top: 21px;
+  right: 20px;
+  height: 2px;
+  background: var(--mini-accent);
+}
+.mini-lines {
+  top: 29px;
+  opacity: 0.52;
+}
+.mini-lines::before {
+  content: '';
+  top: 6px;
+  left: 0;
+  width: 78%;
+}
+.mini-lines::after {
+  content: '';
+  top: 12px;
+  left: 0;
+  width: 90%;
+}
+/* The absolutely-positioned parts are child-scoped on purpose. A bare
+   `.mini-banner` also matched the container that carried `mini-{id}`, and won on
+   source order, so the whole thumbnail escaped its card. */
+.template-mini > .mini-rail {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 28%;
+  background: #eef1f4;
+  border-right: 2px solid var(--mini-accent);
+}
+.mini-rail ~ .mini-name,
+.mini-rail ~ .mini-rule,
+.mini-rail ~ .mini-lines {
+  left: 38%;
+}
+.template-mini > .mini-banner {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 23px;
+  background: var(--mini-accent);
+}
+.mini-banner ~ .mini-name {
+  top: 8px;
+  left: 14px;
+  background: #fff;
+}
+.mini-banner ~ .mini-rule {
+  top: 28px;
+}
+.mini-banner ~ .mini-lines {
+  top: 35px;
+}
+/* Declared after the banner variants so the short line keeps its own offset
+   instead of stacking on top of the full-width one. */
+.template-mini .mini-lines.short {
+  top: 49px;
+  right: 34px;
+}
+.template-mini > .mini-banner ~ .mini-lines.short {
+  top: 46px;
+}
+
+.editor-error {
+  flex: none;
+  padding: 7px 14px;
+  color: var(--magenta);
+  background: rgba(224, 69, 154, 0.09);
+  border-bottom: 1px solid var(--magenta);
+  font-size: var(--t-sm);
 }
 
 /* ------------------------------------------------------------- dashboard -- */

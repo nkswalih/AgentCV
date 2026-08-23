@@ -23,7 +23,8 @@
   line-height: var(--doc-leading, 1.4);
 
   position: relative;
-  overflow: hidden;
+  /* Not clipped: when content runs past one sheet the page grows, and the
+     editor draws the break lines where the PDF will actually split. */
 }
 
 .page[data-paper='Letter'] {
@@ -53,13 +54,28 @@
   text-decoration: none;
 }
 
-/* Empty-field placeholders show only in the editor preview, never in export.
-   The print route sets [data-export] to switch them off. */
-.page[data-export='true'] .doc-placeholder {
-  visibility: hidden;
+/* Contact line entries. Anchors keep the surrounding text colour -- a wall of
+   blue underlines reads as spam on a printed page; the tap targets still work
+   in the PDF. */
+.doc-contact a {
+  color: inherit;
+  text-decoration: none;
 }
-.doc-placeholder {
-  color: #b6bec7;
+.doc-contact-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 2.5pt;
+}
+/* Separator between entries on one line; spaced by margin because the entries
+   are rendered as an element list with no whitespace between them. */
+.doc-contact-sep {
+  margin: 0 3pt;
+}
+/* Scaled to the text so icons never outgrow their entry at any font size. */
+.doc-icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
 }
 
 /* =========================================================================
@@ -70,10 +86,13 @@
  * matters more than visual flourish when a parser sits between you and a human.
  * ====================================================================== */
 
+/* Page margins come from the two sliders. Every value below carries the default
+   as its var fallback, so a document saved before these settings existed still
+   renders with the margins it was designed for. */
 .tpl-ats-classic,
 .tpl-ats-modern,
 .tpl-compact {
-  padding: 14mm 15mm;
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
 }
 
 /* -- shared single-column section rhythm -- */
@@ -92,36 +111,36 @@
 .tpl-ats-classic {
   font-family: var(--doc-font, 'Source Serif 4', serif);
 }
+/* No rule under the header: the summary's own titled section carries the
+   structure here, and stacking two lines read as a stray <hr>. */
 .tpl-ats-classic .doc-header {
   text-align: center;
-  padding-bottom: 7pt;
-  border-bottom: 0.75pt solid #14181d;
 }
 .tpl-ats-classic .doc-name {
-  font-size: 21pt;
+  font-size: var(--doc-name-size, 21pt);
   font-weight: 700;
   letter-spacing: 0.01em;
   margin: 0;
   line-height: 1.1;
 }
 .tpl-ats-classic .doc-headline {
-  font-size: 11pt;
+  font-size: var(--doc-title-size, 11pt);
   margin: 2pt 0 0;
-  color: #3d4650;
+  color: #374151;
 }
 .tpl-ats-classic .doc-contact {
   margin-top: 5pt;
   font-size: 9pt;
-  color: #3d4650;
+  color: #374151;
 }
 .tpl-ats-classic .doc-section-title {
-  font-size: 11pt;
+  font-size: var(--doc-heading-size, 11pt);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
   margin: 0 0 4pt;
   padding-bottom: 2pt;
-  border-bottom: 0.5pt solid #9aa3ad;
+  border-bottom: 0.5pt solid #7c8794;
 }
 
 /* -- ATS Modern: sans, left-aligned, one accent rule as the only colour -- */
@@ -130,14 +149,14 @@
   border-bottom: 2pt solid var(--doc-accent, #2563eb);
 }
 .tpl-ats-modern .doc-name {
-  font-size: 23pt;
+  font-size: var(--doc-name-size, 23pt);
   font-weight: 700;
   letter-spacing: -0.02em;
   margin: 0;
   line-height: 1.05;
 }
 .tpl-ats-modern .doc-headline {
-  font-size: 11pt;
+  font-size: var(--doc-title-size, 11pt);
   font-weight: 500;
   color: var(--doc-accent, #2563eb);
   margin: 2pt 0 0;
@@ -145,10 +164,10 @@
 .tpl-ats-modern .doc-contact {
   margin-top: 6pt;
   font-size: 9pt;
-  color: #4a545f;
+  color: #374151;
 }
 .tpl-ats-modern .doc-section-title {
-  font-size: 10pt;
+  font-size: var(--doc-heading-size, 10pt);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.1em;
@@ -158,35 +177,39 @@
 
 /* -- Compact: same ATS discipline, tightened for people with more history -- */
 .tpl-compact {
-  padding: 11mm 12mm;
+  /* Held at 80% of the set margin rather than pinned to a fixed value: running
+     tighter than the others is the whole reason this template exists, so it has
+     to stay tighter at every slider position, not just the default. */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.8) calc(var(--doc-margin-x, 15mm) * 0.8);
 }
+/* No rule under the header either -- same reason as Classic: the first
+   section title's underline is the anchor, not a second dark line. */
 .tpl-compact .doc-header {
-  padding-bottom: 5pt;
-  border-bottom: 0.75pt solid #14181d;
+  padding-bottom: 0;
 }
 .tpl-compact .doc-name {
-  font-size: 18pt;
+  font-size: var(--doc-name-size, 18pt);
   font-weight: 700;
   margin: 0;
   line-height: 1.05;
 }
 .tpl-compact .doc-headline {
-  font-size: 10pt;
+  font-size: var(--doc-title-size, 10pt);
   margin: 1pt 0 0;
-  color: #3d4650;
+  color: #374151;
 }
 .tpl-compact .doc-contact {
   margin-top: 3pt;
   font-size: 8.5pt;
-  color: #3d4650;
+  color: #374151;
 }
 .tpl-compact .doc-section-title {
-  font-size: 9.5pt;
+  font-size: var(--doc-heading-size, 9.5pt);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin: 0 0 3pt;
-  border-bottom: 0.5pt solid #c4cbd2;
+  border-bottom: 0.5pt solid #aab3bd;
 }
 .tpl-compact .doc-section {
   margin-top: calc(var(--doc-gap, 1) * 6pt);
@@ -211,36 +234,49 @@
 .tpl-sidebar .doc-rail {
   background: #f1f4f7;
   border-right: 2pt solid var(--doc-accent, #2563eb);
-  padding: 13mm 9mm;
+  /* The rail is only 62mm wide, so it keeps a tighter horizontal gutter -- a
+     full page margin on both sides would leave almost no room for text. */
+  padding: var(--doc-margin-y, 13mm) calc(var(--doc-margin-x, 15mm) * 0.6);
 }
 .tpl-sidebar .doc-main {
-  padding: 13mm 11mm;
+  padding: var(--doc-margin-y, 13mm) var(--doc-margin-x, 15mm);
+  min-width: 0;
+}
+/* Photo top-right in the main header, level with the name; the text block
+   takes the remaining width and shrinks first. */
+.tpl-sidebar .doc-main .doc-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 5mm;
+}
+.tpl-sidebar .doc-header-text {
   min-width: 0;
 }
 .tpl-sidebar .doc-photo {
-  width: 32mm;
-  height: 32mm;
+  width: 26mm;
+  height: 26mm;
   border-radius: 50%;
   object-fit: cover;
-  display: block;
-  margin: 0 auto 7pt;
+  flex: none;
+  margin: 0;
   border: 2pt solid var(--doc-accent, #2563eb);
 }
 .tpl-sidebar .doc-name {
-  font-size: 19pt;
+  font-size: var(--doc-name-size, 19pt);
   font-weight: 700;
   line-height: 1.05;
   margin: 0;
   letter-spacing: -0.01em;
 }
 .tpl-sidebar .doc-headline {
-  font-size: 10pt;
+  font-size: var(--doc-title-size, 10pt);
   color: var(--doc-accent, #2563eb);
   font-weight: 600;
   margin: 2pt 0 0;
 }
 .tpl-sidebar .doc-rail .doc-section-title {
-  font-size: 9pt;
+  font-size: var(--doc-heading-size, 9pt);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -248,7 +284,7 @@
   margin: 0 0 4pt;
 }
 .tpl-sidebar .doc-main .doc-section-title {
-  font-size: 11pt;
+  font-size: var(--doc-heading-size, 11pt);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.07em;
@@ -265,7 +301,7 @@
 }
 .tpl-sidebar .doc-contact {
   font-size: 8.5pt;
-  color: #3d4650;
+  color: #374151;
   display: flex;
   flex-direction: column;
   gap: 2.5pt;
@@ -279,42 +315,49 @@
 .tpl-banner .doc-header {
   background: var(--doc-accent, #2563eb);
   color: #fff;
-  padding: 12mm 14mm;
+  /* The band is a header, not a cover page. Its vertical padding stays at 65%
+      of the page margin so raising the margin cannot swell the band into the
+      content area below it. */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.65) var(--doc-margin-x, 15mm);
   display: flex;
   align-items: center;
-  gap: 8mm;
+  gap: 7mm;
 }
 .tpl-banner .doc-photo {
-  width: 26mm;
-  height: 26mm;
+  width: 23mm;
+  height: 23mm;
   border-radius: 50%;
   object-fit: cover;
   flex: none;
   border: 2.5pt solid rgba(255, 255, 255, 0.85);
 }
 .tpl-banner .doc-name {
-  font-size: 25pt;
+  font-size: var(--doc-name-size, 21pt);
   font-weight: 700;
   letter-spacing: -0.025em;
   margin: 0;
-  line-height: 1;
+  line-height: 1.05;
 }
 .tpl-banner .doc-headline {
-  font-size: 11.5pt;
-  margin: 3pt 0 0;
-  /* Slightly held back from pure white so the name stays dominant. */
-  color: rgba(255, 255, 255, 0.86);
+  font-size: var(--doc-title-size, 10.5pt);
+  margin: 2.5pt 0 0;
+  /* Held just back from pure white so the name still leads, but well clear of
+     the 4.5:1 floor against the accent. */
+  color: rgba(255, 255, 255, 0.94);
 }
 .tpl-banner .doc-contact {
-  margin-top: 6pt;
+  margin-top: 5pt;
   font-size: 8.5pt;
-  color: rgba(255, 255, 255, 0.92);
+  color: rgba(255, 255, 255, 0.96);
 }
 .tpl-banner .doc-body {
-  padding: 11mm 14mm 14mm;
+  /* Less air above than below: the coloured band already separates the body
+     from the top of the sheet. */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.8) var(--doc-margin-x, 15mm)
+    var(--doc-margin-y, 14mm);
 }
 .tpl-banner .doc-section-title {
-  font-size: 10.5pt;
+  font-size: var(--doc-heading-size, 10.5pt);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.09em;
@@ -329,7 +372,7 @@
   content: '';
   flex: 1;
   height: 0.75pt;
-  background: #d5dbe2;
+  background: #c3cad2;
 }
 .tpl-banner .doc-section {
   margin-top: calc(var(--doc-gap, 1) * 9pt);
@@ -354,27 +397,33 @@
 }
 .doc-item-title {
   font-weight: 700;
-  font-size: 1.02em;
+  /* Relative by default so it tracks the base font size; an explicit entry
+     override arrives in pt and takes over. */
+  font-size: var(--doc-entry-size, 1.02em);
 }
 .doc-item-sub {
   font-weight: 600;
-  color: #3d4650;
+  color: #374151;
 }
 /* Dates are tabular data; mono keeps columns of them optically aligned. */
 .doc-item-date {
   font-size: 0.87em;
-  color: #5b6672;
+  color: #4b5563;
   white-space: nowrap;
   flex: none;
   font-variant-numeric: tabular-nums;
 }
 .doc-item-meta {
   font-size: 0.9em;
-  color: #5b6672;
+  color: #4b5563;
 }
 
 .doc-summary {
   margin: 0;
+}
+/* Several summary items read as several paragraphs. */
+.doc-summary + .doc-summary {
+  margin-top: 3pt;
 }
 
 /* Skills: category label plus its members on one line, which packs far more
@@ -397,10 +446,38 @@
   margin-top: 2pt;
 }
 .doc-tag {
-  border: 0.5pt solid #c4cbd2;
+  border: 0.5pt solid #aab3bd;
   border-radius: 2pt;
   padding: 1pt 4pt;
   font-size: 0.88em;
+}
+
+/* Column-mode skills: every group's names flattened into one 1-4 column grid.
+   Grid, not CSS multi-column: a grid fills row-wise, so the order a parser reads
+   out of the DOM is the same order a human reads across the page. Multi-column
+   would flow the two apart. */
+.doc-skill-bullets {
+  margin: 0;
+  padding-left: 12pt;
+  display: grid;
+  grid-template-columns: repeat(var(--skill-cols, 1), minmax(0, 1fr));
+  /* Column gap only -- rows are spaced by the list's own leading. */
+  column-gap: 12pt;
+}
+.doc-skill-bullets li {
+  margin-bottom: 1.5pt;
+  /* A long name wraps inside its column instead of widening it. */
+  overflow-wrap: break-word;
+  break-inside: avoid;
+}
+/* Dash markers swap the native disc for a hyphen glyph. */
+.doc-skill-bullets[data-marker='dash'] {
+  list-style-type: '-';
+}
+/* Flat: no marker at all, names flush against the section's left edge. */
+.doc-skill-bullets[data-marker='flat'] {
+  list-style: none;
+  padding-left: 0;
 }
 
 .doc-langrow {
