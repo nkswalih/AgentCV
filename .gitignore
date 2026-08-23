@@ -1,0 +1,96 @@
+# ---------------------------------------------------------------------------
+# Personal data — never commit
+#
+# The SQLite database holds real resume content: full name, phone, address,
+# employment history. Uploaded photos are personal data too. On a public repo
+# these would be permanently exposed, so they are ignored first and explicitly.
+# ---------------------------------------------------------------------------
+backend/data/
+backend/uploads/
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+
+# Exported documents may contain personal details
+*.pdf
+*.tex
+!docs/**/*.pdf
+
+# ---------------------------------------------------------------------------
+# Secrets and credentials
+#
+# AI features will need an API key; keep every variant out of git. Commit
+# .env.example instead so the required names are documented.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+secrets.json
+credentials.json
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ---------------------------------------------------------------------------
+# Node / frontend
+# ---------------------------------------------------------------------------
+node_modules/
+frontend/dist/
+frontend/.vite/
+*.tsbuildinfo
+npm-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ---------------------------------------------------------------------------
+# Tooling caches
+#
+# .agents holds third-party skills installed by `npx skills add`; skills-lock.json
+# is committed so they can be restored reproducibly.
+# ---------------------------------------------------------------------------
+.agents/
+ms-playwright/
+tectonic-cache/
+vendor/tectonic/
+
+# ---------------------------------------------------------------------------
+# Editors and OS
+#
+# .claude/settings.local.json is per-machine permission state, not project config.
+# .claude/skills/ is third-party skill content installed by the skills CLI;
+# skills-lock.json records the sources and hashes needed to restore it.
+# ---------------------------------------------------------------------------
+.claude/settings.local.json
+.claude/skills/
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+desktop.ini
+
