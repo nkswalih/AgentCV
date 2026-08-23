@@ -27,6 +27,11 @@ async function readError(res: Response): Promise<string | null> {
   }
 }
 
+export interface ExportOptions {
+  paperSize?: 'A4' | 'Letter'
+  compress?: boolean
+}
+
 export const api = {
   list: () => request<ResumeSummary[]>('/resumes'),
 
@@ -45,12 +50,12 @@ export const api = {
 
   remove: (id: string) => request<void>(`/resumes/${id}`, { method: 'DELETE' }),
 
-  /** Asks the backend to print the resume, then saves the returned PDF. */
-  async exportPdf(id: string): Promise<void> {
-    const res = await fetch(`${BASE}/resumes/${id}/export/pdf`, {
+  /** POSTs an export request and saves the returned file to disk. */
+  async download(path: string, body: unknown, fallbackName: string): Promise<void> {
+    const res = await fetch(`${BASE}${path}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify(body),
     })
     if (!res.ok) {
       throw new Error((await readError(res)) ?? `Export failed (${res.status})`)
@@ -63,10 +68,23 @@ export const api = {
     try {
       const a = document.createElement('a')
       a.href = url
-      a.download = match?.[1] ?? 'resume.pdf'
+      a.download = match?.[1] ?? fallbackName
       a.click()
     } finally {
       URL.revokeObjectURL(url)
     }
   },
+
+  exportPdf: (id: string, options: ExportOptions = {}) =>
+    api.download(`/resumes/${id}/export/pdf`, options, 'resume.pdf'),
+
+  exportDocx: (id: string, options: ExportOptions = {}) =>
+    api.download(
+      `/resumes/${id}/export/docx`,
+      { paperSize: options.paperSize },
+      'resume.docx',
+    ),
+
+  exportTex: (id: string, options: ExportOptions = {}) =>
+    api.download(`/resumes/${id}/export/tex`, { paperSize: options.paperSize }, 'resume.tex'),
 }
