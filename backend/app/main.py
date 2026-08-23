@@ -17,7 +17,8 @@ from fastapi.staticfiles import StaticFiles
 
 from .db import init_db
 from .pdf import renderer
-from .routers import export, resumes
+from .routers import export, resumes, uploads
+from .routers.uploads import UPLOAD_DIR
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
 
@@ -46,11 +47,17 @@ app.add_middleware(
 
 app.include_router(resumes.router)
 app.include_router(export.router)
+app.include_router(uploads.router)
 
 
 @app.get("/api/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+# Uploaded photos. Chromium fetches these by URL while printing, so they must
+# be reachable from the same origin as the print page.
+app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 # When the frontend has been built, serve it from the same origin so the whole

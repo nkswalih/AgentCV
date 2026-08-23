@@ -3,3 +3,7 @@ uvicorn[standard]>=0.32
 sqlalchemy>=2.0.36
 pydantic>=2.10
 playwright>=1.49
+# Optional pass that shrinks exported PDFs (object dedupe + stream recompress).
+pypdf>=5.0
+# Required by FastAPI to parse multipart form data for photo uploads.
+python-multipart>=0.0.20
