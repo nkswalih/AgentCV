@@ -1,0 +1,212 @@
+/**
+ * Editor state for a single resume, with debounced autosave.
+ *
+ * The whole document lives here and every template reads from it, so the
+ * preview updates on each keystroke without a round-trip. Persistence is
+ * debounced separately -- typing should never wait on the network.
+ */
+
+import { arrayMove } from '@dnd-kit/sortable'
+import { create } from 'zustand'
+import { immer } from 'zustand/middleware/immer'
+
+import { api } from './api'
+import { emptyItem, emptySection } from './factories'
+import type { Basics, ResumeDocument, Section, SectionType, Settings } from './types'
+
+const AUTOSAVE_DELAY_MS = 700
+
+type SaveState = 'saved' | 'dirty' | 'saving' | 'error'
+
+interface EditorState {
+  id: string | null
+  name: string
+  doc: ResumeDocument | null
+  loading: boolean
+  loadError: string | null
+  saveState: SaveState
+  saveError: string | null
+
+  load: (id: string) => Promise<void>
+  rename: (name: string) => void
+  saveNow: () => Promise<void>
+
+  updateBasics: (patch: Partial<Basics>) => void
+  updateSettings: (patch: Partial<Settings>) => void
+
+  addSection: (type: SectionType) => void
+  removeSection: (sectionId: string) => void
+  updateSection: (sectionId: string, patch: Partial<Pick<Section, 'title' | 'visible'>>) => void
+  moveSection: (from: number, to: number) => void
+
+  addItem: (sectionId: string) => void
+  removeItem: (sectionId: string, itemId: string) => void
+  updateItem: (sectionId: string, itemId: string, patch: Record<string, unknown>) => void
+  moveItem: (sectionId: string, from: number, to: number) => void
+}
+
+let saveTimer: ReturnType<typeof setTimeout> | undefined
+
+export const useEditor = create<EditorState>()(
+  immer((set, get) => {
+    /** Mark dirty and (re)arm the autosave timer. */
+    function scheduleSave() {
+      set((s) => {
+        s.saveState = 'dirty'
+      })
+      clearTimeout(saveTimer)
+      saveTimer = setTimeout(() => void get().saveNow(), AUTOSAVE_DELAY_MS)
+    }
+
+    /** Apply a mutation to the loaded document, then schedule a save. */
+    function edit(recipe: (doc: ResumeDocument) => void) {
+      set((s) => {
+        if (s.doc) recipe(s.doc)
+      })
+      scheduleSave()
+    }
+
+    function withSection(
+      doc: ResumeDocument,
+      sectionId: string,
+      fn: (section: Section) => void,
+    ) {
+      const section = doc.sections.find((s) => s.id === sectionId)
+      if (section) fn(section)
+    }
+
+    return {
+      id: null,
+      name: '',
+      doc: null,
+      loading: false,
+      loadError: null,
+      saveState: 'saved',
+      saveError: null,
+
+      async load(id) {
+        // Drop any save still pending for the previously open resume.
+        clearTimeout(saveTimer)
+        set((s) => {
+          s.loading = true
+          s.loadError = null
+          s.saveState = 'saved'
+          s.saveError = null
+        })
+        try {
+          const resume = await api.get(id)
+          set((s) => {
+            s.id = resume.id
+            s.name = resume.name
+            s.doc = resume.document
+            s.loading = false
+          })
+        } catch (err) {
+          set((s) => {
+            s.loading = false
+            s.loadError = err instanceof Error ? err.message : String(err)
+          })
+        }
+      },
+
+      rename(name) {
+        set((s) => {
+          s.name = name
+        })
+        scheduleSave()
+      },
+
+      async saveNow() {
+        const { id, doc, name } = get()
+        if (!id || !doc) return
+
+        clearTimeout(saveTimer)
+        set((s) => {
+          s.saveState = 'saving'
+        })
+        try {
+          await api.update(id, { name, document: doc })
+          set((s) => {
+            // Another edit may have landed mid-flight; that edit armed its own
+            // timer, so don't overwrite its 'dirty' with 'saved'.
+            if (s.saveState === 'saving') s.saveState = 'saved'
+            s.saveError = null
+          })
+        } catch (err) {
+          set((s) => {
+            s.saveState = 'error'
+            s.saveError = err instanceof Error ? err.message : String(err)
+          })
+        }
+      },
+
+      updateBasics(patch) {
+        edit((doc) => {
+          Object.assign(doc.basics, patch)
+        })
+      },
+
+      updateSettings(patch) {
+        edit((doc) => {
+          Object.assign(doc.settings, patch)
+        })
+      },
+
+      addSection(type) {
+        edit((doc) => {
+          doc.sections.push(emptySection(type))
+        })
+      },
+
+      removeSection(sectionId) {
+        edit((doc) => {
+          doc.sections = doc.sections.filter((s) => s.id !== sectionId)
+        })
+      },
+
+      updateSection(sectionId, patch) {
+        edit((doc) => withSection(doc, sectionId, (s) => Object.assign(s, patch)))
+      },
+
+      moveSection(from, to) {
+        edit((doc) => {
+          doc.sections = arrayMove(doc.sections, from, to)
+        })
+      },
+
+      addItem(sectionId) {
+        edit((doc) =>
+          withSection(doc, sectionId, (s) => {
+            // Item shape follows the section's own type, so this is sound.
+            s.items.push(emptyItem(s.type) as never)
+          }),
+        )
+      },
+
+      removeItem(sectionId, itemId) {
+        edit((doc) =>
+          withSection(doc, sectionId, (s) => {
+            s.items = s.items.filter((i) => i.id !== itemId) as never
+          }),
+        )
+      },
+
+      updateItem(sectionId, itemId, patch) {
+        edit((doc) =>
+          withSection(doc, sectionId, (s) => {
+            const item = s.items.find((i) => i.id === itemId)
+            if (item) Object.assign(item, patch)
+          }),
+        )
+      },
+
+      moveItem(sectionId, from, to) {
+        edit((doc) =>
+          withSection(doc, sectionId, (s) => {
+            s.items = arrayMove(s.items, from, to) as never
+          }),
+        )
+      },
+    }
+  }),
+)
