@@ -308,6 +308,9 @@ class ResumeUpdate(Base):
 
 
 class ExportRequest(Base):
-    """Options for a PDF render. Defaults come from the document's settings."""
+    """Options for an export. Defaults come from the document's settings."""
 
     paper_size: PaperSize | None = Field(None, alias="paperSize")
+    # PDF only: run a shrink pass (object dedupe + stream recompression) over
+    # the rendered file. No-op when pypdf is unavailable.
+    compress: bool = False
