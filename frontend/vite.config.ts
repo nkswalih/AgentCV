@@ -12,6 +12,12 @@ export default defineConfig({
         target: 'http://127.0.0.1:8000',
         changeOrigin: true,
       },
+      // Uploaded photos are served by the backend. Chromium loads them from
+      // this origin while printing, so the dev server must proxy them too.
+      '/uploads': {
+        target: 'http://127.0.0.1:8000',
+        changeOrigin: true,
+      },
     },
   },
 })
