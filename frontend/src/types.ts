@@ -12,7 +12,7 @@ export type SectionType =
   | 'languages'
   | 'custom'
 
-export type TemplateId = 'modern' | 'classic' | 'compact' | 'elegant' | 'minimal'
+export type TemplateId = 'ats-classic' | 'ats-modern' | 'compact' | 'sidebar' | 'banner'
 export type PaperSize = 'A4' | 'Letter'
 
 export interface Link {

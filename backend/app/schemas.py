@@ -195,11 +195,13 @@ Section = Annotated[
 
 
 class TemplateId(str, Enum):
-    MODERN = "modern"
-    CLASSIC = "classic"
+    # Named for how a parser sees them, not for how they look -- ATS-safety is
+    # the choice that actually decides whether a resume survives screening.
+    ATS_CLASSIC = "ats-classic"
+    ATS_MODERN = "ats-modern"
     COMPACT = "compact"
-    ELEGANT = "elegant"
-    MINIMAL = "minimal"
+    SIDEBAR = "sidebar"
+    BANNER = "banner"
 
 
 class PaperSize(str, Enum):
@@ -208,7 +210,7 @@ class PaperSize(str, Enum):
 
 
 class Settings(Base):
-    template: TemplateId = TemplateId.MODERN
+    template: TemplateId = TemplateId.ATS_MODERN
     accent_color: str = Field("#2563eb", alias="accentColor")
     font_family: str = Field("Inter", alias="fontFamily")
     font_size: float = Field(10.5, alias="fontSize", ge=7, le=16)

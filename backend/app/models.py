@@ -30,7 +30,7 @@ class Resume(Base):
     )
     name: Mapped[str] = mapped_column(String(200), default="Untitled Resume")
     # Mirrored from document.settings.template for cheap dashboard listing.
-    template: Mapped[str] = mapped_column(String(40), default="modern")
+    template: Mapped[str] = mapped_column(String(40), default="ats-modern")
     document: Mapped[dict] = mapped_column(JSON, default=dict)
 
     created_at: Mapped[datetime] = mapped_column(
