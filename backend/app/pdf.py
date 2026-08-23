@@ -154,12 +154,17 @@ class _Renderer:
             await page.emulate_media(media="screen", color_scheme="light")
 
             return await page.pdf(
+                # The paper name is the single source of truth: no CSS @page
+                # rule exists in the document stylesheets, and with
+                # prefer_css_page_size enabled Chromium falls back to its own
+                # default (Letter) when none is found -- which is exactly how
+                # "A4" exports came out as Letter. With it off, the requested
+                # format always wins.
                 format=_PAPER_FORMATS.get(paper_size, "A4"),
                 print_background=True,
                 # Zero margins on purpose -- the template owns its own page
                 # padding, so preview and PDF share one box model.
                 margin={"top": "0", "right": "0", "bottom": "0", "left": "0"},
-                prefer_css_page_size=True,
             )
         finally:
             await context.close()
