@@ -7,7 +7,7 @@
 import type { CSSProperties } from 'react'
 
 import type { ResumeDocument, Section, SectionType } from '../types'
-import { Contact, DocSection, Summary } from './parts'
+import { Contact, DocSection, hasContact } from './parts'
 import { FONT_STACKS, PHOTO_TEMPLATES } from './registry'
 
 /** In the sidebar template these move into the rail; the rest stay in main. */
@@ -27,13 +27,21 @@ export function ResumePage({ doc, forExport = false }: Props) {
   const { basics, sections, settings } = doc
 
   // Style knobs travel as custom properties so a settings change costs a
-  // recalculation rather than a React re-render of the whole document.
+  // recalculation rather than a React re-render of the whole document. Element
+  // size overrides are omitted when null, letting each template's own default
+  // (which differs per template) apply through the var() fallback.
   const style = {
     '--doc-font': FONT_STACKS[settings.fontFamily] ?? FONT_STACKS.Inter,
     '--doc-size': `${settings.fontSize}pt`,
     '--doc-leading': settings.lineHeight,
     '--doc-gap': settings.sectionSpacing,
+    '--doc-margin-x': `${settings.marginX}mm`,
+    '--doc-margin-y': `${settings.marginY}mm`,
     '--doc-accent': settings.accentColor,
+    ...(settings.nameSize != null && { '--doc-name-size': `${settings.nameSize}pt` }),
+    ...(settings.titleSize != null && { '--doc-title-size': `${settings.titleSize}pt` }),
+    ...(settings.headingSize != null && { '--doc-heading-size': `${settings.headingSize}pt` }),
+    ...(settings.entrySize != null && { '--doc-entry-size': `${settings.entrySize}pt` }),
   } as CSSProperties
 
   const showPhoto =
@@ -46,7 +54,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
     'data-export': forExport ? 'true' : 'false',
   }
 
-  const name = basics.fullName.trim() || 'Your Name'
+  // Nothing is invented for the page: an empty field simply does not render.
+  const name = basics.fullName.trim()
   const headline = basics.headline.trim()
 
   if (settings.template === 'sidebar') {
@@ -55,21 +64,26 @@ export function ResumePage({ doc, forExport = false }: Props) {
     return (
       <div {...rootProps}>
         <aside className="doc-rail">
-          {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
-          <section className="doc-section">
-            <h2 className="doc-section-title">Contact</h2>
-            <Contact basics={basics} stacked />
-          </section>
+          {hasContact(basics) && (
+            <section className="doc-section">
+              <h2 className="doc-section-title">Contact</h2>
+              <Contact basics={basics} stacked icons={settings.showIcons} />
+            </section>
+          )}
           {rail.map((s) => (
             <DocSection key={s.id} section={s} tags />
           ))}
         </aside>
         <div className="doc-main">
           <header className="doc-header">
-            <h1 className="doc-name">{name}</h1>
-            {headline && <p className="doc-headline">{headline}</p>}
+            <div className="doc-header-text">
+              {name && <h1 className="doc-name">{name}</h1>}
+              {headline && <p className="doc-headline">{headline}</p>}
+            </div>
+            {/* Photo sits top-right, level with the name, on every photo
+                template -- the rail keeps contact and skills instead. */}
+            {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
           </header>
-          <Summary summary={basics.summary} />
           {main.map((s) => (
             <DocSection key={s.id} section={s} />
           ))}
@@ -84,13 +98,12 @@ export function ResumePage({ doc, forExport = false }: Props) {
         <header className="doc-header">
           {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
           <div>
-            <h1 className="doc-name">{name}</h1>
+            {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
-            <Contact basics={basics} />
+            <Contact basics={basics} icons={settings.showIcons} />
           </div>
         </header>
         <div className="doc-body">
-          <Summary summary={basics.summary} />
           {sections.map((s: Section) => (
             <DocSection key={s.id} section={s} />
           ))}
@@ -103,11 +116,10 @@ export function ResumePage({ doc, forExport = false }: Props) {
   return (
     <div {...rootProps}>
       <header className="doc-header">
-        <h1 className="doc-name">{name}</h1>
+        {name && <h1 className="doc-name">{name}</h1>}
         {headline && <p className="doc-headline">{headline}</p>}
-        <Contact basics={basics} />
+        <Contact basics={basics} icons={settings.showIcons} />
       </header>
-      <Summary summary={basics.summary} />
       {sections.map((s: Section) => (
         <DocSection key={s.id} section={s} />
       ))}
