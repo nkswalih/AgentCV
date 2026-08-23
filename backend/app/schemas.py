@@ -25,7 +25,7 @@ class Base(BaseModel):
 
 
 # --------------------------------------------------------------------------
-# Basics (the header block: name, contact details, summary)
+# Basics (the header block: name, contact details)
 # --------------------------------------------------------------------------
 
 
@@ -43,6 +43,8 @@ class Basics(Base):
     location: str = ""
     website: str = ""
     photo_url: str | None = Field(None, alias="photoUrl")
+    # Legacy: old documents kept the summary here. Migration lifts it into a
+    # SummarySection on load; nothing renders from this field anymore.
     summary: str = ""
     links: list[Link] = Field(default_factory=list)
 
@@ -125,6 +127,7 @@ class CustomItem(ItemBase):
 
 
 class SectionType(str, Enum):
+    SUMMARY = "summary"
     EXPERIENCE = "experience"
     EDUCATION = "education"
     SKILLS = "skills"
@@ -140,6 +143,19 @@ class SectionBase(Base):
     visible: bool = True
 
 
+class SummaryItem(ItemBase):
+    """One paragraph of the summary; several items read as several paragraphs."""
+
+    summary: str = ""
+
+
+class SummarySection(SectionBase):
+    """An editable heading (the title) plus one paragraph per item."""
+
+    type: Literal[SectionType.SUMMARY] = SectionType.SUMMARY
+    items: list[SummaryItem] = Field(default_factory=list)
+
+
 class ExperienceSection(SectionBase):
     type: Literal[SectionType.EXPERIENCE] = SectionType.EXPERIENCE
     items: list[ExperienceItem] = Field(default_factory=list)
@@ -150,9 +166,27 @@ class EducationSection(SectionBase):
     items: list[EducationItem] = Field(default_factory=list)
 
 
+class SkillsLayout(str, Enum):
+    """How a skills section prints: one line per category, or a column grid."""
+
+    INLINE = "inline"
+    BULLETS = "bullets"
+
+
+class SkillMarker(str, Enum):
+    """The glyph before each skill in the column layout. FLAT renders none."""
+
+    BULLET = "bullet"
+    DASH = "dash"
+    FLAT = "flat"
+
+
 class SkillsSection(SectionBase):
     type: Literal[SectionType.SKILLS] = SectionType.SKILLS
     items: list[SkillGroup] = Field(default_factory=list)
+    layout: SkillsLayout = SkillsLayout.INLINE
+    marker: SkillMarker = SkillMarker.BULLET
+    columns: int = Field(2, ge=1, le=4)
 
 
 class ProjectsSection(SectionBase):
@@ -177,6 +211,7 @@ class CustomSection(SectionBase):
 
 Section = Annotated[
     Union[
+        SummarySection,
         ExperienceSection,
         EducationSection,
         SkillsSection,
@@ -216,8 +251,23 @@ class Settings(Base):
     font_size: float = Field(10.5, alias="fontSize", ge=7, le=16)
     line_height: float = Field(1.4, alias="lineHeight", ge=1.0, le=2.2)
     section_spacing: float = Field(1.0, alias="sectionSpacing", ge=0.4, le=2.5)
+    # Page margins in millimetres, because the output is a real sheet of paper
+    # and this is the one setting people already think about in real units. The
+    # bounds are wider than the editor's sliders so the UI can be retuned
+    # without invalidating documents that are already saved.
+    margin_x: float = Field(15.0, alias="marginX", ge=5, le=35)
+    margin_y: float = Field(14.0, alias="marginY", ge=5, le=35)
     paper_size: PaperSize = Field(PaperSize.A4, alias="paperSize")
     show_photo: bool = Field(False, alias="showPhoto")
+    # Icons in front of the contact line entries; off prints plain text.
+    show_icons: bool = Field(True, alias="showIcons")
+    # Per-element font size overrides in pt. None follows the template default,
+    # which differs per template -- bounds are wider than the editor sliders so
+    # the UI can be retuned without invalidating saved documents.
+    name_size: float | None = Field(None, alias="nameSize", ge=10, le=40)
+    title_size: float | None = Field(None, alias="titleSize", ge=8, le=24)
+    heading_size: float | None = Field(None, alias="headingSize", ge=7, le=20)
+    entry_size: float | None = Field(None, alias="entrySize", ge=7, le=20)
 
 
 # --------------------------------------------------------------------------

@@ -18,6 +18,8 @@ from .schemas import (
     Settings,
     SkillGroup,
     SkillsSection,
+    SummaryItem,
+    SummarySection,
 )
 
 
@@ -29,9 +31,9 @@ def starter_document() -> ResumeDocument:
             email="you@example.com",
             phone="",
             location="City, Country",
-            summary="",
         ),
         sections=[
+            SummarySection(title="Summary", items=[SummaryItem()]),
             ExperienceSection(
                 title="Work Experience",
                 items=[ExperienceItem(bullets=[""])],
