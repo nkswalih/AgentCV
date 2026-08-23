@@ -744,6 +744,79 @@ input[type='range']::-moz-range-thumb {
   font-size: var(--t-md);
 }
 
+/* --------------------------------------------------------------- export -- */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  background: rgba(6, 9, 13, 0.62);
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.modal {
+  width: 400px;
+  max-width: 100%;
+  background: var(--ink-800);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-md);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+}
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px 0;
+}
+.modal-body {
+  padding: 10px 14px 4px;
+}
+.modal-foot {
+  padding: 10px 14px 14px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+/* Format cards -- the whole surface is clickable, note explains the tradeoff. */
+.export-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 7px;
+}
+.export-card {
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  background: var(--ink-750);
+  padding: 9px 10px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  transition: border-color 120ms var(--ease);
+}
+.export-card:hover {
+  border-color: var(--ink-500);
+}
+.export-card[data-active='true'] {
+  border-color: var(--cyan);
+  background: var(--cyan-glow);
+}
+.export-format {
+  font-size: var(--t-base);
+  font-weight: 600;
+  color: var(--text-hi);
+}
+.export-card[data-active='true'] .export-format {
+  color: var(--cyan);
+}
+.export-note {
+  font-size: var(--t-xs);
+  color: var(--text-lo);
+}
+
 /* ---------------------------------------------------------- section editor -- */
 
 .section-card {

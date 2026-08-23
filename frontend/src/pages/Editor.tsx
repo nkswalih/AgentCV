@@ -3,8 +3,8 @@
 import { Link, useParams } from 'react-router-dom'
 import { useEffect, useState } from 'react'
 
-import { api } from '../api'
 import { useEditor } from '../store'
+import { ExportDialog } from '../editor/ExportDialog'
 import { PagePreview } from '../editor/PagePreview'
 import { LeftPane, RightPane } from '../editor/Panes'
 
@@ -27,28 +27,11 @@ export function Editor() {
   const name = useEditor((s) => s.name)
   const rename = useEditor((s) => s.rename)
   const saveNow = useEditor((s) => s.saveNow)
-  const [exporting, setExporting] = useState(false)
-  const [exportError, setExportError] = useState<string | null>(null)
+  const [exportOpen, setExportOpen] = useState(false)
 
   useEffect(() => {
     if (id) void load(id)
   }, [id, load])
-
-  async function exportPdf() {
-    if (!id) return
-    setExporting(true)
-    setExportError(null)
-    try {
-      // Export always flushes the latest keystroke first. Otherwise a quick
-      // click after typing could download the previous autosave.
-      await saveNow()
-      await api.exportPdf(id)
-    } catch (e) {
-      setExportError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setExporting(false)
-    }
-  }
 
   const error = useEditor((s) => s.loadError)
   if (error) {
@@ -84,15 +67,15 @@ export function Editor() {
         <button className="btn" onClick={() => void saveNow()}>
           Save
         </button>
-        <button className="btn btn-primary" disabled={exporting} onClick={() => void exportPdf()}>
-          {exporting ? 'Exporting…' : 'Export PDF'}
+        <button className="btn btn-primary" onClick={() => setExportOpen(true)}>
+          Export
         </button>
       </header>
 
-      {exportError && (
-        <div className="editor-error" role="alert">
-          {exportError}
-        </div>
+      {exportOpen && (
+        <ExportDialog
+          onClose={() => setExportOpen(false)}
+        />
       )}
 
       <div className="panes">
