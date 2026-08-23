@@ -39,8 +39,12 @@ async def export_pdf(
     except BrowserNotAvailable as exc:
         raise HTTPException(status.HTTP_503_SERVICE_UNAVAILABLE, str(exc)) from exc
     except Exception as exc:  # noqa: BLE001 -- render failures are reported, not swallowed
+        # The type name matters: some exceptions worth reporting stringify to ""
+        # (NotImplementedError is one), and "PDF render failed: " tells nobody
+        # anything.
         raise HTTPException(
-            status.HTTP_502_BAD_GATEWAY, f"PDF render failed: {exc}"
+            status.HTTP_502_BAD_GATEWAY,
+            f"PDF render failed: {type(exc).__name__}: {exc}".rstrip(": "),
         ) from exc
 
     return Response(
