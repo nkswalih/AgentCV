@@ -11,8 +11,15 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 
 import { api } from './api'
-import { emptyItem, emptySection } from './factories'
-import type { Basics, ResumeDocument, Section, SectionType, Settings } from './types'
+import { emptyItem, emptySection, newId } from './factories'
+import type {
+  Basics,
+  ResumeDocument,
+  Section,
+  SectionType,
+  Settings,
+  SkillsSection,
+} from './types'
 
 const AUTOSAVE_DELAY_MS = 700
 
@@ -36,7 +43,13 @@ interface EditorState {
 
   addSection: (type: SectionType) => void
   removeSection: (sectionId: string) => void
-  updateSection: (sectionId: string, patch: Partial<Pick<Section, 'title' | 'visible'>>) => void
+  updateSection: (
+    sectionId: string,
+    // `layout`, `marker` and `columns` exist only on skills sections; the union
+    // above is what keeps them from being applied to any other kind.
+    patch: Partial<Pick<Section, 'title' | 'visible'>> &
+      Partial<Pick<SkillsSection, 'layout' | 'marker' | 'columns'>>,
+  ) => void
   moveSection: (from: number, to: number) => void
 
   addItem: (sectionId: string) => void
@@ -95,10 +108,25 @@ export const useEditor = create<EditorState>()(
         })
         try {
           const resume = await api.get(id)
+          const doc = resume.document
+          // Legacy documents kept the summary on basics with no heading and no
+          // way to reach it from the section list. Lift it into a real summary
+          // section so it edits and prints like every other section.
+          if (doc.basics.summary.trim() && !doc.sections.some((s) => s.type === 'summary')) {
+            doc.sections.unshift({
+              id: newId(),
+              type: 'summary',
+              title: 'Summary',
+              visible: true,
+              items: [{ id: newId(), visible: true, summary: doc.basics.summary }],
+            })
+            doc.basics.summary = ''
+            scheduleSave()
+          }
           set((s) => {
             s.id = resume.id
             s.name = resume.name
-            s.doc = resume.document
+            s.doc = doc
             s.loading = false
           })
         } catch (err) {
@@ -203,7 +231,7 @@ export const useEditor = create<EditorState>()(
       moveItem(sectionId, from, to) {
         edit((doc) =>
           withSection(doc, sectionId, (s) => {
-            s.items = arrayMove(s.items, from, to) as never
+            s.items = arrayMove(s.items as never[], from, to) as never
           }),
         )
       },

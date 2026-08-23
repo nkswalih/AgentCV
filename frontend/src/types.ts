@@ -4,6 +4,7 @@
  */
 
 export type SectionType =
+  | 'summary'
   | 'experience'
   | 'education'
   | 'skills'
@@ -29,6 +30,8 @@ export interface Basics {
   location: string
   website: string
   photoUrl: string | null
+  /** Legacy: old documents kept the summary here instead of in a section.
+      Migration lifts it out on load; nothing renders from this field anymore. */
   summary: string
   links: Link[]
 }
@@ -84,6 +87,12 @@ export interface LanguageItem extends ItemBase {
   proficiency: string
 }
 
+/** One paragraph of the summary section. Several items read as several
+    paragraphs under the same heading. */
+export interface SummaryItem extends ItemBase {
+  summary: string
+}
+
 export interface CustomItem extends ItemBase {
   title: string
   subtitle: string
@@ -101,13 +110,34 @@ export interface ExperienceSection extends SectionBase {
   type: 'experience'
   items: ExperienceItem[]
 }
+/** The professional summary: an editable heading plus one paragraph per item. */
+export interface SummarySection extends SectionBase {
+  type: 'summary'
+  items: SummaryItem[]
+}
 export interface EducationSection extends SectionBase {
   type: 'education'
   items: EducationItem[]
 }
+/** How a skills section prints: one line per category ("Backend: Python, Go"),
+    or every skill flattened into a column grid. */
+export type SkillsLayout = 'inline' | 'bullets'
+/**
+ * The glyph in front of each skill in the column layout. `flat` renders no
+ * marker at all -- just the skill names in their columns.
+ */
+export type SkillMarker = 'bullet' | 'dash' | 'flat'
+/** Columns in the flattened skills grid. */
+export type SkillsColumns = 1 | 2 | 3 | 4
+
 export interface SkillsSection extends SectionBase {
   type: 'skills'
   items: SkillGroup[]
+  layout: SkillsLayout
+  /** Ignored by the inline layout, but kept so switching back and forth
+      remembers the choice. */
+  marker: SkillMarker
+  columns: SkillsColumns
 }
 export interface ProjectsSection extends SectionBase {
   type: 'projects'
@@ -135,6 +165,7 @@ export type Section =
   | CertificationsSection
   | LanguagesSection
   | CustomSection
+  | SummarySection
 
 export type SectionItem = Section['items'][number]
 
@@ -145,8 +176,22 @@ export interface Settings {
   fontSize: number
   lineHeight: number
   sectionSpacing: number
+  /** Page margins in millimetres: left/right and top/bottom. */
+  marginX: number
+  marginY: number
   paperSize: PaperSize
   showPhoto: boolean
+  /** Icons in front of the contact line entries; off prints plain text. */
+  showIcons: boolean
+  /**
+   * Per-element font size overrides in pt. Null follows the template's own
+   * default, which differs per template -- so the null state, not a number,
+   * is "as designed".
+   */
+  nameSize: number | null
+  titleSize: number | null
+  headingSize: number | null
+  entrySize: number | null
 }
 
 export interface ResumeDocument {
