@@ -10,7 +10,7 @@
 import templatesCss from '../styles/templates.css?raw'
 
 const FONT_LINK =
-  'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Noto+Serif:wght@400;600;700&family=Libre+Baskerville:wght@400;700&display=swap'
+  'https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Noto+Serif:wght@400;600;700&family=Libre+Baskerville:wght@400;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap'
 
 export function downloadHtmlExport(resumeName: string): void {
   const page = document.querySelector('.page')
