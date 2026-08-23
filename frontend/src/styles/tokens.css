@@ -1,0 +1,103 @@
+/*
+ * AgentCV design tokens.
+ *
+ * The palette comes from the product's own world: this is a typesetting tool,
+ * so the shell is ink-dark and the accents are process colours -- cyan for
+ * live/active state, magenta for overflow, ochre for a warning. The resume
+ * page itself is true paper white in every theme, because it is paper, not UI.
+ */
+
+:root {
+  /* Ink -- the shell. Blue-shifted rather than neutral black, so the white
+     page reads as warm paper against it. */
+  --ink-900: #0e1116;
+  --ink-850: #11161c;
+  --ink-800: #151a21;
+  --ink-750: #1a2028;
+  --ink-700: #1d242d;
+  --ink-600: #2a3340;
+  --ink-500: #3a4655;
+
+  /* Text */
+  --text-hi: #dce3ea;
+  --text-mid: #9aa8b8;
+  --text-lo: #6d7d8f;
+
+  /* Process inks */
+  --cyan: #35bee0;
+  --cyan-dim: #1d7f99;
+  --cyan-glow: rgba(53, 190, 224, 0.14);
+  --magenta: #e0459a;
+  --ochre: #e8a33d;
+
+  --paper: #ffffff;
+
+  /* Type: three roles -- display, UI, and measurements. */
+  --font-display: 'Space Grotesk', system-ui, sans-serif;
+  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+
+  /* Compact scale, tuned for a dense tool rather than a marketing page. */
+  --t-xs: 11px;
+  --t-sm: 12px;
+  --t-base: 13px;
+  --t-md: 15px;
+  --t-lg: 18px;
+  --t-xl: 24px;
+
+  --r-sm: 5px;
+  --r-md: 8px;
+  --r-lg: 12px;
+
+  --pane-left: 286px;
+  --pane-right: 300px;
+  --topbar-h: 54px;
+
+  --ease: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--ink-900);
+  color: var(--text-hi);
+  font-family: var(--font-ui);
+  font-size: var(--t-base);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+/* One visible focus treatment everywhere, in the live/active process colour. */
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
