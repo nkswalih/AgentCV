@@ -25,6 +25,7 @@ export type DocIconName =
   | 'gear'
   | 'folder'
   | 'award'
+  | 'file'
 
 const STROKE_ICONS: Partial<Record<DocIconName, ReactNode>> = {
   user: (
@@ -89,6 +90,14 @@ const STROKE_ICONS: Partial<Record<DocIconName, ReactNode>> = {
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
     </>
   ),
+  file: (
+    <>
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <path d="M14 2v6h6" />
+      <path d="M9 13h6" />
+      <path d="M9 17h6" />
+    </>
+  ),
 }
 
 const FILL_ICONS: Partial<Record<DocIconName, string>> = {
@@ -101,20 +110,92 @@ const FILL_ICONS: Partial<Record<DocIconName, string>> = {
     'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z',
 }
 
-export function DocIcon({ name, className }: { name: DocIconName; className?: string }) {
-  const fill = FILL_ICONS[name]
+/**
+ * Solid silhouettes for the section-heading icons, so the heading "Filled"
+ * style renders a true filled glyph instead of the outline drawing with a
+ * colour poured into it. Each entry mirrors its STROKE_ICONS counterpart;
+ * shapes with interior holes (gear teeth, globe meridians) rely on evenodd
+ * fill so the hole stays transparent.
+ */
+const SECTION_ICON_FILLS: Partial<Record<DocIconName, ReactNode>> = {
+  user: (
+    <>
+      <circle cx="12" cy="7.2" r="4.4" />
+      <path d="M12 13.6c-4.6 0-8 2.7-8 6.9 0 .28.22.5.5.5h15a.5.5 0 0 0 .5-.5c0-4.2-3.4-6.9-8-6.9Z" />
+    </>
+  ),
+  briefcase: (
+    <>
+      <path d="M10.2 3h3.6a1.7 1.7 0 0 1 1.7 1.7V7h-1.6V4.9a.3.3 0 0 0-.3-.3h-3.2a.3.3 0 0 0-.3.3V7H8.5V4.7A1.7 1.7 0 0 1 10.2 3Z" />
+      <path d="M3.6 8.6A1.6 1.6 0 0 1 5.2 7h13.6a1.6 1.6 0 0 1 1.6 1.6v9.3a1.6 1.6 0 0 1-1.6 1.6H5.2a1.6 1.6 0 0 1-1.6-1.6Z" />
+    </>
+  ),
+  gradcap: (
+    <>
+      <path d="m11.05 3.9-8.4 3.73a.8.8 0 0 0 0 1.47l8.4 3.72c.31.14.66.14.97 0l8.4-3.72a.8.8 0 0 0 0-1.47l-8.4-3.73a1.27 1.27 0 0 0-1.02 0Z" />
+      <path d="M5.6 11.6v3.55c0 1.86 2.86 3.35 6.4 3.35s6.4-1.49 6.4-3.35V11.6l-5.43 2.41a2.87 2.87 0 0 1-2.31 0L5.6 11.6Z" />
+    </>
+  ),
+  gear: (
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M19.14 12.94c.04-.31.06-.62.06-.94s-.02-.64-.07-.94l2.03-1.58a.49.49 0 0 0 .12-.61l-1.92-3.32a.49.49 0 0 0-.59-.22l-2.39.96a7.03 7.03 0 0 0-1.62-.94l-.36-2.54a.48.48 0 0 0-.48-.41h-3.84a.48.48 0 0 0-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96a.49.49 0 0 0-.59.22L2.74 8.87a.49.49 0 0 0 .12.61l2.03 1.58a7.6 7.6 0 0 0 0 1.88l-2.03 1.58a.49.49 0 0 0-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54a7.03 7.03 0 0 0 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32a.49.49 0 0 0-.12-.61l-2.01-1.58ZM12 15.6A3.61 3.61 0 1 1 15.61 12 3.6 3.6 0 0 1 12 15.6Z"
+    />
+  ),
+  folder: (
+    <path d="M3.7 3.5h5.16c.53 0 1.04.21 1.41.59l1.32 1.32c.19.18.44.29.71.29h8A1.7 1.7 0 0 1 22 7.4v11.1a1.7 1.7 0 0 1-1.7 1.7H3.7A1.7 1.7 0 0 1 2 18.5V5.2a1.7 1.7 0 0 1 1.7-1.7Z" />
+  ),
+  award: (
+    <>
+      <circle cx="12" cy="9" r="6.2" />
+      <path d="M8.06 13.9 6.75 22l5.25-3.15L17.25 22l-1.31-8.1a6.18 6.18 0 0 1-7.88 0Z" />
+    </>
+  ),
+  globe: (
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19Zm0 1.8c2.55 1.45 4.05 4.2 4.05 7.7S14.55 18.25 12 19.7C9.45 18.25 7.95 15.5 7.95 12S9.45 5.75 12 4.3Zm-9.2 6.8h18.4v1.8H2.8Z"
+    />
+  ),
+  file: (
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M13.5 2.5H6.75A1.75 1.75 0 0 0 5 4.25v15.5A1.75 1.75 0 0 0 6.75 21.5h10.5a1.75 1.75 0 0 0 1.75-1.75V8L13.5 2.5Zm-.3 2.2 3.6 3.6h-3.6V4.7Z"
+    />
+  ),
+}
+
+export function DocIcon({
+  name,
+  className,
+  variant,
+}: {
+  name: DocIconName
+  className?: string
+  /** 'fill' forces the solid silhouette, 'outline' the stroked drawing.
+   *  Omitted (contact line, links): brands are solid by nature, everything
+   *  else is stroked. */
+  variant?: 'outline' | 'fill'
+}) {
+  const brandPath = FILL_ICONS[name]
+  const sectionFill = variant === 'fill' ? SECTION_ICON_FILLS[name] : undefined
+  const fillNode =
+    sectionFill ?? (variant === 'outline' ? undefined : brandPath && <path d={brandPath} />)
   return (
     <svg
       className={className ?? 'doc-icon'}
       viewBox="0 0 24 24"
       aria-hidden="true"
-      fill={fill ? 'currentColor' : 'none'}
-      stroke={fill ? 'none' : 'currentColor'}
-      strokeWidth={fill ? undefined : 1.8}
+      fill={fillNode ? 'currentColor' : 'none'}
+      stroke={fillNode ? 'none' : 'currentColor'}
+      strokeWidth={fillNode ? undefined : 1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {fill ? <path d={fill} /> : STROKE_ICONS[name]}
+      {fillNode ?? STROKE_ICONS[name]}
     </svg>
   )
 }
@@ -174,4 +255,5 @@ export const SECTION_ICONS: Record<string, DocIconName> = {
   projects: 'folder',
   certifications: 'award',
   languages: 'globe',
+  custom: 'file',
 }

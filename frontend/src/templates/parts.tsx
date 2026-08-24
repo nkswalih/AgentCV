@@ -545,10 +545,18 @@ export function DocSection({
   if (!section.visible) return null
   if (visibleItems(section).length === 0) return null
   const sectionIcon = SECTION_ICONS[section.type]
+  // Both drawings are rendered; the document root's data-heading-* attributes
+  // decide which one shows, keeping the icons in lockstep with the Section
+  // Headings controls without threading settings through every template.
   return (
     <section className="doc-section">
       <h2 className="doc-section-title">
-        {sectionIcon && <DocIcon name={sectionIcon} className="doc-section-icon" />}
+        {sectionIcon && (
+          <>
+            <DocIcon name={sectionIcon} className="doc-section-icon icon-outline" variant="outline" />
+            <DocIcon name={sectionIcon} className="doc-section-icon icon-fill" variant="fill" />
+          </>
+        )}
         {section.title}
       </h2>
       <SectionBody section={section} tags={tags} timeline={timeline} />
