@@ -1,6 +1,9 @@
-/** Template registry: what the style panel offers, and how each is labelled. */
+/** Template registry: the design system, its metadata, and its fonts. */
 
 import type { TemplateId } from '../types'
+
+/** How a photo participates in the design. */
+export type PhotoSupport = 'none' | 'optional' | 'designed'
 
 export interface TemplateMeta {
   id: TemplateId
@@ -8,42 +11,217 @@ export interface TemplateMeta {
   /** Whether an applicant tracking system can parse it reliably. */
   atsSafe: boolean
   note: string
+  /** The structural idea, in words -- shown on the picker card. */
+  layout: string
+  photo: PhotoSupport
+  /** Dialog filter chips this design belongs to. */
+  tags: TemplateTag[]
+  /** The face the design was drawn with. Applying the design applies it. */
+  font: string
 }
 
 /**
- * ATS-safe templates come first. A resume that a parser mangles never reaches a
- * human, so that property is ranked above visual appeal in the picker order.
+ * Filter chips for the creation dialog, in display order. A template appears
+ * under a chip when its tags include it; "ATS Safe" reads the atsSafe flag.
+ */
+export const TEMPLATE_CHIPS = [
+  'popular',
+  'simple',
+  'modern',
+  'professional',
+  'creative',
+  'photo',
+  'twocol',
+  'executive',
+  'technical',
+  'academic',
+] as const
+
+export type TemplateTag = (typeof TEMPLATE_CHIPS)[number]
+
+/**
+ * Twelve directions, each with its own layout, header structure and rhythm --
+ * switching templates changes the composition of the page, not just its
+ * colours. ATS-safe designs stay single-column with plain text order; the
+ * design-led ones say so honestly.
+ *
+ * Retired ids (atlantic-blue & co.) are deliberately absent: they were colour
+ * studies on one shared skeleton, which is exactly what this system should not
+ * be. Documents saved with those ids still validate and render through the
+ * generic single-column path.
  */
 export const TEMPLATES: TemplateMeta[] = [
   {
-    id: 'ats-modern',
-    name: 'Modern',
+    id: 'classic-pro',
+    name: 'Classic Professional',
     atsSafe: true,
-    note: 'Single column, one accent rule. Safe default.',
+    note: 'The timeless single column. Strong serif hierarchy, quiet rules.',
+    layout: 'Single column · serif',
+    photo: 'none',
+    tags: ['popular', 'simple', 'professional'],
+    font: 'Georgia',
   },
   {
-    id: 'ats-classic',
-    name: 'Classic',
+    id: 'modern-min',
+    name: 'Modern Minimal',
     atsSafe: true,
-    note: 'Serif, centred header. Traditional industries.',
+    note: 'A large confident name and generous air. Nothing else competes.',
+    layout: 'Single column · airy sans',
+    photo: 'none',
+    tags: ['popular', 'simple', 'modern'],
+    font: 'Inter',
   },
   {
-    id: 'compact',
-    name: 'Compact',
+    id: 'executive',
+    name: 'Executive',
     atsSafe: true,
-    note: 'Tightened spacing for longer histories.',
+    note: 'Centred small caps between double rules. Senior, formal, composed.',
+    layout: 'Centred header · serif',
+    photo: 'none',
+    tags: ['popular', 'professional', 'executive'],
+    font: 'Garamond',
+  },
+  {
+    id: 'two-col',
+    name: 'Two Column',
+    atsSafe: false,
+    note: 'Experience earns the wide column; skills and contact live aside.',
+    layout: 'Two columns · right rail',
+    photo: 'none',
+    tags: ['professional', 'twocol'],
+    font: 'Inter',
   },
   {
     id: 'sidebar',
     name: 'Sidebar',
     atsSafe: false,
-    note: 'Two columns with a photo. Parsers may reorder it.',
+    note: 'A tinted left rail carries contact and skills beside the story.',
+    layout: 'Left sidebar · photo ready',
+    photo: 'optional',
+    tags: ['creative', 'twocol', 'photo'],
+    font: 'Inter',
   },
   {
-    id: 'banner',
-    name: 'Banner',
+    id: 'editorial',
+    name: 'Editorial',
     atsSafe: false,
-    note: 'Colour header with a photo. Design-led roles.',
+    note: 'Magazine typography: oversized serif name, split masthead, rules.',
+    layout: 'Split masthead · serif',
+    photo: 'none',
+    tags: ['modern', 'creative'],
+    font: 'Georgia',
+  },
+  {
+    id: 'compact',
+    name: 'Compact',
+    atsSafe: true,
+    note: 'Tightened margins and leading for long histories.',
+    layout: 'Single column · dense',
+    photo: 'none',
+    tags: ['simple', 'professional'],
+    font: 'Arial',
+  },
+  {
+    id: 'creative',
+    name: 'Creative',
+    atsSafe: false,
+    note: 'A deep indigo band holds the identity; the body stays disciplined.',
+    layout: 'Header band · photo optional',
+    photo: 'optional',
+    tags: ['creative', 'photo', 'modern'],
+    font: 'Lato',
+  },
+  {
+    id: 'devtech',
+    name: 'Technical',
+    atsSafe: true,
+    note: 'Skills and projects surface first, the way engineers are read.',
+    layout: 'Reordered · projects early',
+    photo: 'none',
+    tags: ['modern', 'technical'],
+    font: 'IBM Plex Sans',
+  },
+  {
+    id: 'academic',
+    name: 'Academic',
+    atsSafe: true,
+    note: 'Education leads, centred Times masthead, no ornament at all.',
+    layout: 'Centred header · education first',
+    photo: 'none',
+    tags: ['professional', 'academic'],
+    font: 'Times New Roman',
+  },
+  {
+    id: 'timeline',
+    name: 'Timeline',
+    atsSafe: false,
+    note: 'Dates run down a ruled spine beside each role. Order you can see.',
+    layout: 'Timeline entries',
+    photo: 'none',
+    tags: ['modern', 'creative'],
+    font: 'IBM Plex Sans',
+  },
+  {
+    id: 'photo-pro',
+    name: 'Photo Pro',
+    atsSafe: false,
+    note: 'Portrait set into the masthead, name and contact around it.',
+    layout: 'Photo masthead',
+    photo: 'designed',
+    tags: ['photo', 'professional'],
+    font: 'Georgia',
+  },
+  {
+    id: 'portal-pro',
+    name: 'Professional',
+    atsSafe: false,
+    note: 'Deep navy rail carries identity and skills; banded section headers.',
+    layout: 'Left rail · banded headers',
+    photo: 'designed',
+    tags: ['professional', 'photo'],
+    font: 'Georgia',
+  },
+  {
+    id: 'modern-deep',
+    name: 'Modern Deep',
+    atsSafe: false,
+    note: 'Dark rail with profile, dot-scale languages and awards beside the story.',
+    layout: 'Left rail · profile aside',
+    photo: 'designed',
+    tags: ['creative', 'photo'],
+    font: 'Merriweather',
+  },
+  {
+    id: 'serif-ats',
+    name: 'Serif Classic',
+    atsSafe: true,
+    note: 'Centered Times masthead, ruled title-case headers, plain text only.',
+    layout: 'Single column · Times',
+    photo: 'none',
+    tags: ['professional'],
+    font: 'Times New Roman',
+  },
+  {
+    id: 'jake',
+    name: "Jake's Resume",
+    atsSafe: true,
+    note: 'The proven plain format: small-caps headers, two-line entries, education first.',
+    layout: 'Single column · education first',
+    photo: 'none',
+    tags: ['professional'],
+    font: 'Times New Roman',
+  },
+  // -- The original classic, kept: documents already use it and it remains
+  //    the plainest page in the set. --
+  {
+    id: 'ats-classic',
+    name: 'ATS Classic',
+    atsSafe: true,
+    note: 'The original single column. Centered serif header, quiet rules.',
+    layout: 'Single column · classic serif',
+    photo: 'none',
+    tags: ['professional'],
+    font: 'Georgia',
   },
 ]
 
@@ -53,6 +231,10 @@ export const TEMPLATES_BY_ID = new Map(TEMPLATES.map((t) => [t.id, t]))
 export const PHOTO_TEMPLATES: ReadonlySet<TemplateId> = new Set<TemplateId>([
   'sidebar',
   'banner',
+  'creative',
+  'photo-pro',
+  'portal-pro',
+  'modern-deep',
 ])
 
 export interface FontChoice {
@@ -109,8 +291,10 @@ export const FONT_STACKS: Record<string, string> = Object.fromEntries(
   FONT_CHOICES.map((f) => [f.label, f.stack]),
 )
 
-/** Accent presets. Deliberately muted -- these print on white paper. */
+/** Accent presets. Deliberately muted -- these print on white paper. Grey
+    leads: it is the default, so it is the first swatch a user sees active. */
 export const ACCENT_PRESETS = [
+  '#374151',
   '#2563eb',
   '#0f766e',
   '#7c3aed',

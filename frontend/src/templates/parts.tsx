@@ -1,6 +1,6 @@
 /** Shared building blocks used by every resume template. */
 
-import { Fragment, type CSSProperties, type ReactNode } from 'react'
+import { createContext, Fragment, useContext, type CSSProperties, type ReactNode } from 'react'
 
 import type {
   Basics,
@@ -81,6 +81,25 @@ function dateRange(start: string, end: string, current?: boolean) {
   return `${start} — ${to}`
 }
 
+/** The date line of any entry that carries one -- the timeline layout lifts
+    these out of the entry head and onto its own spine. */
+export function itemDateRange(section: Section, item: SectionItem): string {
+  switch (section.type) {
+    case 'experience': {
+      const i = item as ExperienceItem
+      return dateRange(i.startDate, i.endDate, i.current)
+    }
+    case 'education':
+      return dateRange((item as EducationItem).startDate, (item as EducationItem).endDate)
+    case 'projects':
+      return dateRange((item as ProjectItem).startDate, (item as ProjectItem).endDate)
+    case 'custom':
+      return (item as CustomItem).date
+    default:
+      return ''
+  }
+}
+
 /** Whether the author has given us anything to put on a contact line. */
 export function hasContact(basics: Basics) {
   return (
@@ -142,6 +161,18 @@ function contactEntries(basics: Basics): ContactEntry[] {
   return entries
 }
 
+/**
+ * True inside miniatures (dashboard cards, the picker gallery). Thumbnails
+ * often sit inside a navigational link, so interactive elements -- the
+ * contact line's anchors -- render as inert spans there: an <a> inside an
+ * <a> is invalid DOM, and clicking a thumbnail should navigate once.
+ */
+const PreviewContext = createContext(false)
+
+export function PreviewScope({ children }: { children: ReactNode }) {
+  return <PreviewContext.Provider value={true}>{children}</PreviewContext.Provider>
+}
+
 /** Contact line: clickable entries, optional icons. Only non-empty parts appear. */
 export function Contact({
   basics,
@@ -155,6 +186,7 @@ export function Contact({
   const entries = contactEntries(basics)
   if (entries.length === 0) return null
 
+  const preview = useContext(PreviewContext)
   const renderEntry = (entry: ContactEntry) => {
     const content = icons ? (
       <span className="doc-contact-item">
@@ -164,17 +196,25 @@ export function Contact({
     ) : (
       entry.text
     )
-    return entry.href ? (
-      <a className="doc-link" href={entry.href}>
-        {content}
-      </a>
-    ) : (
-      <span>{content}</span>
-    )
+    if (entry.href && !preview)
+      return (
+        <a className="doc-link" href={entry.href}>
+          {content}
+        </a>
+      )
+    return <span className={entry.href ? 'doc-link' : undefined}>{content}</span>
   }
 
   if (stacked) {
-    return <div className="doc-contact">{entries.map((e) => <Fragment key={e.key}>{renderEntry(e)}</Fragment>)}</div>
+    return (
+      <div className="doc-contact">
+        {entries.map((e) => (
+          <div className="doc-contact-row" key={e.key}>
+            {renderEntry(e)}
+          </div>
+        ))}
+      </div>
+    )
   }
 
   const nodes: ReactNode[] = []
@@ -185,7 +225,7 @@ export function Contact({
           ·
         </span>,
       )
-    nodes.push(renderEntry(entry))
+    nodes.push(<Fragment key={entry.key}>{renderEntry(entry)}</Fragment>)
   })
   return <div className="doc-contact">{nodes}</div>
 }
@@ -212,19 +252,53 @@ function ItemHead({
   sub,
   meta,
   date,
+  hideDate,
+  inlineSub,
+  swap,
 }: {
   title: string
   sub?: string
   meta?: string
   date?: string
+  /** The timeline layout draws the date on its own spine instead. */
+  hideDate?: boolean
+  /** Single-line heads: the subtitle rides beside the title instead of
+      stacking beneath it -- how a certification row wants to read. */
+  inlineSub?: boolean
+  /** Two spread rows: location tops the right column, the date sits under it
+      -- how a university / degree pair wants to read. */
+  swap?: boolean
 }) {
   const hasSub = !!sub?.trim()
   const hasMeta = !!meta?.trim()
+  if (swap) {
+    return (
+      <div className="doc-item-head doc-item-head-swap">
+        <div className="doc-item-row">
+          {title.trim() && <div className="doc-item-title">{title}</div>}
+          {hasMeta && <div className="doc-item-meta">{meta}</div>}
+        </div>
+        {(hasSub || (date?.trim() && !hideDate)) && (
+          <div className="doc-item-row">
+            {hasSub && <div className="doc-item-sub">{sub}</div>}
+            {!hideDate && date?.trim() && <div className="doc-item-date">{date}</div>}
+          </div>
+        )}
+      </div>
+    )
+  }
   return (
     <div className="doc-item-head">
       <div>
-        {title.trim() && <div className="doc-item-title">{title}</div>}
-        {(hasSub || hasMeta) && (
+        {title.trim() && (
+          <div className="doc-item-title">
+            {title}
+            {inlineSub && hasSub && (
+              <span className="doc-item-sub doc-item-inline"> — {sub}</span>
+            )}
+          </div>
+        )}
+        {!inlineSub && (hasSub || hasMeta) && (
           <div className="doc-item-sub">
             {hasSub && sub}
             {hasMeta && (
@@ -235,13 +309,20 @@ function ItemHead({
             )}
           </div>
         )}
+        {inlineSub && hasMeta && (
+          <div className="doc-item-meta">{meta}</div>
+        )}
       </div>
-      {date?.trim() && <div className="doc-item-date">{date}</div>}
+      {!hideDate && date?.trim() && <div className="doc-item-date">{date}</div>}
     </div>
   )
 }
 
-function Experience({ item }: { item: ExperienceItem }) {
+/** Entry-head layout: default stacks date beside the title; 'swap' spreads
+    location over the date (Jake's two-line heads). */
+type HeadKind = 'default' | 'swap'
+
+function Experience({ item, bare, head }: { item: ExperienceItem; bare?: boolean; head?: HeadKind }) {
   return (
     <div className="doc-item">
       <ItemHead
@@ -249,13 +330,15 @@ function Experience({ item }: { item: ExperienceItem }) {
         sub={item.company}
         meta={item.location}
         date={dateRange(item.startDate, item.endDate, item.current)}
+        hideDate={bare}
+        swap={head === 'swap'}
       />
       <Bullets bullets={item.bullets} />
     </div>
   )
 }
 
-function Education({ item }: { item: EducationItem }) {
+function Education({ item, bare, head }: { item: EducationItem; bare?: boolean; head?: HeadKind }) {
   return (
     <div className="doc-item">
       <ItemHead
@@ -263,6 +346,8 @@ function Education({ item }: { item: EducationItem }) {
         sub={item.institution}
         meta={item.location}
         date={dateRange(item.startDate, item.endDate)}
+        hideDate={bare}
+        swap={head === 'swap'}
       />
       {item.grade.trim() && <div className="doc-item-meta">{item.grade}</div>}
       <Bullets bullets={item.bullets} />
@@ -279,13 +364,11 @@ function Skills({ item, tags }: { item: SkillGroup; tags?: boolean }) {
       {label && <span className="doc-skillgroup-label">{label}</span>}
       {tags ? (
         skills.length > 0 && (
-          <div className="doc-taglist">
+          <ul className="doc-skilllines">
             {skills.map((s) => (
-              <span className="doc-tag" key={s}>
-                {s}
-              </span>
+              <li key={s}>{s}</li>
             ))}
-          </div>
+          </ul>
         )
       ) : (
         skills.length > 0 && (
@@ -299,7 +382,7 @@ function Skills({ item, tags }: { item: SkillGroup; tags?: boolean }) {
   )
 }
 
-function Project({ item }: { item: ProjectItem }) {
+function Project({ item, bare, head }: { item: ProjectItem; bare?: boolean; head?: HeadKind }) {
   return (
     <div className="doc-item">
       <ItemHead
@@ -307,6 +390,8 @@ function Project({ item }: { item: ProjectItem }) {
         sub={item.role}
         meta={item.url}
         date={dateRange(item.startDate, item.endDate)}
+        hideDate={bare}
+        swap={head === 'swap'}
       />
       <Bullets bullets={item.bullets} />
     </div>
@@ -316,7 +401,7 @@ function Project({ item }: { item: ProjectItem }) {
 function Certification({ item }: { item: CertificationItem }) {
   return (
     <div className="doc-item">
-      <ItemHead title={item.name} sub={item.issuer} date={item.date} />
+      <ItemHead title={item.name} sub={item.issuer} date={item.date} inlineSub />
     </div>
   )
 }
@@ -330,72 +415,117 @@ function Language({ item }: { item: LanguageItem }) {
   )
 }
 
-function Custom({ item }: { item: CustomItem }) {
+function Custom({ item, bare, head }: { item: CustomItem; bare?: boolean; head?: HeadKind }) {
   return (
     <div className="doc-item">
-      <ItemHead title={item.title} sub={item.subtitle} date={item.date} />
+      <ItemHead
+        title={item.title}
+        sub={item.subtitle}
+        date={item.date}
+        hideDate={bare}
+        swap={head === 'swap'}
+      />
       <Bullets bullets={item.bullets} />
     </div>
   )
 }
 
+/** Section types whose entries carry dates and can ride the timeline spine. */
+const TIMELINE_TYPES: ReadonlySet<SectionType> = new Set([
+  'experience',
+  'education',
+  'projects',
+  'custom',
+])
+
 /**
  * Renders a section's items. `tags` switches skills to pill form, which suits
- * the narrow sidebar rail but wastes space in a full-width column.
+ * the narrow sidebar rail but wastes space in a full-width column. `timeline`
+ * lifts dates out of the entries onto a ruled spine -- the Timeline template.
  */
-export function SectionBody({ section, tags }: { section: Section; tags?: boolean }) {
+export function SectionBody({
+  section,
+  tags,
+  timeline,
+}: {
+  section: Section
+  tags?: boolean
+  timeline?: boolean
+}) {
   const items = visibleItems(section)
+  const onSpine = timeline && TIMELINE_TYPES.has(section.type)
 
-  switch (section.type) {
-    case 'summary':
-      // Each item is its own paragraph under the section's heading.
-      return items.map((i) => <SummaryParagraph key={i.id} item={i as SummaryItem} />)
-    case 'experience':
-      return items.map((i) => <Experience key={i.id} item={i as ExperienceItem} />)
-    case 'education':
-      return items.map((i) => <Education key={i.id} item={i as EducationItem} />)
-    case 'skills': {
-      const s = section as SkillsSection
-      // Column mode: every group's skills merge into one flat grid and the
-      // category names drop out -- the columns themselves are the structure.
-      // The sidebar's pill default is overridden here too: an explicit choice
-      // in the panel outranks a template default.
-      if (s.layout === 'bullets') {
-        const seen = new Set<string>()
-        const flat: string[] = []
-        for (const group of items as SkillGroup[]) {
-          for (const skill of group.skills) {
-            const name = skill.trim()
-            if (name !== '' && !seen.has(name)) {
-              seen.add(name)
-              flat.push(name)
+  const render = (i: SectionItem): ReactNode => {
+    // Renders ONE entry -- the item it is handed. The caller maps over the
+    // section's items; returning the whole list from here multiplied every
+    // entry N times (and every resume onto a second page).
+    switch (section.type) {
+      case 'summary':
+        return <SummaryParagraph key={i.id} item={i as SummaryItem} />
+      case 'experience':
+        return <Experience key={i.id} item={i as ExperienceItem} bare={onSpine} />
+      case 'education':
+        return <Education key={i.id} item={i as EducationItem} bare={onSpine} />
+      case 'skills': {
+        const s = section as SkillsSection
+        // Column mode: every group's skills merge into one flat grid and the
+        // category names drop out -- the columns themselves are the structure.
+        // The sidebar's pill default is overridden here too: an explicit choice
+        // in the panel outranks a template default.
+        if (s.layout === 'bullets') {
+          const seen = new Set<string>()
+          const flat: string[] = []
+          for (const group of items as SkillGroup[]) {
+            for (const skill of group.skills) {
+              const name = skill.trim()
+              if (name !== '' && !seen.has(name)) {
+                seen.add(name)
+                flat.push(name)
+              }
             }
           }
+          if (flat.length === 0) return null
+          return (
+            <ul
+              className="doc-skill-bullets"
+              data-marker={s.marker}
+              style={{ '--skill-cols': s.columns } as CSSProperties}
+            >
+              {flat.map((skill) => (
+                <li key={skill}>{skill}</li>
+              ))}
+            </ul>
+          )
         }
-        if (flat.length === 0) return null
-        return (
-          <ul
-            className="doc-skill-bullets"
-            data-marker={s.marker}
-            style={{ '--skill-cols': s.columns } as CSSProperties}
-          >
-            {flat.map((skill) => (
-              <li key={skill}>{skill}</li>
-            ))}
-          </ul>
-        )
+        const g = i as SkillGroup
+        return <Skills key={g.id} item={g} tags={tags} />
       }
-      return items.map((i) => <Skills key={i.id} item={i as SkillGroup} tags={tags} />)
+      case 'projects':
+        return <Project key={i.id} item={i as ProjectItem} bare={onSpine} />
+      case 'certifications':
+        return <Certification key={i.id} item={i as CertificationItem} />
+      case 'languages':
+        return <Language key={i.id} item={i as LanguageItem} />
+      case 'custom':
+        return <Custom key={i.id} item={i as CustomItem} bare={onSpine} />
     }
-    case 'projects':
-      return items.map((i) => <Project key={i.id} item={i as ProjectItem} />)
-    case 'certifications':
-      return items.map((i) => <Certification key={i.id} item={i as CertificationItem} />)
-    case 'languages':
-      return items.map((i) => <Language key={i.id} item={i as LanguageItem} />)
-    case 'custom':
-      return items.map((i) => <Custom key={i.id} item={i as CustomItem} />)
   }
+
+  if (onSpine) {
+    return (
+      <div className="tl-list">
+        {items.map((i) => (
+          <div className="tl-item" key={i.id}>
+            <div className="tl-when">{itemDateRange(section, i)}</div>
+            <div className="tl-body">{render(i)}</div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
+  // Skills in inline mode renders the whole set at once (see above).
+  return <>{section.type === 'skills' ? render(items[0]) : items.map((i) => render(i))}</>
 }
 
 /**
@@ -403,13 +533,21 @@ export function SectionBody({ section, tags }: { section: Section; tags?: boolea
  * when none of its entries have been filled in -- a bare heading over empty
  * space is the same noise as a placeholder.
  */
-export function DocSection({ section, tags }: { section: Section; tags?: boolean }) {
+export function DocSection({
+  section,
+  tags,
+  timeline,
+}: {
+  section: Section
+  tags?: boolean
+  timeline?: boolean
+}) {
   if (!section.visible) return null
   if (visibleItems(section).length === 0) return null
   return (
     <section className="doc-section">
       <h2 className="doc-section-title">{section.title}</h2>
-      <SectionBody section={section} tags={tags} />
+      <SectionBody section={section} tags={tags} timeline={timeline} />
     </section>
   )
 }
