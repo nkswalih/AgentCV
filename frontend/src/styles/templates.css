@@ -2044,18 +2044,26 @@
   letter-spacing: 0.02em;
 }
 
-/* -- Icons: hidden via attribute ----------------------------------------- */
+/* -- Icons ----------------------------------------------------------------
+   Both drawings (outline + fill) are rendered into every heading; these
+   attribute rules pick which one shows. Filled is the default. Sized in em
+   so the icon tracks the heading's own point size in every template. */
 .doc-section-title .doc-section-icon {
   display: none;
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
 }
-[data-heading-icons="true"] .doc-section-title .doc-section-icon {
+[data-heading-icons='true'] .doc-section-title .doc-section-icon.icon-fill {
   display: inline;
   margin-right: 4pt;
-  vertical-align: middle;
+  vertical-align: -0.08em;
 }
-
-/* -- Icon style: outlined ----------------------------------------------- */
-[data-heading-icon-style="outlined"] .doc-section-title .doc-section-icon {
-  fill: none;
-  stroke: currentColor;
+[data-heading-icon-style='outlined'] .doc-section-title .doc-section-icon.icon-fill {
+  display: none;
+}
+[data-heading-icons='true'][data-heading-icon-style='outlined'] .doc-section-title .doc-section-icon.icon-outline {
+  display: inline;
+  margin-right: 4pt;
+  vertical-align: -0.08em;
 }

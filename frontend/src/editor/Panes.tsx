@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { Fragment, useRef, useState } from 'react'
 
 import { useEditor } from '../store'
 import { newId } from '../factories'
@@ -10,22 +10,26 @@ import {
   PHOTO_TEMPLATES,
   TEMPLATES,
 } from '../templates/registry'
-import { isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
+import { DocIcon, isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
 import { Check, Segmented, Slider, Text } from './fields'
 import { SectionCard, useDragSensors, DRAG_MODIFIERS } from './SectionCard'
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
+  closestCorners,
+  pointerWithin,
+  useDroppable,
+  type CollisionDetection,
   type DragEndEvent,
   type DragOverEvent,
 } from '@dnd-kit/core'
 import {
   SortableContext,
   verticalListSortingStrategy,
-  arrayMove,
 } from '@dnd-kit/sortable'
 import type { Link, Section, SectionType, TemplateId } from '../types'
-import { Plus } from './icons'
+import { Grip, Plus } from './icons'
 
 const ADDABLE: SectionType[] = [
   'summary',
@@ -38,12 +42,84 @@ const ADDABLE: SectionType[] = [
   'custom',
 ]
 
+/**
+ * Cross-column collision strategy: prefer whatever is physically under the
+ * cursor so either column is an equal drop target, falling back to nearest
+ * corners for keyboard drags (which never move a pointer).
+ */
+const dualCollisionDetection: CollisionDetection = (args) => {
+  const pointerCollisions = pointerWithin(args)
+  return pointerCollisions.length > 0 ? pointerCollisions : closestCorners(args)
+}
+
+type ColumnId = 'left' | 'right'
+
+/** Simplified section card for the drag overlay — no sortable/dnd hooks. */
+function DragOverlayCard({ section }: { section: Section }) {
+  return (
+    <div className="section-card">
+      <div className="section-row" data-hidden={!section.visible}>
+        <span className="grip" aria-hidden="true"><Grip /></span>
+        <span className="section-row-title">{section.title}</span>
+        <span className="count">{section.items.length}</span>
+      </div>
+    </div>
+  )
+}
+
+/** A column body that is a valid droppable target for cross-container dragging.
+ *  SortableContext is INSIDE so items are sortable within this droppable zone.
+ *  While dragging, `insertAt` draws the insertion line at the exact slot where
+ *  the section will land. */
+function DroppableColumn({
+  id,
+  column,
+  items,
+  sections,
+  emptyLabel,
+  insertAt = null,
+}: {
+  id: string
+  column: ColumnId
+  items: string[]
+  sections: Section[]
+  emptyLabel: string
+  insertAt?: number | null
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id })
+  return (
+    <div
+      ref={setNodeRef}
+      className="dual-column-body"
+      id={id}
+      data-column={column}
+      data-over={isOver}
+    >
+      <SortableContext items={items} strategy={verticalListSortingStrategy}>
+        {sections.length === 0 && (
+          <div className="dual-column-empty">{emptyLabel}</div>
+        )}
+        {sections.map((section, i) => (
+          <Fragment key={section.id}>
+            {insertAt === i && <div className="drop-indicator" />}
+            <SectionCard section={section} />
+          </Fragment>
+        ))}
+        {insertAt != null && insertAt >= sections.length && (
+          <div className="drop-indicator" />
+        )}
+      </SortableContext>
+    </div>
+  )
+}
+
 export function LeftPane() {
   const { doc, addSection, moveSection, moveSectionToColumn, updateSettings, updateBasics } = useEditor()
   const sensors = useDragSensors()
   const photoInputRef = useRef<HTMLInputElement>(null)
   const [photoBusy, setPhotoBusy] = useState(false)
   const [photoError, setPhotoError] = useState<string | null>(null)
+  const [activeId, setActiveId] = useState<string | null>(null)
   if (!doc) return null
 
   const currentDoc = doc
@@ -97,63 +173,86 @@ export function LeftPane() {
     if (from !== -1 && to !== -1) moveSection(from, to)
   }
 
-  /** Track which column the dragged item is currently over for cross-column moves. */
-  const dragOverColumnRef = useRef<'left' | 'right' | null>(null)
+  /** Where a dragged section would land right now: which column and at which
+   *  slot. Null when the cursor is over no valid target (or over its own
+   *  current position). Drives the live insertion indicator. */
+  const [dropTarget, setDropTarget] = useState<{ column: ColumnId; index: number } | null>(null)
+
+  function onDualDragStart(e: { active: { id: string | number } }) {
+    setActiveId(String(e.active.id))
+    setDropTarget(null)
+  }
 
   function onDualDragOver(e: DragOverEvent) {
-    const { active, over } = e
-    if (!over) return
-    const activeId = active.id as string
-    const overId = over.id as string
+    const over = e.over
+    if (!over || e.active.id === over.id) {
+      setDropTarget(null)
+      return
+    }
+    const id = String(e.active.id)
+    const overId = String(over.id)
 
-    // Detect which column the over item belongs to
-    const overInLeft = leftIds.includes(overId)
-    const overInRight = rightIds.includes(overId)
-    const activeInLeft = leftIds.includes(activeId)
-    const activeInRight = rightIds.includes(activeId)
-
-    // If dropped on the column body itself (empty zone)
+    // Resolve which column the pointer is over, and the slot it maps to:
+    // hovering a section card means "take this card's place" (or the slot
+    // after it, past its midpoint), hovering the column body means "append".
+    let column: ColumnId
+    let index: number
     if (overId === 'left-column') {
-      dragOverColumnRef.current = 'left'
-      if (activeInRight) moveSectionToColumn(activeId, 'left', leftIds.length)
-      return
-    }
-    if (overId === 'right-column') {
-      dragOverColumnRef.current = 'right'
-      if (activeInLeft) moveSectionToColumn(activeId, 'right', rightIds.length)
+      column = 'left'
+      index = leftIds.length
+    } else if (overId === 'right-column') {
+      column = 'right'
+      index = rightIds.length
+    } else if (leftIds.includes(overId)) {
+      column = 'left'
+      index = leftIds.indexOf(overId)
+    } else if (rightIds.includes(overId)) {
+      column = 'right'
+      index = rightIds.indexOf(overId)
+    } else {
+      setDropTarget(null)
       return
     }
 
-    // Cross-column move: item from left dragged over right (or vice versa)
-    if (activeInLeft && overInRight) {
-      dragOverColumnRef.current = 'right'
-      const toIdx = rightIds.indexOf(overId)
-      if (toIdx !== -1) moveSectionToColumn(activeId, 'right', toIdx)
-    } else if (activeInRight && overInLeft) {
-      dragOverColumnRef.current = 'left'
-      const toIdx = leftIds.indexOf(overId)
-      if (toIdx !== -1) moveSectionToColumn(activeId, 'left', toIdx)
+    // Below the hovered card's midpoint inserts after it, not before.
+    const translated = e.active.rect.current.translated
+    if (translated && overId !== 'left-column' && overId !== 'right-column' && over.rect) {
+      const cursorY = translated.top + translated.height / 2
+      const overMidY = over.rect.top + over.rect.height / 2
+      if (cursorY > overMidY) index += 1
     }
-    // Same column reorder
-    else if (activeInLeft && overInLeft) {
-      dragOverColumnRef.current = 'left'
-      const from = leftIds.indexOf(activeId)
-      const to = leftIds.indexOf(overId)
-      if (from !== -1 && to !== -1 && from !== to) {
-        updateSettings({ leftColumn: arrayMove(leftIds, from, to) })
-      }
-    } else if (activeInRight && overInRight) {
-      dragOverColumnRef.current = 'right'
-      const from = rightIds.indexOf(activeId)
-      const to = rightIds.indexOf(overId)
-      if (from !== -1 && to !== -1 && from !== to) {
-        updateSettings({ rightColumn: arrayMove(rightIds, from, to) })
-      }
+
+    // Suppress the indicator when it would land exactly where the section
+    // already is (its own slot, or directly beneath itself).
+    const fromColumn: ColumnId = leftIds.includes(id) ? 'left' : 'right'
+    const fromIndex = fromColumn === 'left' ? leftIds.indexOf(id) : rightIds.indexOf(id)
+    if (column === fromColumn && (index === fromIndex || index === fromIndex + 1)) {
+      setDropTarget(null)
+      return
     }
+
+    setDropTarget({ column, index })
   }
 
   function onDualDragEnd() {
-    dragOverColumnRef.current = null
+    if (activeId && dropTarget) {
+      // The stored index counts the section's old position; moving down within
+      // the same column shifts everything after the removal up by one.
+      const fromColumn: ColumnId = leftIds.includes(activeId) ? 'left' : 'right'
+      const fromIndex = fromColumn === 'left' ? leftIds.indexOf(activeId) : rightIds.indexOf(activeId)
+      const index =
+        dropTarget.column === fromColumn && dropTarget.index > fromIndex
+          ? dropTarget.index - 1
+          : dropTarget.index
+      moveSectionToColumn(activeId, dropTarget.column, index)
+    }
+    setDropTarget(null)
+    setActiveId(null)
+  }
+
+  function onDualDragCancel() {
+    setDropTarget(null)
+    setActiveId(null)
   }
 
   async function uploadPhoto(file: File) {
@@ -385,7 +484,9 @@ export function LeftPane() {
                   data-active={hs.iconStyle === 'filled'}
                   onClick={() => updateSettings({ headingStyle: { ...hs, iconStyle: 'filled' } })}
                 >
-                  <span className="icon-style-dot" />
+                  <span className="icon-style-dot">
+                    <DocIcon name="briefcase" variant="fill" />
+                  </span>
                   Filled
                 </button>
                 <button
@@ -393,7 +494,9 @@ export function LeftPane() {
                   data-active={hs.iconStyle === 'outlined'}
                   onClick={() => updateSettings({ headingStyle: { ...hs, iconStyle: 'outlined' } })}
                 >
-                  <span className="icon-style-dot" />
+                  <span className="icon-style-dot">
+                    <DocIcon name="briefcase" variant="outline" />
+                  </span>
                   Outlined
                 </button>
               </div>
@@ -425,45 +528,70 @@ export function LeftPane() {
           ) : (
             <DndContext
               sensors={sensors}
-              collisionDetection={closestCenter}
-              modifiers={DRAG_MODIFIERS}
+              collisionDetection={dualCollisionDetection}
+              onDragStart={onDualDragStart}
               onDragOver={onDualDragOver}
               onDragEnd={onDualDragEnd}
+              onDragCancel={onDualDragCancel}
             >
+              {/* -- Profile header card ---------------------------------- */}
+              <div className="profile-header-card">
+                <p className="eyebrow" style={{ marginBottom: 6 }}>Profile</p>
+                <div className="profile-header-row">
+                  {currentDoc.basics.photoUrl && (
+                    <img
+                      className="profile-header-thumb"
+                      src={currentDoc.basics.photoUrl}
+                      alt=""
+                    />
+                  )}
+                  <div className="profile-header-info">
+                    <span className="profile-header-name">
+                      {currentDoc.basics.fullName || 'Your Name'}
+                    </span>
+                    {currentDoc.basics.headline && (
+                      <span className="profile-header-headline">
+                        {currentDoc.basics.headline}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               <div className="dual-columns">
                 <div className="dual-column">
                   <p className="eyebrow">Left Column</p>
-                  <SortableContext
+                  <DroppableColumn
+                    id="left-column"
+                    column="left"
                     items={leftIds}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="dual-column-body" data-column="left">
-                      {leftSections.length === 0 && (
-                        <div className="dual-column-empty">Drop sections here</div>
-                      )}
-                      {leftSections.map((section) => (
-                        <SectionCard key={section.id} section={section} />
-                      ))}
-                    </div>
-                  </SortableContext>
+                    sections={leftSections}
+                    emptyLabel="Drop sections here"
+                    insertAt={dropTarget?.column === 'left' ? dropTarget.index : null}
+                  />
                 </div>
                 <div className="dual-column">
                   <p className="eyebrow">Right Column</p>
-                  <SortableContext
+                  <DroppableColumn
+                    id="right-column"
+                    column="right"
                     items={rightIds}
-                    strategy={verticalListSortingStrategy}
-                  >
-                    <div className="dual-column-body" data-column="right">
-                      {rightSections.length === 0 && (
-                        <div className="dual-column-empty">Drop sections here</div>
-                      )}
-                      {rightSections.map((section) => (
-                        <SectionCard key={section.id} section={section} />
-                      ))}
-                    </div>
-                  </SortableContext>
+                    sections={rightSections}
+                    emptyLabel="Drop sections here"
+                    insertAt={dropTarget?.column === 'right' ? dropTarget.index : null}
+                  />
                 </div>
               </div>
+
+              <DragOverlay dropAnimation={null}>
+                {activeId ? (
+                  <div className="drag-overlay-card">
+                    <DragOverlayCard
+                      section={currentDoc.sections.find((s) => s.id === activeId)!}
+                    />
+                  </div>
+                ) : null}
+              </DragOverlay>
             </DndContext>
           )}
         </div>

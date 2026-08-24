@@ -373,6 +373,47 @@
 }
 
 /* -- Dual-column section layout (Layout editor, Two mode) --------------- */
+.profile-header-card {
+  background: var(--ink-800);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  margin-bottom: 8px;
+}
+.profile-header-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.profile-header-thumb {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--ink-500);
+  flex: none;
+}
+.profile-header-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 1px;
+}
+.profile-header-name {
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--text-hi);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.profile-header-headline {
+  font-size: 10px;
+  color: var(--text-lo);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .dual-columns {
   display: flex;
   gap: 8px;
@@ -394,6 +435,20 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  transition: border-color 150ms var(--ease), background 150ms var(--ease);
+}
+.dual-column-body[data-over='true'] {
+  border-color: var(--cyan-dim);
+  background: var(--cyan-glow);
+}
+/* -- Insertion line: the exact slot a dragged section will land in -------- */
+.drop-indicator {
+  height: 3px;
+  margin: 2px 4px;
+  border-radius: 2px;
+  background: var(--cyan);
+  box-shadow: 0 0 6px var(--cyan-dim);
+  pointer-events: none;
 }
 .dual-column-empty {
   font-size: var(--t-xs);
@@ -1113,7 +1168,29 @@ input[type='range']::-moz-range-thumb {
   gap: 4px;
 }
 .section-card[data-dragging='true'] {
-  opacity: 0.72;
+  opacity: 0.35;
+  border: 1.5px dashed var(--ink-500);
+  border-radius: var(--r-sm);
+  background: transparent;
+  pointer-events: none;
+}
+
+/* -- DragOverlay: floating card following the cursor -------------------- */
+.drag-overlay-card {
+  width: 280px;
+  opacity: 0.92;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.5), 0 0 0 1px var(--cyan-dim);
+  border-radius: var(--r-md);
+  background: var(--ink-800);
+  pointer-events: none;
+  transform: rotate(1.5deg);
+}
+.drag-overlay-card .section-card {
+  opacity: 1;
+}
+.drag-overlay-card .section-row {
+  background: var(--ink-800);
+  border-color: var(--cyan-dim);
 }
 
 .item-toggle {
@@ -1876,13 +1953,17 @@ input[type='range']::-moz-range-thumb {
   color: var(--cyan);
 }
 .icon-style-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  border: 2px solid currentColor;
+  width: 18px;
+  height: 18px;
+  border-radius: var(--r-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
-.icon-style-btn[data-active='true'] .icon-style-dot {
-  background: currentColor;
+.icon-style-dot svg {
+  width: 15px;
+  height: 15px;
+  display: block;
 }
 
 /* -- Add section: pill-style buttons ------------------------------------ */
