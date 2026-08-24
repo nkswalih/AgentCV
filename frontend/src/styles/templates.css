@@ -1938,3 +1938,66 @@
   padding-bottom: 1.5pt;
   border-bottom: 0.5pt solid #ccd3da;
 }
+
+/* ======================================================================
+   Photo Layout — independent of columns/sections
+   Controls: size, shape, grayscale, position (order in rail/header)
+   ====================================================================== */
+
+/* -- Size presets -------------------------------------------------------- */
+[data-photo-size="sm"] .doc-photo {
+  width: 18mm;
+  height: 18mm;
+}
+[data-photo-size="md"] .doc-photo {
+  width: 24mm;
+  height: 24mm;
+}
+[data-photo-size="lg"] .doc-photo {
+  width: 30mm;
+  height: 30mm;
+}
+[data-photo-size="xl"] .doc-photo {
+  width: 36mm;
+  height: 36mm;
+}
+
+/* -- Shape presets ------------------------------------------------------- */
+[data-photo-shape="circle"] .doc-photo {
+  border-radius: 50%;
+}
+[data-photo-shape="rounded"] .doc-photo {
+  border-radius: 4pt;
+}
+[data-photo-shape="square"] .doc-photo {
+  border-radius: 0;
+}
+[data-photo-shape="none"] .doc-photo {
+  border-radius: 0;
+  width: 100%;
+  height: auto;
+}
+
+/* -- Grayscale ----------------------------------------------------------- */
+[data-photo-grayscale="true"] .doc-photo {
+  filter: grayscale(1);
+}
+
+/* -- Position in top header (row layout) ---------------------------------
+   'left'  → default flex order (appears first)
+   'right' → order: 1 (appears after text)
+   'top'   → flex-direction: column on parent                            */
+[data-photo-position="right"] .doc-rail-top .doc-photo,
+[data-photo-position="right"] .doc-header-top .doc-photo {
+  order: 1;
+}
+[data-photo-position="top"] .doc-rail-top,
+[data-photo-position="top"] .doc-header-top {
+  flex-direction: column;
+  align-items: flex-start;
+}
+[data-photo-position="top"] .doc-rail-top .doc-photo,
+[data-photo-position="top"] .doc-header-top .doc-photo {
+  order: -1;
+  margin-bottom: 6pt;
+}

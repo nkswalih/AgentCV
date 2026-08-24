@@ -306,6 +306,18 @@ class Settings(Base):
     # Profile layout controls (reserved for future UI)
     profile_layout: dict | None = Field(None, alias="profileLayout")
 
+    # Photo layout controls (independent of columns/sections)
+    photo_layout: dict = Field(
+        default_factory=lambda: {
+            "show": True,
+            "grayscale": False,
+            "position": "left",
+            "size": "md",
+            "shape": "circle",
+        },
+        alias="photoLayout",
+    )
+
 
 # --------------------------------------------------------------------------
 # The document, plus API request/response shapes

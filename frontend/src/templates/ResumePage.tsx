@@ -134,8 +134,10 @@ export function ResumePage({ doc, forExport = false }: Props) {
     ...(settings.entrySize != null && { '--doc-entry-size': `${settings.entrySize}pt` }),
   } as CSSProperties
 
+  // Photo layout — fully independent of column/header layout.
+  const pl = settings.photoLayout ?? { show: true, grayscale: false, position: 'left', size: 'md', shape: 'circle' }
   const showPhoto =
-    settings.showPhoto && !!basics.photoUrl && PHOTO_TEMPLATES.has(template)
+    pl.show && !!basics.photoUrl && PHOTO_TEMPLATES.has(template)
 
   // Sidebar templates keep their tpl-* class in all layout modes so their
   // template-specific styling (colors, fonts, typography) is preserved.
@@ -147,6 +149,10 @@ export function ResumePage({ doc, forExport = false }: Props) {
     'data-export': forExport ? 'true' : 'false',
     'data-columns': settings.columnLayout,
     'data-header': settings.headerPosition,
+    'data-photo-position': pl.position,
+    'data-photo-size': pl.size,
+    'data-photo-shape': pl.shape,
+    ...(pl.grayscale && { 'data-photo-grayscale': 'true' }),
   }
 
   // Nothing is invented for the page: an empty field simply does not render.

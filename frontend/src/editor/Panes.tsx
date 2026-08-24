@@ -232,6 +232,60 @@ export function LeftPane() {
           )}
         </section>
 
+        {/* -- Photo Layout -------------------------------------------------- */}
+        <section className="style-section">
+          <p className="eyebrow style-section-title">Photo Layout</p>
+          {(() => {
+            const pl = currentDoc.settings.photoLayout ?? { show: true, grayscale: false, position: 'left', size: 'md', shape: 'circle' }
+            return (
+              <>
+                <Check
+                  label="Show photo"
+                  checked={pl.show}
+                  onChange={(show) => updateSettings({ photoLayout: { ...pl, show } })}
+                />
+                <Check
+                  label="Grayscale"
+                  checked={pl.grayscale}
+                  onChange={(grayscale) => updateSettings({ photoLayout: { ...pl, grayscale } })}
+                />
+                <Segmented
+                  label="Position"
+                  value={pl.position}
+                  options={[
+                    { value: 'left', label: 'Left' },
+                    { value: 'top', label: 'Top' },
+                    { value: 'right', label: 'Right' },
+                  ]}
+                  onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
+                />
+                <Segmented
+                  label="Size"
+                  value={pl.size}
+                  options={[
+                    { value: 'sm', label: 'S' },
+                    { value: 'md', label: 'M' },
+                    { value: 'lg', label: 'L' },
+                    { value: 'xl', label: 'XL' },
+                  ]}
+                  onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })}
+                />
+                <Segmented
+                  label="Shape"
+                  value={pl.shape}
+                  options={[
+                    { value: 'circle', label: 'Circle' },
+                    { value: 'rounded', label: 'Rounded' },
+                    { value: 'square', label: 'Square' },
+                    { value: 'none', label: 'None' },
+                  ]}
+                  onChange={(shape) => updateSettings({ photoLayout: { ...pl, shape } })}
+                />
+              </>
+            )
+          })()}
+        </section>
+
         {/* -- Section layout -------------------------------------------------- */}
         {columnLayout === 'one' ? (
           /* Single column: existing section list with full SectionCards */
@@ -329,7 +383,7 @@ function PhotoField() {
       if (!res.ok) throw new Error((await res.json()).detail ?? `Upload failed (${res.status})`)
       const { url } = (await res.json()) as { url: string }
       updateBasics({ photoUrl: url })
-      updateSettings({ showPhoto: true })
+      updateSettings({ showPhoto: true, photoLayout: { ...doc!.settings.photoLayout, show: true } })
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
     } finally {
@@ -369,7 +423,7 @@ function PhotoField() {
         <Check
           label="Show on resume"
           checked={doc.settings.showPhoto}
-          onChange={(showPhoto) => updateSettings({ showPhoto })}
+          onChange={(showPhoto) => updateSettings({ showPhoto, photoLayout: { ...doc.settings.photoLayout, show: showPhoto } })}
         />
       )}
     </div>

@@ -233,6 +233,20 @@ export interface Settings {
     /** Contact display: 'inline' (single line) | 'stacked' (one per row). */
     contactDisplay?: 'inline' | 'stacked'
   }
+
+  /** Photo layout controls — independent of columns/sections. */
+  photoLayout: {
+    /** Show / hide the profile photo on the resume. */
+    show: boolean
+    /** Apply a grayscale filter to the photo. */
+    grayscale: boolean
+    /** Photo position relative to the profile/header text. */
+    position: 'left' | 'top' | 'right'
+    /** Photo size preset. */
+    size: 'sm' | 'md' | 'lg' | 'xl'
+    /** Photo shape. */
+    shape: 'circle' | 'square' | 'rounded' | 'none'
+  }
 }
 
 export interface ResumeDocument {

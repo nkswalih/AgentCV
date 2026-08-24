@@ -229,6 +229,13 @@ const BASE: ResumeDocument = {
     columnWidth: 40,
     leftColumn: [],
     rightColumn: [],
+    photoLayout: {
+      show: true,
+      grayscale: false,
+      position: 'left',
+      size: 'md',
+      shape: 'circle',
+    },
   },
 }
 
