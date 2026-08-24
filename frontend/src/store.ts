@@ -11,7 +11,7 @@ import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 
 import { api } from './api'
-import { emptyItem, emptySection, newId } from './factories'
+import { emptyItem, emptySection, newId, normalizeSettings } from './factories'
 import type {
   Basics,
   ResumeDocument,
@@ -110,6 +110,12 @@ export const useEditor = create<EditorState>()(
         try {
           const resume = await api.get(id)
           const doc = resume.document
+          // Hydration: fill any settings gaps left by documents stored before
+          // a field existed. Saved values always win -- defaults never
+          // overwrite them -- and the store ends up with one complete,
+          // consistent settings object, so control state can't drift from the
+          // preview after a refresh.
+          doc.settings = normalizeSettings(doc.settings)
           // Legacy documents kept the summary on basics with no heading and no
           // way to reach it from the section list. Lift it into a real summary
           // section so it edits and prints like every other section.
