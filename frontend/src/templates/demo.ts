@@ -236,6 +236,12 @@ const BASE: ResumeDocument = {
       size: 'md',
       shape: 'circle',
     },
+    headingStyle: {
+      visual: 'underline',
+      capitalization: 'uppercase',
+      showIcons: true,
+      iconStyle: 'filled',
+    },
   },
 }
 

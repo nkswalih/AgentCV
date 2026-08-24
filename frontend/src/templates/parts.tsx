@@ -17,7 +17,7 @@ import type {
   SkillsSection,
   SummaryItem,
 } from '../types'
-import { DocIcon, iconForLink, type DocIconName } from './doc-icons'
+import { DocIcon, iconForLink, SECTION_ICONS, type DocIconName } from './doc-icons'
 
 /**
  * Every field that carries visible text, per section type.
@@ -544,9 +544,13 @@ export function DocSection({
 }) {
   if (!section.visible) return null
   if (visibleItems(section).length === 0) return null
+  const sectionIcon = SECTION_ICONS[section.type]
   return (
     <section className="doc-section">
-      <h2 className="doc-section-title">{section.title}</h2>
+      <h2 className="doc-section-title">
+        {sectionIcon && <DocIcon name={sectionIcon} className="doc-section-icon" />}
+        {section.title}
+      </h2>
       <SectionBody section={section} tags={tags} timeline={timeline} />
     </section>
   )

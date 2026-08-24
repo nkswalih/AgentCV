@@ -139,6 +139,9 @@ export function ResumePage({ doc, forExport = false }: Props) {
   const showPhoto =
     pl.show && !!basics.photoUrl && PHOTO_TEMPLATES.has(template)
 
+  // Section heading style controls.
+  const hs = settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
+
   // Sidebar templates keep their tpl-* class in all layout modes so their
   // template-specific styling (colors, fonts, typography) is preserved.
   // CSS rules use [data-columns="one"] to override the grid layout.
@@ -153,6 +156,10 @@ export function ResumePage({ doc, forExport = false }: Props) {
     'data-photo-size': pl.size,
     'data-photo-shape': pl.shape,
     ...(pl.grayscale && { 'data-photo-grayscale': 'true' }),
+    'data-heading-visual': hs.visual,
+    'data-heading-cap': hs.capitalization,
+    ...(hs.showIcons && { 'data-heading-icons': 'true' }),
+    ...(hs.showIcons && { 'data-heading-icon-style': hs.iconStyle }),
   }
 
   // Nothing is invented for the page: an empty field simply does not render.
