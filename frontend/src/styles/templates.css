@@ -7,24 +7,38 @@
  *
  * Physical units (mm, pt) are used throughout rather than px, because the output
  * is a real sheet of paper.
+ *
+ * Architecture:
+ *   1. Foundation -- paper, shared entry blocks, the type defaults every skin
+ *      starts from. A skin only declares how it DIFFERS.
+ *   2. The skins -- each one is a composition: its own header architecture,
+ *      heading system, date treatment and rhythm. Palette is part of a skin's
+ *      identity and is fixed; the accent slider steers only the two legacy ATS
+ *      templates and Banner, which predate the system.
+ *
+ * Density contract: every skin is tuned so an ordinary, well-filled resume
+ * occupies one sheet with balanced margins -- never spilling onto page two by
+ * accident, never shrinking type below ~9.5pt equivalent to force a fit.
  */
+
+/* =========================================================================
+ * 1. Foundation
+ * ====================================================================== */
 
 .page {
   /* Paper. Overridden to Letter via [data-paper]. */
   width: 210mm;
   min-height: 297mm;
   background: var(--paper);
-  color: #14181d;
+  color: #191e24;
 
   /* Every knob in the style panel arrives as a custom property, so changing a
      setting re-renders nothing -- the browser just recomputes. */
   font-family: var(--doc-font, 'Inter', sans-serif);
   font-size: var(--doc-size, 10.5pt);
-  line-height: var(--doc-leading, 1.4);
+  line-height: var(--doc-leading, 1.42);
 
   position: relative;
-  /* Not clipped: when content runs past one sheet the page grows, and the
-     editor draws the break lines where the PDF will actually split. */
 }
 
 .page[data-paper='Letter'] {
@@ -41,22 +55,31 @@
   break-after: avoid;
 }
 
-.doc-bullets {
-  margin: 3pt 0 0;
-  padding-left: 13pt;
+/* -- Header defaults (skins override individually) ---------------------- */
+.doc-name {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
 }
-.doc-bullets li {
-  margin-bottom: 1.5pt;
+.doc-headline {
+  margin: 2.5pt 0 0;
+  font-size: var(--doc-title-size, 11pt);
+  color: #4b5563;
+}
+.doc-contact {
+  margin-top: 5pt;
+  font-size: 9pt;
+  color: #374151;
 }
 
+/* Links and contact entries. Anchors keep the surrounding text colour -- a
+   wall of blue underlines reads as spam on a printed page; the tap targets
+   still work in the PDF. */
 .doc-link {
   color: inherit;
   text-decoration: none;
 }
-
-/* Contact line entries. Anchors keep the surrounding text colour -- a wall of
-   blue underlines reads as spam on a printed page; the tap targets still work
-   in the PDF. */
 .doc-contact a {
   color: inherit;
   text-decoration: none;
@@ -69,7 +92,8 @@
 /* Separator between entries on one line; spaced by margin because the entries
    are rendered as an element list with no whitespace between them. */
 .doc-contact-sep {
-  margin: 0 3pt;
+  margin: 0 3.5pt;
+  color: #9aa4af;
 }
 /* Scaled to the text so icons never outgrow their entry at any font size. */
 .doc-icon {
@@ -78,346 +102,32 @@
   flex: none;
 }
 
-/* =========================================================================
- * ATS-safe family
- *
- * Single column, real headings, no layout tables, no icons, no photo. Applicant
- * tracking systems read these top-to-bottom without mangling the order, which
- * matters more than visual flourish when a parser sits between you and a human.
- * ====================================================================== */
-
-/* Page margins come from the two sliders. Every value below carries the default
-   as its var fallback, so a document saved before these settings existed still
-   renders with the margins it was designed for. */
-.tpl-ats-classic,
-.tpl-ats-modern,
-.tpl-compact {
-  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+/* -- Shared rhythm ------------------------------------------------------- */
+/* Every skin inherits this section cadence; designs that need more or less
+   air override the multiplier, none of them improvise their own baseline. */
+.doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 10pt);
 }
-
-/* -- shared single-column section rhythm -- */
-.tpl-ats-classic .doc-section,
-.tpl-ats-modern .doc-section,
-.tpl-compact .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 9pt);
-}
-.tpl-ats-classic .doc-section:first-of-type,
-.tpl-ats-modern .doc-section:first-of-type,
-.tpl-compact .doc-section:first-of-type {
+.doc-section:first-of-type,
+.doc-body .doc-section:first-child {
   margin-top: calc(var(--doc-gap, 1) * 7pt);
 }
-
-/* -- ATS Classic: serif, centred header, traditional and quietly formal -- */
-.tpl-ats-classic {
-  font-family: var(--doc-font, 'Source Serif 4', serif);
-}
-/* No rule under the header: the summary's own titled section carries the
-   structure here, and stacking two lines read as a stray <hr>. */
-.tpl-ats-classic .doc-header {
-  text-align: center;
-}
-.tpl-ats-classic .doc-name {
-  font-size: var(--doc-name-size, 21pt);
+.doc-section-title {
+  margin: 0 0 5pt;
   font-weight: 700;
-  letter-spacing: 0.01em;
-  margin: 0;
-  line-height: 1.1;
-}
-.tpl-ats-classic .doc-headline {
-  font-size: var(--doc-title-size, 11pt);
-  margin: 2pt 0 0;
-  color: #374151;
-}
-.tpl-ats-classic .doc-contact {
-  margin-top: 5pt;
-  font-size: 9pt;
-  color: #374151;
-}
-.tpl-ats-classic .doc-section-title {
   font-size: var(--doc-heading-size, 11pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin: 0 0 4pt;
-  padding-bottom: 2pt;
-  /* Same ink as the text, not a grey: a parser-plain resume reads best when
-     its rules are as decisive as its type. */
-  border-bottom: 0.5pt solid #14181d;
+  letter-spacing: 0.02em;
 }
 
-/* -- ATS Modern: sans, left-aligned, one accent rule as the only colour -- */
-.tpl-ats-modern .doc-header {
-  padding-bottom: 8pt;
-  border-bottom: 2pt solid var(--doc-accent, #2563eb);
-}
-.tpl-ats-modern .doc-name {
-  font-size: var(--doc-name-size, 23pt);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 0;
-  line-height: 1.05;
-}
-.tpl-ats-modern .doc-headline {
-  font-size: var(--doc-title-size, 11pt);
-  font-weight: 500;
-  color: var(--doc-accent, #2563eb);
+.doc-bullets {
   margin: 2pt 0 0;
+  padding-left: 12pt;
 }
-.tpl-ats-modern .doc-contact {
-  margin-top: 6pt;
-  font-size: 9pt;
-  color: #374151;
+.doc-bullets li {
+  margin-bottom: 0.5pt;
 }
-.tpl-ats-modern .doc-section-title {
-  font-size: var(--doc-heading-size, 10pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--doc-accent, #2563eb);
-  margin: 0 0 5pt;
-}
-
-/* -- Compact: same ATS discipline, tightened for people with more history -- */
-.tpl-compact {
-  /* Held at 80% of the set margin rather than pinned to a fixed value: running
-     tighter than the others is the whole reason this template exists, so it has
-     to stay tighter at every slider position, not just the default. */
-  padding: calc(var(--doc-margin-y, 14mm) * 0.8) calc(var(--doc-margin-x, 15mm) * 0.8);
-}
-/* No rule under the header either -- same reason as Classic: the first
-   section title's underline is the anchor, not a second dark line. */
-.tpl-compact .doc-header {
-  padding-bottom: 0;
-}
-.tpl-compact .doc-name {
-  font-size: var(--doc-name-size, 18pt);
-  font-weight: 700;
-  margin: 0;
-  line-height: 1.05;
-}
-.tpl-compact .doc-headline {
-  font-size: var(--doc-title-size, 10pt);
-  margin: 1pt 0 0;
-  color: #374151;
-}
-.tpl-compact .doc-contact {
-  margin-top: 3pt;
-  font-size: 8.5pt;
-  color: #374151;
-}
-.tpl-compact .doc-section-title {
-  font-size: var(--doc-heading-size, 9.5pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin: 0 0 3pt;
-  border-bottom: 0.5pt solid #aab3bd;
-}
-.tpl-compact .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 6pt);
-}
-.tpl-compact .doc-bullets {
-  padding-left: 11pt;
-}
-
-/* =========================================================================
- * Design-forward family
- *
- * Two-column and colour-block layouts, with room for a photo. Stronger on a
- * human desk; riskier through a parser -- the editor labels them as such.
- * ====================================================================== */
-
-/* -- Sidebar: contact, skills and photo in a tinted rail on the left -- */
-.tpl-sidebar {
-  display: grid;
-  grid-template-columns: 62mm 1fr;
-  padding: 0;
-}
-.tpl-sidebar .doc-rail {
-  background: #f1f4f7;
-  border-right: 2pt solid var(--doc-accent, #2563eb);
-  /* The rail is only 62mm wide, so it keeps a tighter horizontal gutter -- a
-     full page margin on both sides would leave almost no room for text. */
-  padding: var(--doc-margin-y, 13mm) calc(var(--doc-margin-x, 15mm) * 0.6);
-}
-.tpl-sidebar .doc-main {
-  padding: var(--doc-margin-y, 13mm) var(--doc-margin-x, 15mm);
-  min-width: 0;
-}
-/* Photo top-right in the main header, level with the name; the text block
-   takes the remaining width and shrinks first. */
-.tpl-sidebar .doc-main .doc-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 5mm;
-}
-.tpl-sidebar .doc-header-text {
-  min-width: 0;
-}
-.tpl-sidebar .doc-photo {
-  width: 26mm;
-  height: 26mm;
-  border-radius: 50%;
-  object-fit: cover;
-  flex: none;
-  margin: 0;
-  border: 2pt solid var(--doc-accent, #2563eb);
-}
-.tpl-sidebar .doc-name {
-  font-size: var(--doc-name-size, 19pt);
-  font-weight: 700;
-  line-height: 1.05;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-.tpl-sidebar .doc-headline {
-  font-size: var(--doc-title-size, 10pt);
-  color: var(--doc-accent, #2563eb);
-  font-weight: 600;
-  margin: 2pt 0 0;
-}
-.tpl-sidebar .doc-rail .doc-section-title {
-  font-size: var(--doc-heading-size, 9pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--doc-accent, #2563eb);
-  margin: 0 0 4pt;
-}
-.tpl-sidebar .doc-main .doc-section-title {
-  font-size: var(--doc-heading-size, 11pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin: 0 0 5pt;
-  padding-bottom: 2pt;
-  border-bottom: 1pt solid var(--doc-accent, #2563eb);
-}
-.tpl-sidebar .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 9pt);
-}
-.tpl-sidebar .doc-rail .doc-section:first-child,
-.tpl-sidebar .doc-main .doc-section:first-of-type {
-  margin-top: calc(var(--doc-gap, 1) * 8pt);
-}
-.tpl-sidebar .doc-contact {
-  font-size: 8.5pt;
-  color: #374151;
-  display: flex;
-  flex-direction: column;
-  gap: 2.5pt;
-  word-break: break-word;
-}
-
-/* -- Banner: full-bleed accent header, photo inline, confident and graphic -- */
-.tpl-banner {
-  padding: 0;
-}
-.tpl-banner .doc-header {
-  background: var(--doc-accent, #2563eb);
-  color: #fff;
-  /* The band is a header, not a cover page. Its vertical padding stays at 65%
-      of the page margin so raising the margin cannot swell the band into the
-      content area below it. */
-  padding: calc(var(--doc-margin-y, 14mm) * 0.65) var(--doc-margin-x, 15mm);
-  display: flex;
-  align-items: center;
-  gap: 7mm;
-}
-.tpl-banner .doc-photo {
-  width: 23mm;
-  height: 23mm;
-  border-radius: 50%;
-  object-fit: cover;
-  flex: none;
-  border: 2.5pt solid rgba(255, 255, 255, 0.85);
-}
-.tpl-banner .doc-name {
-  font-size: var(--doc-name-size, 21pt);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  margin: 0;
-  line-height: 1.05;
-}
-.tpl-banner .doc-headline {
-  font-size: var(--doc-title-size, 10.5pt);
-  margin: 2.5pt 0 0;
-  /* Held just back from pure white so the name still leads, but well clear of
-     the 4.5:1 floor against the accent. */
-  color: rgba(255, 255, 255, 0.94);
-}
-.tpl-banner .doc-contact {
-  margin-top: 5pt;
-  font-size: 8.5pt;
-  color: rgba(255, 255, 255, 0.96);
-}
-.tpl-banner .doc-body {
-  /* Less air above than below: the coloured band already separates the body
-     from the top of the sheet. */
-  padding: calc(var(--doc-margin-y, 14mm) * 0.8) var(--doc-margin-x, 15mm)
-    var(--doc-margin-y, 14mm);
-}
-.tpl-banner .doc-section-title {
-  font-size: var(--doc-heading-size, 10.5pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--doc-accent, #2563eb);
-  margin: 0 0 5pt;
-  display: flex;
-  align-items: center;
-  gap: 6pt;
-}
-/* The rule grows out of the title rather than sitting under it. */
-.tpl-banner .doc-section-title::after {
-  content: '';
-  flex: 1;
-  height: 0.75pt;
-  background: #c3cad2;
-}
-.tpl-banner .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 9pt);
-}
-.tpl-banner .doc-body .doc-section:first-of-type {
-  margin-top: 0;
-}
-
-/* =========================================================================
- * Shared entry blocks
- * ====================================================================== */
-
-.doc-item + .doc-item {
-  margin-top: calc(var(--doc-gap, 1) * 6pt);
-}
-
-.doc-item-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8pt;
-}
-.doc-item-title {
-  font-weight: 700;
-  /* Relative by default so it tracks the base font size; an explicit entry
-     override arrives in pt and takes over. */
-  font-size: var(--doc-entry-size, 1.02em);
-}
-.doc-item-sub {
-  font-weight: 600;
-  color: #374151;
-}
-/* Dates are tabular data; mono keeps columns of them optically aligned. */
-.doc-item-date {
-  font-size: 0.87em;
-  color: #4b5563;
-  white-space: nowrap;
-  flex: none;
-  font-variant-numeric: tabular-nums;
-}
-.doc-item-meta {
-  font-size: 0.9em;
-  color: #4b5563;
+.doc-bullets li:last-child {
+  margin-bottom: 0;
 }
 
 .doc-summary {
@@ -428,17 +138,55 @@
   margin-top: 3pt;
 }
 
+/* -- Shared entry blocks --------------------------------------------------
+   The hierarchy every skin shares: bold role over quieter employer, tabular
+   dates hard-right, meta small. Skins restyle these slots; none of them
+   flatten the distinction away. */
+.doc-item + .doc-item {
+  margin-top: calc(var(--doc-gap, 1) * 4.5pt);
+}
+.doc-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8pt;
+}
+.doc-item-title {
+  font-weight: 650;
+  /* Relative by default so it tracks the base font size; an explicit entry
+     override arrives in pt and takes over. */
+  font-size: var(--doc-entry-size, 1.02em);
+}
+.doc-item-sub {
+  font-weight: 500;
+  color: #374151;
+}
+/* Dates are tabular data; tabular numerals keep columns of them optically
+   aligned down the page. */
+.doc-item-date {
+  font-size: 0.86em;
+  color: #57606b;
+  white-space: nowrap;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.doc-item-meta {
+  font-size: 0.9em;
+  color: #57606b;
+}
+/* The inline companion of a single-line head (certification rows). */
+.doc-item-inline {
+  font-weight: 500;
+  font-size: 0.92em;
+}
+
 /* Skills: category label plus its members on one line, which packs far more
    into the same vertical space than one skill per row. */
 .doc-skillgroup + .doc-skillgroup {
-  margin-top: 3pt;
+  margin-top: 2.5pt;
 }
 .doc-skillgroup-label {
-  font-weight: 700;
-}
-
-.tpl-sidebar .doc-rail .doc-skillgroup-label {
-  display: block;
+  font-weight: 650;
 }
 
 .doc-taglist {
@@ -467,7 +215,7 @@
   column-gap: 12pt;
 }
 .doc-skill-bullets li {
-  margin-bottom: 1.5pt;
+  margin-bottom: 1pt;
   /* A long name wraps inside its column instead of widening it. */
   overflow-wrap: break-word;
   break-inside: avoid;
@@ -482,6 +230,26 @@
   padding-left: 0;
 }
 
+/* Stacked contact rows: each entry sits on its own line regardless of the
+   surrounding skin's display context. The block wrapper prevents the entries
+   from collapsing into a single inline run in narrow rails. */
+.doc-contact-row {
+  display: block;
+}
+.doc-contact-row + .doc-contact-row {
+  margin-top: 1.5pt;
+}
+
+/* Skill lines: one skill per line, used in sidebar rails instead of the
+   pill-tag grid. Matches how reference resumes render narrow-column skills. */
+.doc-skilllines {
+  margin: 0;
+  padding-left: 12pt;
+}
+.doc-skilllines li {
+  margin-bottom: 1pt;
+}
+
 .doc-langrow {
   display: flex;
   justify-content: space-between;
@@ -489,4 +257,1581 @@
 }
 .doc-langrow + .doc-langrow {
   margin-top: 2pt;
+}
+
+/* =========================================================================
+ * 1b. Layout overrides (columns, header position, column width)
+ *
+ * These rules respond to the Layout controls in the left sidebar. They
+ * apply generically across single-column templates; grid-based templates
+ * (sidebar, two-col, portal-pro, modern-deep) intentionally ignore them.
+ * ====================================================================== */
+
+/* -- Header position ----------------------------------------------------- */
+/* Left/right header: two regions side by side using inline grid columns
+   (widths set via --doc-col-width in JSX). No new visual styles — the
+   template's own renderer styles each region identically to the original. */
+
+/* -- Column layout ------------------------------------------------------- */
+/* Two columns: explicit left/right containers with configurable width ratio */
+.page[data-columns='two'] > .doc-columns {
+  display: grid;
+  grid-template-columns: var(--doc-col-width, 40%) 1fr;
+  column-gap: 14pt;
+}
+.page[data-columns='two'] > .doc-columns > .doc-col > * {
+  break-inside: avoid;
+}
+
+/* =========================================================================
+ * 2. Single-column rhythm shared by the ATS family
+ *
+ * Real margins, real headings, normal reading order. These are the designs a
+ * parser reads cleanly -- and, deliberately, the best-looking pages in the
+ * library, because ATS-safe was never supposed to mean plain.
+ * ====================================================================== */
+
+.tpl-ats-classic,
+.tpl-ats-modern,
+.tpl-compact,
+.tpl-classic-pro,
+.tpl-modern-min,
+.tpl-executive,
+.tpl-editorial,
+.tpl-devtech,
+.tpl-academic,
+.tpl-timeline,
+.tpl-photo-pro,
+.tpl-serif-ats,
+.tpl-jake,
+/* Retired colour-study ids: kept renderable through the neutral path so old
+   documents still open; they are no longer offered in the picker. */
+.tpl-atlantic-blue,
+.tpl-true-blue,
+.tpl-editorial-rule,
+.tpl-refined,
+.tpl-classic-sans,
+.tpl-clean-slate,
+.tpl-quiet-focus,
+.tpl-clear {
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+
+/* -- ATS Classic: centred serif, quietly formal -------------------------- */
+.tpl-ats-classic {
+  font-family: var(--doc-font, 'Source Serif 4', Georgia, serif);
+}
+.tpl-ats-classic .doc-header {
+  text-align: center;
+}
+.tpl-ats-classic .doc-name {
+  font-size: var(--doc-name-size, 21pt);
+  line-height: 1.1;
+}
+.tpl-ats-classic .doc-headline {
+  color: #3f4854;
+}
+.tpl-ats-classic .doc-contact {
+  margin-top: 5pt;
+  font-size: 9pt;
+  color: #3f4854;
+}
+.tpl-ats-classic .doc-section-title {
+  font-size: var(--doc-heading-size, 10.5pt);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 4pt;
+  padding-bottom: 2pt;
+  /* Same ink as the text: a parser-plain resume reads best when its rules are
+     as decisive as its type. */
+  border-bottom: 0.75pt solid #23282e;
+}
+.tpl-ats-classic .doc-item-sub {
+  font-style: italic;
+}
+.tpl-ats-classic .doc-item-date {
+  font-style: italic;
+}
+
+/* -- ATS Modern: left-aligned sans, one decisive accent rule ------------- */
+.tpl-ats-modern .doc-header {
+  padding-bottom: 8pt;
+  border-bottom: 2pt solid var(--doc-accent, #374151);
+}
+.tpl-ats-modern .doc-name {
+  font-size: var(--doc-name-size, 23pt);
+  letter-spacing: -0.02em;
+}
+.tpl-ats-modern .doc-headline {
+  font-weight: 550;
+  color: var(--doc-accent, #374151);
+}
+.tpl-ats-modern .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--doc-accent, #374151);
+  margin-bottom: 4.5pt;
+  padding-bottom: 2pt;
+  border-bottom: 0.5pt solid #e3e7eb;
+}
+
+/* -- Compact: the same discipline, tightened for long histories ---------- */
+.tpl-compact {
+  /* Held at 80% of the set margin rather than pinned to a fixed value: running
+     tighter than the others is the whole reason this template exists, so it has
+     to stay tighter at every slider position, not just the default. */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.78) calc(var(--doc-margin-x, 15mm) * 0.8);
+}
+.tpl-compact .doc-name {
+  font-size: var(--doc-name-size, 17.5pt);
+  line-height: 1.05;
+}
+.tpl-compact .doc-headline {
+  margin-top: 1.5pt;
+  font-size: var(--doc-title-size, 10pt);
+}
+.tpl-compact .doc-contact {
+  margin-top: 3pt;
+  font-size: 8.5pt;
+}
+.tpl-compact .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 6pt);
+}
+.tpl-compact .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 5pt);
+}
+.tpl-compact .doc-section-title {
+  font-size: var(--doc-heading-size, 9.5pt);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 3pt;
+  padding-bottom: 1.5pt;
+  border-bottom: 0.5pt solid #b6bec7;
+}
+.tpl-compact .doc-bullets {
+  padding-left: 11pt;
+}
+.tpl-compact .doc-item + .doc-item {
+  margin-top: calc(var(--doc-gap, 1) * 4pt);
+}
+
+/* -- Classic Professional: serif authority, double-rule signature --------- */
+.tpl-classic-pro {
+  font-family: var(--doc-font, Georgia, 'Times New Roman', serif);
+}
+.tpl-classic-pro .doc-name {
+  font-size: var(--doc-name-size, 22pt);
+  letter-spacing: 0.005em;
+}
+.tpl-classic-pro .doc-headline {
+  font-size: var(--doc-title-size, 10.5pt);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #454e59;
+  margin-top: 3pt;
+}
+.tpl-classic-pro .doc-contact {
+  font-size: 9pt;
+  padding-bottom: 5pt;
+  /* The signature: a heavy rule carried by a hairline, the way stationery
+     printers have finished a letterhead for a century. */
+  border-bottom: 1.75pt solid #20252b;
+  position: relative;
+}
+.tpl-classic-pro .doc-contact::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -3pt;
+  border-bottom: 0.5pt solid #20252b;
+}
+.tpl-classic-pro .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-classic-pro .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-classic-pro .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  margin-bottom: 4.5pt;
+  padding-bottom: 2pt;
+  border-bottom: 0.5pt solid #c3cad2;
+}
+.tpl-classic-pro .doc-item-sub {
+  font-style: italic;
+}
+
+/* -- Modern Minimal: scale and air instead of rules ----------------------- */
+.tpl-modern-min {
+  font-family: var(--doc-font, 'Inter', system-ui, sans-serif);
+}
+.tpl-modern-min .doc-name {
+  font-size: var(--doc-name-size, 24pt);
+  font-weight: 750;
+  letter-spacing: -0.032em;
+  line-height: 1.02;
+  color: #10151b;
+}
+.tpl-modern-min .doc-headline {
+  font-weight: 500;
+  color: #5b6570;
+  margin-top: 3pt;
+}
+.tpl-modern-min .doc-contact {
+  margin-top: 3.5pt;
+  color: #5b6570;
+}
+.tpl-modern-min .doc-contact-sep {
+  margin: 0 6pt;
+}
+.tpl-modern-min .doc-header {
+  padding-bottom: 5pt;
+}
+.tpl-modern-min .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 6pt);
+}
+.tpl-modern-min .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 5pt);
+}
+/* No rule anywhere: the whitespace under a tiny tracked label IS the divider. */
+.tpl-modern-min .doc-section-title {
+  font-size: var(--doc-heading-size, 9pt);
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #8a94a0;
+  margin-bottom: 3.5pt;
+}
+.tpl-modern-min .doc-item-title {
+  font-weight: 600;
+}
+.tpl-modern-min .doc-item-date,
+.tpl-modern-min .doc-item-meta {
+  color: #6b7480;
+}
+
+/* -- Executive: centred formality inside a ruled frame -------------------- */
+.tpl-executive {
+  font-family: var(--doc-font, Garamond, 'Cormorant Garamond', Georgia, serif);
+}
+.tpl-executive .doc-header {
+  text-align: center;
+  border-top: 0.5pt solid #33383f;
+  border-bottom: 1.5pt solid #33383f;
+  padding: 7pt 0 7pt;
+  position: relative;
+}
+/* The heavier partner rules sit just outside the hairlines -- a frame, not a
+   pair of stray bars. */
+.tpl-executive .doc-header::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 2pt;
+  border-top: 1.5pt solid #33383f;
+}
+.tpl-executive .doc-header::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 2pt;
+  border-bottom: 0.5pt solid #33383f;
+}
+.tpl-executive .doc-name {
+  font-size: var(--doc-name-size, 20pt);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  line-height: 1.15;
+  color: #21262d;
+}
+.tpl-executive .doc-headline {
+  font-style: italic;
+  color: #4c545e;
+  margin-top: 3pt;
+}
+.tpl-executive .doc-contact {
+  justify-content: center;
+  text-align: center;
+  margin-top: 5pt;
+}
+.tpl-executive .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 7.5pt);
+}
+.tpl-executive .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 6.5pt);
+}
+.tpl-executive .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  text-align: center;
+  color: #272c33;
+  margin-bottom: 5pt;
+  position: relative;
+  padding-bottom: 3pt;
+}
+/* A short centred tick under each heading -- the section marker of formal
+   reports, and the only ornament on the page. */
+.tpl-executive .doc-section-title::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 22pt;
+  transform: translateX(-50%);
+  border-bottom: 1pt solid #33383f;
+}
+.tpl-executive .doc-item-sub {
+  font-style: italic;
+}
+.tpl-executive .doc-item-date {
+  font-style: italic;
+}
+
+/* -- Editorial: magazine masthead and typographic sections ---------------- */
+.tpl-editorial {
+  font-family: var(--doc-font, Georgia, 'Noto Serif', serif);
+}
+.tpl-editorial .doc-masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18pt;
+  padding-bottom: 7pt;
+  position: relative;
+}
+/* The newspaper finish: one fat rule with a hairline riding beneath it. */
+.tpl-editorial .doc-masthead::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4pt;
+  border-bottom: 2.25pt solid #171b21;
+}
+.tpl-editorial .doc-masthead::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-bottom: 0.5pt solid #171b21;
+}
+.tpl-editorial .doc-name {
+  font-size: var(--doc-name-size, 29pt);
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  line-height: 0.98;
+  color: #14181d;
+}
+.tpl-editorial .doc-headline {
+  font-size: var(--doc-title-size, 12pt);
+  font-style: italic;
+  color: #3f4854;
+  margin-top: 4pt;
+}
+.tpl-editorial .doc-masthead .doc-contact {
+  text-align: right;
+  font-size: 8.5pt;
+  color: #3f4854;
+  flex: none;
+  line-height: 1.5;
+}
+.tpl-editorial .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-editorial .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-editorial .doc-section-title {
+  font-size: var(--doc-heading-size, 10.5pt);
+  font-weight: 400;
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+  color: #14181d;
+  margin-bottom: 4.5pt;
+  /* Heading, then a hairline running to the right edge -- the running heads
+     of a broadsheet section. */
+  display: flex;
+  align-items: baseline;
+  gap: 8pt;
+}
+.tpl-editorial .doc-section-title::after {
+  content: '';
+  flex: 1;
+  border-bottom: 0.5pt solid #99a1ab;
+}
+.tpl-editorial .doc-item-sub {
+  font-style: italic;
+}
+
+/* -- Academic: centred Times, education leads, zero ornament -------------- */
+.tpl-academic {
+  font-family: var(--doc-font, 'Times New Roman', Tinos, Times, serif);
+}
+.tpl-academic .doc-header {
+  text-align: center;
+  padding-bottom: 8pt;
+}
+.tpl-academic .doc-name {
+  font-size: var(--doc-name-size, 19pt);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+}
+.tpl-academic .doc-headline {
+  font-style: italic;
+  color: #3f4854;
+  margin-top: 3pt;
+}
+.tpl-academic .doc-contact {
+  text-align: center;
+  margin-top: 5pt;
+}
+.tpl-academic .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  text-align: center;
+  margin-bottom: 5pt;
+  /* Centred heading held between two hairlines -- the catalogue style of
+     journal front matter. */
+  display: flex;
+  align-items: center;
+  gap: 10pt;
+}
+.tpl-academic .doc-section-title::before,
+.tpl-academic .doc-section-title::after {
+  content: '';
+  flex: 1;
+  border-top: 0.5pt solid #a7aeb7;
+}
+.tpl-academic .doc-item-sub {
+  font-style: italic;
+}
+
+/* -- Technical: identity left, reach right, proof before chronology ------- */
+.tpl-devtech {
+  font-family: var(--doc-font, 'IBM Plex Sans', system-ui, sans-serif);
+  line-height: calc(var(--doc-leading, 1.42) * 0.96);
+}
+.tpl-devtech .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 6.5pt);
+}
+.tpl-devtech .doc-header-split {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16pt;
+  padding-bottom: 6pt;
+  border-bottom: 1.5pt solid #0f766e;
+}
+.tpl-devtech .doc-header-side .doc-contact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1pt;
+  margin-top: 0;
+  font-size: 8.5pt;
+  text-align: right;
+  color: #4b5563;
+}
+.tpl-devtech .doc-header-side .doc-contact-sep {
+  display: none;
+}
+.tpl-devtech .doc-name {
+  font-size: var(--doc-name-size, 20pt);
+  letter-spacing: -0.02em;
+  color: #17272b;
+}
+.tpl-devtech .doc-headline {
+  font-weight: 600;
+  color: #0f766e;
+}
+.tpl-devtech .doc-section-title {
+  font-size: var(--doc-heading-size, 9.5pt);
+  font-weight: 650;
+  color: #0f766e;
+  margin-bottom: 4pt;
+  /* A short teal bar under the heading: the single colour decision on the
+     page, repeated into a system. */
+  position: relative;
+  padding-bottom: 2.5pt;
+}
+.tpl-devtech .doc-section-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 18pt;
+  height: 2pt;
+  background: #0f766e;
+}
+.tpl-devtech .doc-skillgroup-label {
+  color: #273038;
+}
+
+/* -- Timeline: the chronology drawn as a spine ---------------------------- */
+.tpl-timeline {
+  font-family: var(--doc-font, 'IBM Plex Sans', system-ui, sans-serif);
+  line-height: calc(var(--doc-leading, 1.42) * 0.95);
+}
+.tpl-timeline .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 6pt);
+}
+.tpl-timeline .doc-header-split {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16pt;
+  padding-bottom: 5pt;
+  border-bottom: 1.5pt solid #39424c;
+}
+.tpl-timeline .doc-header-side {
+  text-align: right;
+  padding-bottom: 1pt;
+}
+.tpl-timeline .doc-header-side .doc-contact {
+  margin-top: 0;
+  font-size: 8.5pt;
+  color: #57606b;
+}
+.tpl-timeline .doc-name {
+  font-size: var(--doc-name-size, 20pt);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: #12171d;
+}
+.tpl-timeline .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #454e59;
+  margin-bottom: 4pt;
+}
+.tl-list {
+  position: relative;
+}
+.tl-list::before {
+  content: '';
+  position: absolute;
+  top: 2pt;
+  bottom: 2pt;
+  left: 30mm;
+  border-left: 0.75pt solid #d3dae1;
+}
+.tpl-timeline .tl-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26mm minmax(0, 1fr);
+  gap: 0 10pt;
+  padding-bottom: calc(var(--doc-gap, 1) * 2.5pt + 2pt);
+}
+.tpl-timeline .tl-item:last-child {
+  padding-bottom: 0;
+}
+.tpl-timeline .tl-item::before {
+  content: '';
+  position: absolute;
+  left: 27.5mm;
+  top: 3.5pt;
+  width: 7px;
+  height: 7px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #454e59;
+  box-shadow: 0 0 0 2px var(--paper, #fff);
+  z-index: 1;
+}
+.tpl-timeline .tl-when {
+  font-size: 8.5pt;
+  font-weight: 650;
+  color: #39424c;
+  white-space: nowrap;
+  padding-top: 0.5pt;
+  font-variant-numeric: tabular-nums;
+}
+.tpl-timeline .tl-body .doc-item {
+  margin: 0;
+}
+.tpl-timeline .tl-body .doc-bullets {
+  margin-top: 2pt;
+}
+
+/* -- Photo Pro: the portrait composed INTO the masthead -------------------- */
+.tpl-photo-pro {
+  font-family: var(--doc-font, Georgia, 'Times New Roman', serif);
+  line-height: calc(var(--doc-leading, 1.42) * 0.97);
+}
+.tpl-photo-pro .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-photo-pro .doc-photohead {
+  display: flex;
+  align-items: center;
+  gap: 7mm;
+  border-bottom: 1.75pt solid #23282e;
+  padding-bottom: 6pt;
+}
+.tpl-photo-pro .doc-portrait {
+  width: 24mm;
+  height: 24mm;
+  border-radius: 3mm;
+  object-fit: cover;
+  border: 0.75pt solid #c9cfd6;
+  flex: none;
+}
+/* Without a photo the text block simply takes the whole line -- no hole. */
+.tpl-photo-pro .doc-name {
+  font-size: var(--doc-name-size, 23pt);
+}
+.tpl-photo-pro .doc-headline {
+  letter-spacing: 0.04em;
+  color: #4b5563;
+  margin-top: 3pt;
+}
+.tpl-photo-pro .doc-contact {
+  margin-top: 5pt;
+  font-size: 8.5pt;
+}
+.tpl-photo-pro .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: #33383f;
+  margin-bottom: 4.5pt;
+  padding-bottom: 2pt;
+  border-bottom: 0.5pt solid #ccd2d9;
+}
+
+/* =========================================================================
+ * 3. Columnar designs
+ *    Two deliberate grids -- a light credentials rail on the RIGHT, and a
+ *    dark identity rail on the LEFT. Different problems, different answers;
+ *    neither exists to make another template look different.
+ * ====================================================================== */
+
+/* -- Two Column: the story earns the wide column -------------------------- */
+.tpl-two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56mm;
+  padding: 0;
+  font-family: var(--doc-font, 'Inter', system-ui, sans-serif);
+}
+.tpl-two-col .doc-main {
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+  min-width: 0;
+}
+/* The rail tints to the sheet edges -- a panel, not a floating box. */
+.tpl-two-col .doc-rail {
+  background: #f2f4f7;
+  border-left: 0.5pt solid #dde2e8;
+  padding: var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.55);
+}
+.tpl-two-col .doc-name {
+  font-size: var(--doc-name-size, 21pt);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: #1b2430;
+}
+.tpl-two-col .doc-headline {
+  font-weight: 550;
+  color: #46505c;
+}
+.tpl-two-col .doc-main > .doc-header {
+  padding-bottom: 7pt;
+  border-bottom: 1pt solid #23282e;
+  margin-bottom: 2pt;
+}
+.tpl-two-col .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 8pt);
+}
+.tpl-two-col .doc-main > .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-two-col .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #273038;
+  margin-bottom: 4pt;
+  padding-bottom: 1.5pt;
+  border-bottom: 0.5pt solid #ccd3da;
+}
+.tpl-two-col .doc-rail .doc-section-title {
+  font-size: var(--doc-heading-size, 9pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #3d4956;
+  margin-bottom: 3.5pt;
+}
+.tpl-two-col .doc-rail .doc-contact {
+  font-size: 8.5pt;
+  color: #37404b;
+}
+.tpl-two-col .doc-item-date {
+  color: #4b5563;
+}
+
+/* -- Sidebar: identity in a dark rail, story on white ---------------------- */
+.tpl-sidebar {
+  display: grid;
+  grid-template-columns: 62mm minmax(0, 1fr);
+  padding: 0;
+  line-height: calc(var(--doc-leading, 1.42) * 0.97);
+}
+.tpl-sidebar .doc-rail {
+  background: #242e39;
+  color: #dbe3ea;
+  padding: var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.58);
+}
+.tpl-sidebar .doc-main {
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+/* Photo leads the rail -- the portrait introduces the person before their
+   contact details do. Absent a photo, contact simply moves up. */
+.tpl-sidebar .doc-photo {
+  width: 30mm;
+  height: 30mm;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  border: 2.5pt solid rgba(255, 255, 255, 0.28);
+  margin: 0 0 7pt;
+}
+.tpl-sidebar .doc-rail .doc-section-title {
+  font-size: 8.5pt;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #9fb0bf;
+  margin: 0 0 4pt;
+}
+.tpl-sidebar .doc-rail .doc-contact {
+  font-size: 8.5pt;
+  color: #dbe3ea;
+  word-break: break-word;
+}
+.tpl-sidebar .doc-rail .doc-link {
+  color: #eef2f6;
+}
+.tpl-sidebar .doc-rail .doc-tag {
+  border-color: rgba(255, 255, 255, 0.32);
+  color: #edf1f5;
+}
+.tpl-sidebar .doc-rail .doc-skillgroup-label {
+  display: block;
+  color: #eef2f6;
+}
+.tpl-sidebar .doc-rail .doc-item-meta,
+.tpl-sidebar .doc-rail .doc-langrow .doc-item-meta {
+  color: #a9b7c3;
+}
+.tpl-sidebar .doc-name {
+  font-size: var(--doc-name-size, 20pt);
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  color: #1a222c;
+}
+.tpl-sidebar .doc-headline {
+  font-weight: 550;
+  color: #46505c;
+}
+.tpl-sidebar .doc-main .doc-header {
+  padding-bottom: 5pt;
+  border-bottom: 1pt solid #23282e;
+  margin-bottom: 0;
+}
+.tpl-sidebar .doc-main .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 5.5pt);
+}
+.tpl-sidebar .doc-main .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 5.5pt);
+}
+.tpl-sidebar .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #273038;
+  margin-bottom: 3pt;
+  padding-bottom: 0.75pt;
+  border-bottom: 0.5pt solid #ccd3da;
+}
+
+/* -- Banner: a solid band carries the identity; the body stays disciplined - */
+.tpl-banner {
+  padding: 0;
+}
+.tpl-banner .doc-band,
+.tpl-banner .doc-header {
+  background: var(--doc-accent, #374151);
+  color: #fff;
+  /* The band is a header, not a cover page: vertical padding held to 60% of
+     the page margin so raising the margin cannot swell the band. */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.6) var(--doc-margin-x, 15mm);
+  display: flex;
+  align-items: center;
+  gap: 7mm;
+}
+.tpl-banner .doc-photo {
+  width: 23mm;
+  height: 23mm;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  border: 2.5pt solid rgba(255, 255, 255, 0.85);
+}
+.tpl-banner .doc-name {
+  font-size: var(--doc-name-size, 21pt);
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.tpl-banner .doc-headline {
+  margin-top: 2pt;
+  color: rgba(255, 255, 255, 0.92);
+}
+.tpl-banner .doc-contact {
+  margin-top: 5pt;
+  font-size: 8.5pt;
+  color: rgba(255, 255, 255, 0.94);
+}
+.tpl-banner .doc-contact-sep {
+  color: rgba(255, 255, 255, 0.55);
+}
+.tpl-banner .doc-body {
+  padding: calc(var(--doc-margin-y, 14mm) * 0.8) var(--doc-margin-x, 15mm)
+    var(--doc-margin-y, 14mm);
+}
+.tpl-banner .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 8pt);
+}
+.tpl-banner .doc-body .doc-section:first-of-type {
+  margin-top: 0;
+}
+.tpl-banner .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--doc-accent, #374151);
+  margin-bottom: 4pt;
+  display: flex;
+  align-items: center;
+  gap: 6pt;
+}
+/* The rule grows out of the title rather than sitting under it. */
+.tpl-banner .doc-section-title::after {
+  content: '';
+  flex: 1;
+  height: 0.75pt;
+  background: #c3cad2;
+}
+
+/* -- Creative: identity in a deep flat band, disciplined serif-free body --- */
+.tpl-creative {
+  padding: 0;
+  font-family: var(--doc-font, 'Lato', sans-serif);
+  /* Lato's tall x-height reads larger than its metrics; a slightly closer
+     leading keeps the page composed without shrinking type. */
+  line-height: calc(var(--doc-leading, 1.42) * 0.94);
+}
+.tpl-creative .doc-band {
+  /* One flat, deep indigo. No gradients, no second hue: the restraint is what
+     keeps a coloured header looking composed rather than decorated. */
+  background: #2e3a80;
+  color: #eef1fc;
+  padding: 6.5mm var(--doc-margin-x, 15mm);
+  display: flex;
+  align-items: center;
+  gap: 7mm;
+}
+.tpl-creative .doc-photo {
+  width: 21mm;
+  height: 21mm;
+  border-radius: 3mm;
+  object-fit: cover;
+  flex: none;
+  border: 2pt solid rgba(238, 241, 252, 0.45);
+}
+.tpl-creative .doc-band .doc-name {
+  font-size: var(--doc-name-size, 23pt);
+  letter-spacing: -0.015em;
+  color: #ffffff;
+}
+.tpl-creative .doc-band .doc-headline {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: var(--doc-title-size, 10pt);
+  color: #c9d2f2;
+  margin-top: 2pt;
+}
+.tpl-creative .doc-band .doc-contact {
+  margin-top: 4pt;
+  font-size: 8.5pt;
+  color: #c9d2f2;
+}
+.tpl-creative .doc-band .doc-contact-sep {
+  color: rgba(201, 210, 242, 0.6);
+}
+.tpl-creative .doc-body {
+  padding: calc(var(--doc-margin-y, 14mm) * 0.72) var(--doc-margin-x, 15mm)
+    var(--doc-margin-y, 14mm);
+}
+.tpl-creative .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 6.5pt);
+}
+.tpl-creative .doc-body .doc-section:first-of-type {
+  margin-top: 0;
+}
+.tpl-creative .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: #2e3a80;
+  margin-bottom: 3.5pt;
+  position: relative;
+  padding-bottom: 2.5pt;
+}
+.tpl-creative .doc-section-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 18pt;
+  height: 2pt;
+  background: #2e3a80;
+}
+
+.tpl-modern-min .doc-item + .doc-item {
+  margin-top: calc(var(--doc-gap, 1) * 3pt);
+}
+
+/* -- Professional (portal-pro): dark left rail, banded headers ------------- */
+.tpl-portal-pro {
+  display: grid;
+  grid-template-columns: 70mm 1fr;
+  font-family: var(--doc-font, Georgia, 'Times New Roman', serif);
+}
+.tpl-portal-pro .doc-rail {
+  background: #1e293b;
+  color: #e2e8f0;
+  padding: var(--doc-margin-y, 14mm) 5mm var(--doc-margin-y, 14mm) var(--doc-margin-x, 12mm);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.tpl-portal-pro .doc-rail .doc-name {
+  font-size: var(--doc-name-size, 18pt);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 2pt;
+}
+.tpl-portal-pro .doc-rail .doc-headline {
+  font-size: var(--doc-title-size, 9.5pt);
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 0;
+  font-weight: 500;
+}
+.tpl-portal-pro .doc-rail .doc-photo {
+  width: 28mm;
+  height: 28mm;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 6pt 0;
+  border: 2pt solid rgba(255,255,255,0.2);
+}
+.tpl-portal-pro .doc-rail .doc-contact {
+  font-size: 8pt;
+  color: #cbd5e1;
+  margin-top: 4pt;
+}
+.tpl-portal-pro .doc-rail .doc-contact-item {
+  gap: 3pt;
+}
+.tpl-portal-pro .doc-rail .doc-icon {
+  width: 0.85em;
+  height: 0.85em;
+  opacity: 0.7;
+}
+.tpl-portal-pro .doc-rail .doc-section {
+  margin-top: 8pt;
+}
+.tpl-portal-pro .doc-rail .doc-section-title {
+  font-size: 9pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #94a3b8;
+  margin-bottom: 4pt;
+  padding: 3pt 0;
+  border-bottom: 0.5pt solid rgba(255,255,255,0.15);
+}
+.tpl-portal-pro .doc-rail .doc-skillgroup-label {
+  color: #e2e8f0;
+}
+.tpl-portal-pro .doc-rail .doc-skilllines {
+  padding-left: 10pt;
+  color: #cbd5e1;
+  font-size: 9pt;
+}
+.tpl-portal-pro .doc-rail .doc-langrow {
+  font-size: 9pt;
+  color: #cbd5e1;
+}
+.tpl-portal-pro .doc-main {
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+.tpl-portal-pro .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 11pt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1e293b;
+  font-weight: 700;
+  margin-bottom: 5pt;
+  padding-bottom: 4pt;
+  border-bottom: 1.5pt solid #e2e8f0;
+}
+
+/* -- Modern Deep: dark rail with profile and dot-scale languages ---------- */
+.tpl-modern-deep {
+  display: grid;
+  grid-template-columns: 68mm 1fr;
+  font-family: var(--doc-font, 'Merriweather', Georgia, serif);
+}
+.tpl-modern-deep .doc-rail {
+  background: #1a1f2e;
+  color: #d1d5db;
+  padding: var(--doc-margin-y, 14mm) 5mm var(--doc-margin-y, 14mm) var(--doc-margin-x, 12mm);
+  display: flex;
+  flex-direction: column;
+}
+.tpl-modern-deep .doc-rail .doc-name {
+  font-size: var(--doc-name-size, 17pt);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: 2pt;
+}
+.tpl-modern-deep .doc-rail .doc-headline {
+  font-size: var(--doc-title-size, 8.5pt);
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 0;
+}
+.tpl-modern-deep .doc-rail .doc-photo {
+  width: 26mm;
+  height: 26mm;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 6pt 0;
+  border: 2pt solid rgba(255,255,255,0.15);
+}
+.tpl-modern-deep .doc-rail .doc-contact {
+  font-size: 7.5pt;
+  color: #9ca3af;
+  margin-top: 4pt;
+}
+.tpl-modern-deep .doc-rail .doc-icon {
+  width: 0.8em;
+  height: 0.8em;
+  opacity: 0.6;
+}
+.tpl-modern-deep .doc-rail .doc-section {
+  margin-top: 7pt;
+}
+.tpl-modern-deep .doc-rail .doc-section-title {
+  font-size: 8.5pt;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #9ca3af;
+  margin-bottom: 3pt;
+  padding: 2pt 0;
+  border-bottom: 0.5pt solid rgba(255,255,255,0.12);
+}
+.tpl-modern-deep .doc-rail .doc-summary {
+  font-size: 8.5pt;
+  line-height: 1.45;
+  color: #d1d5db;
+  text-align: justify;
+}
+.tpl-modern-deep .doc-rail .doc-langrow {
+  font-size: 8pt;
+  color: #d1d5db;
+}
+.tpl-modern-deep .doc-rail .doc-lang-dots {
+  display: inline-flex;
+  gap: 2pt;
+  margin-left: 4pt;
+}
+.tpl-modern-deep .doc-rail .doc-lang-dot {
+  width: 5pt;
+  height: 5pt;
+  border-radius: 50%;
+  background: #4b5563;
+}
+.tpl-modern-deep .doc-rail .doc-lang-dot.filled {
+  background: #60a5fa;
+}
+.tpl-modern-deep .doc-main {
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+.tpl-modern-deep .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 11pt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1a1f2e;
+  font-weight: 700;
+  margin-bottom: 5pt;
+  padding-bottom: 4pt;
+  border-bottom: 1.5pt solid #d1d5db;
+}
+
+/* -- Serif Classic (serif-ats): Times, centred, ruled title-case headers --- */
+.tpl-serif-ats {
+  font-family: var(--doc-font, 'Times New Roman', Times, serif);
+}
+.tpl-serif-ats .doc-header {
+  text-align: center;
+  padding-bottom: 6pt;
+  border-bottom: 0.75pt solid #191e24;
+  margin-bottom: 2pt;
+}
+.tpl-serif-ats .doc-name {
+  font-size: var(--doc-name-size, 22pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #111;
+}
+.tpl-serif-ats .doc-headline {
+  font-size: var(--doc-title-size, 11pt);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #374151;
+  font-weight: 600;
+  margin-top: 2pt;
+}
+.tpl-serif-ats .doc-contact {
+  margin-top: 5pt;
+  font-size: 9pt;
+  color: #374151;
+}
+.tpl-serif-ats .doc-contact-item {
+  gap: 3pt;
+}
+.tpl-serif-ats .doc-icon {
+  width: 0.85em;
+  height: 0.85em;
+  opacity: 0.6;
+}
+.tpl-serif-ats .doc-section-title {
+  font-size: var(--doc-heading-size, 12pt);
+  font-weight: 700;
+  text-transform: capitalize;
+  color: #111;
+  margin-bottom: 5pt;
+  padding-bottom: 3pt;
+  border-bottom: 0.5pt solid #9ca3af;
+}
+.tpl-serif-ats .doc-skillgroup {
+  margin-bottom: 2pt;
+}
+.tpl-serif-ats .doc-skillgroup-label {
+  font-weight: 700;
+}
+
+/* -- Jake's Resume: exact LaTeX replica ------------------------------------
+   Source: https://github.com/jakegut/resume
+   11pt Times, centred \scshape header, \titlerule under section titles,
+   tight \vspace{-Npt} rhythm, pipe-separated contact, underlined links. */
+.tpl-jake {
+  font-family: var(--doc-font, 'Times New Roman', Times, serif);
+  font-size: 11pt;
+  line-height: 1.15;
+  padding: 10mm 15mm;
+}
+
+/* -- Header: centred \Huge \scshape name, pipe contact ------------------- */
+.tpl-jake .doc-header {
+  text-align: center;
+  border: none;
+  padding: 0;
+  margin: 0 0 2pt;
+}
+.tpl-jake .doc-name {
+  font-size: var(--doc-name-size, 24pt);
+  font-weight: 700;
+  font-variant: small-caps;
+  color: #000;
+  letter-spacing: 0.02em;
+  line-height: 1.1;
+}
+.tpl-jake .doc-headline {
+  display: none;
+}
+.tpl-jake .doc-contact {
+  margin-top: 1pt;
+  font-size: 10pt;
+  color: #000;
+  text-align: center;
+}
+/* LaTeX uses $|$ pipe separators — hide the · glyph, show pipe via ::after */
+.tpl-jake .doc-contact-sep {
+  margin: 0 1pt;
+  color: #000;
+  font-size: 10pt;
+  display: inline-block;
+  width: 0;
+  overflow: hidden;
+  vertical-align: baseline;
+}
+.tpl-jake .doc-contact-sep::after {
+  content: '|';
+  width: auto;
+  overflow: visible;
+  margin: 0 2pt;
+}
+/* Underlined links like LaTeX \underline{} */
+.tpl-jake .doc-link,
+.tpl-jake .doc-contact a {
+  color: #000;
+  text-decoration: underline;
+  text-underline-offset: 1pt;
+}
+
+/* -- Section titles: \scshape\raggedright\large + \titlerule + vspace ---- */
+.tpl-jake .doc-section {
+  margin-top: 6pt;
+}
+.tpl-jake .doc-section:first-of-type {
+  margin-top: 4pt;
+}
+.tpl-jake .doc-section-title {
+  font-size: var(--doc-heading-size, 12pt);
+  font-variant: small-caps;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  color: #000;
+  margin: 0 0 2pt;
+  padding: 0 0 2pt;
+  border-bottom: 0.5pt solid #000;
+  line-height: 1.2;
+}
+
+/* -- Entry items: tight \vspace{-2pt} rhythm, tabular two-line heads ----- */
+.tpl-jake .doc-item {
+  break-inside: avoid;
+}
+.tpl-jake .doc-item + .doc-item {
+  margin-top: 3pt;
+}
+.tpl-jake .doc-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6pt;
+}
+.tpl-jake .doc-item-title {
+  font-weight: 700;
+  font-size: 10.5pt;
+  color: #000;
+}
+.tpl-jake .doc-item-sub {
+  font-style: italic;
+  font-weight: 400;
+  color: #000;
+  font-size: 10pt;
+}
+.tpl-jake .doc-item-date {
+  font-size: 10pt;
+  color: #000;
+  white-space: nowrap;
+  flex: none;
+}
+.tpl-jake .doc-item-meta {
+  font-size: 10pt;
+  color: #000;
+}
+
+/* -- Bullets: standard \itemize with tiny \bullet ------------------------- */
+.tpl-jake .doc-bullets {
+  margin: 1pt 0 0;
+  padding-left: 14pt;
+}
+.tpl-jake .doc-bullets li {
+  font-size: 10pt;
+  line-height: 1.35;
+  margin-bottom: 0.5pt;
+  color: #000;
+}
+.tpl-jake .doc-bullets li:last-child {
+  margin-bottom: 0;
+}
+
+/* -- Skills: bold Label followed by comma list per line ------------------- */
+.tpl-jake .doc-skillgroup {
+  margin-bottom: 1pt;
+}
+.tpl-jake .doc-skillgroup-label {
+  font-weight: 700;
+  font-size: 10.5pt;
+  color: #000;
+}
+.tpl-jake .doc-skilllines {
+  margin: 0;
+  padding-left: 14pt;
+  font-size: 10pt;
+  color: #000;
+}
+.tpl-jake .doc-skilllines li {
+  margin-bottom: 0.5pt;
+  line-height: 1.35;
+}
+
+/* -- Languages row ------------------------------------------------------- */
+.tpl-jake .doc-langrow {
+  font-size: 10pt;
+  color: #000;
+}
+
+/* -- Summary ------------------------------------------------------------ */
+.tpl-jake .doc-summary {
+  font-size: 10.5pt;
+  line-height: 1.4;
+  color: #000;
+}
+
+/* =====================================================================
+   ONE-COLUMN OVERRIDES FOR SIDEBAR TEMPLATES
+   When [data-columns="one"], collapse the sidebar grid to block layout
+   and render the rail as a full-width top header band.
+   ===================================================================== */
+
+/* -- Shared: override grid for all sidebar templates in one-column mode -- */
+[data-columns="one"].tpl-portal-pro,
+[data-columns="one"].tpl-modern-deep,
+[data-columns="one"].tpl-sidebar,
+[data-columns="one"].tpl-two-col {
+  display: block;
+}
+
+/* -- doc-rail-top: full-width header band for one-column mode ------------ */
+[data-columns="one"] .doc-rail-top {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+
+/* -- doc-rail-top-row: horizontal layout for photo + text/contact -------- */
+[data-columns="one"] .doc-rail-top-row {
+  display: flex;
+  align-items: center;
+  gap: 12pt;
+}
+
+/* -- doc-main: full-width content area in one-column mode ---------------- */
+[data-columns="one"] .doc-main {
+  width: 100%;
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+
+/* -- doc-header-top: full-width header for two-col template in 1-col ---- */
+[data-columns="one"] .doc-header-top {
+  width: 100%;
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+
+/* -- Portal Pro one-column: dark header band ---------------------------- */
+[data-columns="one"].tpl-portal-pro .doc-rail-top {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-name {
+  font-size: var(--doc-name-size, 18pt);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  margin-bottom: 2pt;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-headline {
+  font-size: var(--doc-title-size, 9.5pt);
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 0;
+  font-weight: 500;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-photo {
+  width: 28mm;
+  height: 28mm;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0;
+  border: 2pt solid rgba(255,255,255,0.2);
+  flex: none;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-contact {
+  font-size: 8pt;
+  color: #cbd5e1;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-icon {
+  width: 0.85em;
+  height: 0.85em;
+  opacity: 0.7;
+}
+[data-columns="one"].tpl-portal-pro .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 11pt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1e293b;
+  font-weight: 700;
+  margin-bottom: 5pt;
+  padding-bottom: 4pt;
+  border-bottom: 1.5pt solid #e2e8f0;
+}
+
+/* -- Modern Deep one-column: dark header band --------------------------- */
+[data-columns="one"].tpl-modern-deep .doc-rail-top {
+  background: #1a1f2e;
+  color: #d1d5db;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-name {
+  font-size: var(--doc-name-size, 17pt);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: 2pt;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-headline {
+  font-size: var(--doc-title-size, 8.5pt);
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 0;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-photo {
+  width: 26mm;
+  height: 26mm;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0;
+  border: 2pt solid rgba(255,255,255,0.15);
+  flex: none;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-contact {
+  font-size: 7.5pt;
+  color: #9ca3af;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-icon {
+  width: 0.8em;
+  height: 0.8em;
+  opacity: 0.6;
+}
+[data-columns="one"].tpl-modern-deep .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 11pt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1a1f2e;
+  font-weight: 700;
+  margin-bottom: 5pt;
+  padding-bottom: 4pt;
+  border-bottom: 1pt solid #e2e8f0;
+}
+
+/* -- Sidebar one-column: dark header band ------------------------------- */
+[data-columns="one"].tpl-sidebar .doc-rail-top {
+  background: #242e39;
+  color: #dbe3ea;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-name {
+  font-size: var(--doc-name-size, 20pt);
+  font-weight: 750;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-headline {
+  font-size: var(--doc-title-size, 9pt);
+  font-weight: 550;
+  color: #9fb0bf;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-photo {
+  width: 30mm;
+  height: 30mm;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5pt solid rgba(255, 255, 255, 0.28);
+  flex: none;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-contact {
+  font-size: 8.5pt;
+  color: #dbe3ea;
+  word-break: break-word;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-icon {
+  width: 0.85em;
+  height: 0.85em;
+  opacity: 0.7;
+}
+[data-columns="one"].tpl-sidebar .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #273038;
+  margin-bottom: 3pt;
+  padding-bottom: 0.75pt;
+  border-bottom: 0.5pt solid #ccd3da;
+}
+
+/* -- Two Column one-column: light header with border --------------------- */
+[data-columns="one"].tpl-two-col .doc-header-top {
+  background: #f2f4f7;
+  border-bottom: 1pt solid #23282e;
+  margin-bottom: 2pt;
+}
+[data-columns="one"].tpl-two-col .doc-header-top .doc-name {
+  font-size: var(--doc-name-size, 21pt);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: #1b2430;
+}
+[data-columns="one"].tpl-two-col .doc-header-top .doc-headline {
+  font-weight: 550;
+  color: #46505c;
+}
+[data-columns="one"].tpl-two-col .doc-header-top .doc-contact {
+  font-size: 8.5pt;
+  color: #37404b;
+}
+[data-columns="one"].tpl-two-col .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #273038;
+  margin-bottom: 4pt;
+  padding-bottom: 1.5pt;
+  border-bottom: 0.5pt solid #ccd3da;
 }

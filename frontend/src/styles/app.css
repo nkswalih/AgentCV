@@ -212,6 +212,10 @@
   flex: 1;
   display: grid;
   grid-template-columns: var(--pane-left) minmax(0, 1fr) var(--pane-right);
+  /* A definite row height: without it the implicit row sizes to the preview's
+     content, the centre cell grows instead of scrolling, and tall documents
+     push everything past the clip instead of scrolling inside the stage. */
+  grid-template-rows: minmax(0, 1fr);
   overflow: hidden;
 }
 
@@ -368,21 +372,109 @@
   padding: 4px 0 0;
 }
 
+/* -- Dual-column section layout (Layout editor, Two mode) --------------- */
+.dual-columns {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.dual-column {
+  flex: 1;
+  min-width: 0;
+}
+.dual-column .eyebrow {
+  margin-bottom: 4px;
+}
+.dual-column-body {
+  background: var(--ink-800);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  min-height: 60px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.dual-column-empty {
+  font-size: var(--t-xs);
+  color: var(--text-dim);
+  text-align: center;
+  padding: 16px 4px;
+  opacity: 0.6;
+}
+.col-section-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  background: var(--ink-700);
+  border: 1px solid var(--ink-500);
+  border-radius: var(--r-xs);
+  font-size: var(--t-xs);
+  color: var(--text-bright);
+  cursor: default;
+  transition: background 120ms, border-color 120ms;
+}
+.col-section-item:hover {
+  background: var(--ink-600);
+  border-color: var(--ink-400);
+}
+.col-section-item[data-dragging='true'] {
+  opacity: 0.5;
+  background: var(--ink-600);
+}
+.col-section-item .grip {
+  flex-shrink: 0;
+}
+.col-section-item .doc-icon {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  color: var(--text-dim);
+}
+.col-section-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* --------------------------------------------------------- stage (centre) -- */
+
+/* The grid cell that owns the scrolling stage and the floating zoom bar. */
+.preview-wrap {
+  position: relative;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  display: flex;
+}
+.preview-wrap .stage {
+  flex: 1;
+  min-height: 0;
+}
 
 .stage {
   background: var(--ink-900);
   overflow: auto;
   display: flex;
-  justify-content: center;
+  /* No justify-content here on purpose: with a centred main axis, an
+     overflowing child is aligned UNSAFELY -- it spills past the scroll origin,
+     and the spilled part can never be scrolled back into view. The scaler's
+     own margin:auto centres it when there is room and collapses to flush when
+     there is not, keeping every pixel reachable at any zoom. */
   padding: 40px 48px 64px;
 }
 
 /* Wrapper reserves the *scaled* footprint, so the shrunk page does not leave a
-   full-size hole of empty scroll area beneath it. */
+   full-size hole of empty scroll area beneath it. margin:auto centres at every
+   zoom level while keeping overflowed edges reachable -- justify-content would
+   clip the top-left once the page grows wider than the pane. */
 .page-scaler {
   position: relative;
   flex: none;
+  margin: auto;
 }
 
 .page-frame {
@@ -391,6 +483,63 @@
   left: 0;
   transform: scale(var(--preview-scale, 1));
   transform-origin: top left;
+}
+
+/* Floating zoom control, pinned to the pane corner -- outside the scroller so
+   it never travels with the page. */
+.zoom-bar {
+  position: absolute;
+  right: 14px;
+  bottom: 12px;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px;
+  background: var(--ink-800);
+  border: 1px solid var(--ink-600);
+  border-radius: 999px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+}
+.zoom-btn,
+.zoom-fit {
+  height: 24px;
+  min-width: 24px;
+  padding: 0 7px;
+  border: none;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text-mid);
+  font-size: var(--t-sm);
+  cursor: pointer;
+  transition: color 120ms var(--ease), background-color 120ms var(--ease);
+}
+.zoom-btn:hover:not(:disabled),
+.zoom-fit:hover {
+  color: var(--text-hi);
+  background: var(--ink-700);
+}
+.zoom-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+.zoom-value {
+  min-width: 46px;
+  text-align: center;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  color: var(--cyan);
+}
+.zoom-divider {
+  width: 1px;
+  height: 14px;
+  background: var(--ink-600);
+  margin: 0 3px;
+}
+.zoom-fit[data-active='true'] {
+  background: var(--cyan-glow);
+  color: var(--cyan);
 }
 
 /* Where Chromium will actually break the sheet. Shown only when content
@@ -484,6 +633,31 @@
   font-family: var(--font-mono);
   font-size: 10px;
   color: var(--cyan);
+}
+
+/* Column width +/- controls (Layout section in left pane) */
+.col-width-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.col-width-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.col-width-label {
+  font-size: var(--t-xs);
+  color: var(--text-dim);
+  width: 42px;
+  flex-shrink: 0;
+}
+.col-width-value {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--cyan);
+  width: 32px;
+  text-align: center;
 }
 
 .input,
@@ -776,6 +950,120 @@ input[type='range']::-moz-range-thumb {
   padding: 10px 14px 14px;
   display: flex;
   justify-content: flex-end;
+}
+.modal-title {
+  font-family: var(--font-display);
+  font-size: var(--t-lg);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+/* ------------------------------------------------------- template picker -- */
+
+/* The creation dialog is wider than the export one -- it holds a gallery of
+   real page miniatures, and height stays bounded with its own scroll. */
+.modal-wide {
+  width: 880px;
+  max-height: min(88vh, 780px);
+  display: flex;
+  flex-direction: column;
+}
+.modal-wide .modal-body {
+  overflow-y: auto;
+}
+
+.tp-filters {
+  display: flex;
+  gap: 6px;
+  padding: 12px 14px 0;
+}
+
+.chip {
+  border: 1px solid var(--ink-600);
+  background: transparent;
+  color: var(--text-mid);
+  font-size: var(--t-xs);
+  font-weight: 500;
+  border-radius: 999px;
+  padding: 4px 11px;
+  cursor: pointer;
+  transition: background 120ms var(--ease), color 120ms var(--ease),
+    border-color 120ms var(--ease);
+}
+.chip:hover {
+  color: var(--text-hi);
+  border-color: var(--ink-500);
+}
+.chip[data-active='true'] {
+  background: var(--cyan-glow);
+  border-color: var(--cyan-dim);
+  color: var(--text-hi);
+}
+
+/* Cards flow edge to edge; each shows the design at near-letter scale. */
+.tp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
+  gap: 12px;
+  padding-top: 14px !important;
+}
+
+.tp-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+  padding: 10px;
+  background: var(--ink-850);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  color: inherit;
+  font-size: inherit;
+  transition: border-color 120ms var(--ease), transform 120ms var(--ease),
+    box-shadow 120ms var(--ease);
+}
+.tp-card:hover:not(:disabled) {
+  border-color: var(--cyan-dim);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+.tp-card:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+.tp-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 2px;
+}
+.tp-name {
+  font-size: var(--t-sm);
+  font-weight: 600;
+}
+.tp-note {
+  font-size: var(--t-xs);
+  color: var(--text-mid);
+  line-height: 1.45;
+}
+.tp-note.dim {
+  margin-top: -3px;
+  color: var(--text-lo);
+}
+.tp-busy {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 14, 18, 0.55);
+  border-radius: inherit;
+  font-size: var(--t-sm);
+  color: var(--text-hi);
 }
 
 /* Format cards -- the whole surface is clickable, note explains the tradeoff. */
@@ -1089,6 +1377,63 @@ input[type='range']::-moz-range-thumb {
   top: 46px;
 }
 
+/* Right-hand rail (Two Column): mirrored rail, content stays left. */
+.template-mini > .mini-rail.right {
+  inset: 0 0 0 auto;
+  border-right: none;
+  border-left: 2px solid var(--mini-accent);
+}
+.mini-rail.right ~ .mini-name,
+.mini-rail.right ~ .mini-rule,
+.mini-rail.right ~ .mini-lines {
+  left: 12px;
+  right: 38%;
+}
+.mini-rail.right ~ .mini-lines::before {
+  width: 70%;
+}
+.mini-rail.right ~ .mini-lines::after {
+  width: 82%;
+}
+.mini-rail.right ~ .mini-lines.short {
+  right: 40%;
+}
+
+/* Portrait masthead (Photo Pro): a photo block beside the name. */
+.template-mini > .mini-portrait {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  width: 16px;
+  height: 20px;
+  border-radius: 3px;
+  background: #d9dee4;
+  border: 1.5px solid var(--mini-accent);
+}
+.mini-portrait ~ .mini-name,
+.mini-portrait ~ .mini-rule,
+.mini-portrait ~ .mini-lines,
+.mini-portrait ~ .mini-lines.short {
+  left: 34px;
+}
+.mini-portrait ~ .mini-name {
+  right: 12px;
+}
+
+/* Timeline: a dotted spine with the text indented past it. */
+.mini-name.spine,
+.mini-rule.spine,
+.mini-lines.spine,
+.mini-lines.spine::before,
+.mini-lines.spine::after {
+  left: 30px;
+}
+.mini-rule.spine {
+  border-left: 2px solid var(--mini-accent);
+  background: none;
+  height: 34px;
+}
+
 .editor-error {
   flex: none;
   padding: 7px 14px;
@@ -1096,6 +1441,88 @@ input[type='range']::-moz-range-thumb {
   background: rgba(224, 69, 154, 0.09);
   border-bottom: 1px solid var(--magenta);
   font-size: var(--t-sm);
+}
+
+/* ------------------------------------------------------------ home shell -- */
+
+/* The signed-in shell: a slim sidebar for the three sections of a job hunt,
+   with the active section filling the rest of the window. */
+.home-shell {
+  height: 100%;
+  display: flex;
+}
+
+.home-side {
+  width: 224px;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 18px 14px;
+  background: var(--ink-850);
+  border-right: 1px solid var(--ink-600);
+}
+
+.side-brand {
+  padding: 0 8px;
+}
+
+.side-cta {
+  justify-content: center;
+}
+
+.side-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: var(--r-sm);
+  font-size: var(--t-base);
+  font-weight: 500;
+  color: var(--text-lo);
+  text-decoration: none;
+  transition: background 120ms var(--ease), color 120ms var(--ease);
+}
+.nav-item:hover {
+  background: var(--ink-800);
+  color: var(--text-hi);
+}
+.nav-item.active {
+  background: var(--cyan-glow);
+  color: var(--text-hi);
+}
+.nav-item.active svg {
+  color: var(--cyan);
+}
+
+.side-foot {
+  margin-top: auto;
+  padding: 0 8px;
+}
+
+.home-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Section header shared by every page that lives under the sidebar. */
+.page-head {
+  margin-bottom: 22px;
+}
+.page-title {
+  font-family: var(--font-display);
+  font-size: var(--t-xl);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 6px;
 }
 
 /* ------------------------------------------------------------- dashboard -- */
@@ -1107,42 +1534,87 @@ input[type='range']::-moz-range-thumb {
 }
 
 .dash-inner {
-  max-width: 760px;
+  max-width: 1080px;
   margin: 0 auto;
 }
 
-.dash-list {
+/* Thumbnail gallery: cards flow edge to edge and wrap as the pane allows. */
+.thumb-grid {
   list-style: none;
   margin: 0;
   padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: 14px;
 }
 
 .dash-card {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
   background: var(--ink-850);
   border: 1px solid var(--ink-600);
   border-radius: var(--r-md);
-  transition: border-color 120ms var(--ease), background 120ms var(--ease);
+  transition: border-color 120ms var(--ease), background 120ms var(--ease),
+    transform 120ms var(--ease), box-shadow 120ms var(--ease);
 }
 .dash-card:hover {
   border-color: var(--ink-500);
   background: var(--ink-800);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.35);
 }
 
 .dash-card-main {
-  flex: 1;
-  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 7px;
   text-decoration: none;
   color: inherit;
+  min-width: 0;
+}
+
+/* The miniature sheet. aspect-ratio follows the document's own paper size via
+   an inline style; overflow hidden crops multi-page documents to their first
+   sheet, like a paper stack seen from above. */
+.thumb-window {
+  position: relative;
+  overflow: hidden;
+  background: var(--paper);
+  border-radius: 4px;
+  border: 1px solid var(--ink-500);
+}
+.thumb-scaler {
+  transform-origin: top left;
+}
+.thumb-frame {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: scale(var(--preview-scale, 1));
+  transform-origin: top left;
+}
+.thumb-pages {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+  color: #374151;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(20, 24, 29, 0.18);
+  border-radius: 999px;
+  padding: 1px 7px;
+}
+.thumb-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: var(--t-xs);
+  color: var(--text-lo);
 }
 
 .dash-card-name {
@@ -1204,5 +1676,32 @@ input[type='range']::-moz-range-thumb {
   }
   .stage {
     padding: 20px 14px 40px;
+  }
+
+  /* The sidebar folds into a top bar; the CTA and footer drop out since the
+     dashboard's own empty state still offers creation. */
+  .home-shell {
+    flex-direction: column;
+  }
+  .home-side {
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-right: none;
+    border-bottom: 1px solid var(--ink-600);
+  }
+  .side-nav {
+    flex-direction: row;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .nav-item {
+    padding: 7px 9px;
+  }
+  .side-cta,
+  .side-foot {
+    display: none;
   }
 }
