@@ -207,12 +207,12 @@ export function ResumePage({ doc, forExport = false }: Props) {
       return (
         <div {...rootProps}>
           <aside className="doc-rail doc-rail-top">
-            {name && <h1 className="doc-name">{name}</h1>}
-            {headline && <p className="doc-headline">{headline}</p>}
-            <div className="doc-rail-top-row">
-              {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+            {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+            <div className="doc-rail-top-text">
+              {name && <h1 className="doc-name">{name}</h1>}
+              {headline && <p className="doc-headline">{headline}</p>}
               {hasContact(basics) && (
-                <Contact basics={basics} stacked icons={settings.showIcons} />
+                <Contact basics={basics} icons={settings.showIcons} />
               )}
             </div>
           </aside>
@@ -236,15 +236,36 @@ export function ResumePage({ doc, forExport = false }: Props) {
     if (headerPos === 'right') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `1fr ${colW}%` }}>
-          <aside className="doc-rail">{railContent}</aside>
           <div className="doc-main">{mainContent}</div>
+          <aside className="doc-rail">{railContent}</aside>
         </div>
       )
     }
+    // headerPos === 'top': full-width dark header, two-column content below
     return (
       <div {...rootProps}>
-        <aside className="doc-rail">{railContent}</aside>
-        <div className="doc-main">{mainContent}</div>
+        <aside className="doc-rail doc-rail-top">
+          {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+          <div className="doc-rail-top-text">
+            {name && <h1 className="doc-name">{name}</h1>}
+            {headline && <p className="doc-headline">{headline}</p>}
+            {hasContact(basics) && (
+              <Contact basics={basics} icons={settings.showIcons} />
+            )}
+          </div>
+        </aside>
+        <div className="doc-columns" style={{ display: 'grid', gridTemplateColumns: `${colW}% 1fr` }}>
+          <div className="doc-col doc-col-left">
+            {rail.map((s) => (
+              <DocSection key={s.id} section={s} />
+            ))}
+          </div>
+          <div className="doc-col doc-col-right">
+            {main.map((s) => (
+              <DocSection key={s.id} section={s} />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -276,12 +297,12 @@ export function ResumePage({ doc, forExport = false }: Props) {
       return (
         <div {...rootProps}>
           <aside className="doc-rail doc-rail-top">
-            {name && <h1 className="doc-name">{name}</h1>}
-            {headline && <p className="doc-headline">{headline}</p>}
-            <div className="doc-rail-top-row">
-              {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+            {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+            <div className="doc-rail-top-text">
+              {name && <h1 className="doc-name">{name}</h1>}
+              {headline && <p className="doc-headline">{headline}</p>}
               {hasContact(basics) && (
-                <Contact basics={basics} stacked icons={settings.showIcons} />
+                <Contact basics={basics} icons={settings.showIcons} />
               )}
             </div>
           </aside>
@@ -305,15 +326,36 @@ export function ResumePage({ doc, forExport = false }: Props) {
     if (headerPos === 'right') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `1fr ${colW}%` }}>
-          <aside className="doc-rail">{railContent}</aside>
           <div className="doc-main">{mainContent}</div>
+          <aside className="doc-rail">{railContent}</aside>
         </div>
       )
     }
+    // headerPos === 'top': full-width dark header, two-column content below
     return (
       <div {...rootProps}>
-        <aside className="doc-rail">{railContent}</aside>
-        <div className="doc-main">{mainContent}</div>
+        <aside className="doc-rail doc-rail-top">
+          {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+          <div className="doc-rail-top-text">
+            {name && <h1 className="doc-name">{name}</h1>}
+            {headline && <p className="doc-headline">{headline}</p>}
+            {hasContact(basics) && (
+              <Contact basics={basics} icons={settings.showIcons} />
+            )}
+          </div>
+        </aside>
+        <div className="doc-columns" style={{ display: 'grid', gridTemplateColumns: `${colW}% 1fr` }}>
+          <div className="doc-col doc-col-left">
+            {rail.map((s) => (
+              <DocSection key={s.id} section={s} />
+            ))}
+          </div>
+          <div className="doc-col doc-col-right">
+            {main.map((s) => (
+              <DocSection key={s.id} section={s} />
+            ))}
+          </div>
+        </div>
       </div>
     )
   }
@@ -338,16 +380,14 @@ export function ResumePage({ doc, forExport = false }: Props) {
       return (
         <div {...rootProps}>
           <aside className="doc-rail doc-rail-top">
-            <div className="doc-rail-top-row">
-              {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
-              <div>
-                {name && <h1 className="doc-name">{name}</h1>}
-                {headline && <p className="doc-headline">{headline}</p>}
-              </div>
+            {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+            <div className="doc-rail-top-text">
+              {name && <h1 className="doc-name">{name}</h1>}
+              {headline && <p className="doc-headline">{headline}</p>}
+              {hasContact(basics) && (
+                <Contact basics={basics} icons={settings.showIcons} />
+              )}
             </div>
-            {hasContact(basics) && (
-              <Contact basics={basics} stacked icons={settings.showIcons} />
-            )}
           </aside>
           <div className="doc-main">
             {ordered.map((s) => (
@@ -384,6 +424,11 @@ export function ResumePage({ doc, forExport = false }: Props) {
     if (headerPos === 'right') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `1fr ${colW}%` }}>
+          <div className="doc-main">
+            {main.map((s) => (
+              <DocSection key={s.id} section={s} />
+            ))}
+          </div>
           <aside className="doc-rail">
             {sidebarHeader}
             {hasContact(basics) && (
@@ -396,32 +441,33 @@ export function ResumePage({ doc, forExport = false }: Props) {
               <DocSection key={s.id} section={s} tags />
             ))}
           </aside>
-          <div className="doc-main">
+        </div>
+      )
+    }
+    // headerPos === 'top': full-width dark header, two-column content below
+    return (
+      <div {...rootProps}>
+        <aside className="doc-rail doc-rail-top">
+          {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+          <div className="doc-rail-top-text">
+            {name && <h1 className="doc-name">{name}</h1>}
+            {headline && <p className="doc-headline">{headline}</p>}
+            {hasContact(basics) && (
+              <Contact basics={basics} icons={settings.showIcons} />
+            )}
+          </div>
+        </aside>
+        <div className="doc-columns" style={{ display: 'grid', gridTemplateColumns: `${colW}% 1fr` }}>
+          <div className="doc-col doc-col-left">
+            {rail.map((s) => (
+              <DocSection key={s.id} section={s} />
+            ))}
+          </div>
+          <div className="doc-col doc-col-right">
             {main.map((s) => (
               <DocSection key={s.id} section={s} />
             ))}
           </div>
-        </div>
-      )
-    }
-    return (
-      <div {...rootProps}>
-        <aside className="doc-rail">
-          {hasContact(basics) && (
-            <section className="doc-section">
-              <h2 className="doc-section-title">Contact</h2>
-              <Contact basics={basics} stacked icons={settings.showIcons} />
-            </section>
-          )}
-          {rail.map((s) => (
-            <DocSection key={s.id} section={s} tags />
-          ))}
-        </aside>
-        <div className="doc-main">
-          {sidebarHeader}
-          {main.map((s) => (
-            <DocSection key={s.id} section={s} />
-          ))}
         </div>
       </div>
     )
@@ -444,11 +490,14 @@ export function ResumePage({ doc, forExport = false }: Props) {
       return (
         <div {...rootProps}>
           <header className="doc-header doc-header-top">
-            {name && <h1 className="doc-name">{name}</h1>}
-            {headline && <p className="doc-headline">{headline}</p>}
-            {hasContact(basics) && (
-              <Contact basics={basics} stacked icons={settings.showIcons} />
-            )}
+            {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+            <div className="doc-rail-top-text">
+              {name && <h1 className="doc-name">{name}</h1>}
+              {headline && <p className="doc-headline">{headline}</p>}
+              {hasContact(basics) && (
+                <Contact basics={basics} icons={settings.showIcons} />
+              )}
+            </div>
           </header>
           <div className="doc-main">
             {ordered.map((s) => (
@@ -485,12 +534,6 @@ export function ResumePage({ doc, forExport = false }: Props) {
     if (headerPos === 'right') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `1fr ${colW}%` }}>
-          <div className="doc-main">
-            {twoColHeader}
-            {main.map((s) => (
-              <DocSection key={s.id} section={s} />
-            ))}
-          </div>
           <aside className="doc-rail">
             {hasContact(basics) && (
               <section className="doc-section">
@@ -502,28 +545,40 @@ export function ResumePage({ doc, forExport = false }: Props) {
               <DocSection key={s.id} section={s} tags />
             ))}
           </aside>
+          <div className="doc-main">
+            {twoColHeader}
+            {main.map((s) => (
+              <DocSection key={s.id} section={s} />
+            ))}
+          </div>
         </div>
       )
     }
+    // headerPos === 'top': full-width header with border, two-column content below
     return (
       <div {...rootProps}>
-        <div className="doc-main">
-          {twoColHeader}
-          {main.map((s) => (
-            <DocSection key={s.id} section={s} />
-          ))}
+        <header className="doc-header doc-header-top">
+          {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+          <div className="doc-rail-top-text">
+            {name && <h1 className="doc-name">{name}</h1>}
+            {headline && <p className="doc-headline">{headline}</p>}
+            {hasContact(basics) && (
+              <Contact basics={basics} icons={settings.showIcons} />
+            )}
+          </div>
+        </header>
+        <div className="doc-columns" style={{ display: 'grid', gridTemplateColumns: `${colW}% 1fr` }}>
+          <div className="doc-col doc-col-left">
+            {main.map((s) => (
+              <DocSection key={s.id} section={s} />
+            ))}
+          </div>
+          <div className="doc-col doc-col-right">
+            {rail.map((s) => (
+              <DocSection key={s.id} section={s} />
+            ))}
+          </div>
         </div>
-        <aside className="doc-rail">
-          {hasContact(basics) && (
-            <section className="doc-section">
-              <h2 className="doc-section-title">Contact</h2>
-              <Contact basics={basics} stacked icons={settings.showIcons} />
-            </section>
-          )}
-          {rail.map((s) => (
-            <DocSection key={s.id} section={s} tags />
-          ))}
-        </aside>
       </div>
     )
   }
@@ -579,7 +634,7 @@ export function ResumePage({ doc, forExport = false }: Props) {
       <div {...rootProps}>
         {bandHeader}
         {isTwoCol ? (
-          <div className="doc-columns">
+          <div className="doc-columns" style={{ display: 'grid', gridTemplateColumns: `${colW}% 1fr` }}>
             <div className="doc-col doc-col-left">
               {[...leftSections, ...unassigned].map((s: Section) => (
                 <DocSection key={s.id} section={s} />

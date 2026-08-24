@@ -1623,9 +1623,10 @@
 }
 
 /* =====================================================================
-   ONE-COLUMN OVERRIDES FOR SIDEBAR TEMPLATES
+   ONE-COLUMN & TOP-HEADER OVERRIDES FOR SIDEBAR TEMPLATES
    When [data-columns="one"], collapse the sidebar grid to block layout
    and render the rail as a full-width top header band.
+   When [data-header="top"] in two-column mode, same override applies.
    ===================================================================== */
 
 /* -- Shared: override grid for all sidebar templates in one-column mode -- */
@@ -1636,46 +1637,129 @@
   display: block;
 }
 
-/* -- doc-rail-top: full-width header band for one-column mode ------------ */
-[data-columns="one"] .doc-rail-top {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+/* -- Also override grid when header=top in two-column mode --------------- */
+[data-columns="two"][data-header="top"].tpl-portal-pro,
+[data-columns="two"][data-header="top"].tpl-modern-deep,
+[data-columns="two"][data-header="top"].tpl-sidebar,
+[data-columns="two"][data-header="top"].tpl-two-col {
+  display: block;
 }
 
-/* -- doc-rail-top-row: horizontal layout for photo + text/contact -------- */
-[data-columns="one"] .doc-rail-top-row {
+/* -- doc-columns in top-header mode: horizontal page padding ------------- */
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-columns,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-columns,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-columns,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-columns,
+[data-columns="two"][data-header="top"].tpl-creative .doc-columns {
+  padding: 0 var(--doc-margin-x, 15mm);
+}
+
+/* -- Creative top-header: compact the band -------------------------------- */
+[data-columns="one"].tpl-creative .doc-band,
+[data-columns="two"][data-header="top"].tpl-creative .doc-band {
+  padding: calc(6.5mm * 0.6) var(--doc-margin-x, 15mm);
+}
+[data-columns="one"].tpl-creative .doc-band .doc-contact,
+[data-columns="two"][data-header="top"].tpl-creative .doc-band .doc-contact {
   display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  font-size: 8pt;
+}
+[data-columns="one"].tpl-creative .doc-band .doc-contact .doc-contact-sep,
+[data-columns="two"][data-header="top"].tpl-creative .doc-band .doc-contact .doc-contact-sep {
+  margin: 0 4pt;
+}
+
+/* -- doc-rail-top: full-width header band -------------------------------- */
+.tpl-portal-pro .doc-rail-top,
+.tpl-modern-deep .doc-rail-top,
+.tpl-sidebar .doc-rail-top {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 12pt;
+  padding: calc(var(--doc-margin-y, 14mm) * 0.5) var(--doc-margin-x, 15mm);
 }
 
-/* -- doc-main: full-width content area in one-column mode ---------------- */
-[data-columns="one"] .doc-main {
+/* -- doc-rail-top-text: profile info fills remaining width --------------- */
+.doc-rail-top-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* -- doc-rail-top-text contact: inline single line ---------------------- */
+.doc-rail-top-text .doc-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  font-size: 8pt;
+}
+.doc-rail-top-text .doc-contact .doc-contact-sep {
+  margin: 0 4pt;
+}
+
+/* -- doc-header-top: full-width header for two-col template -------------- */
+.doc-header-top {
   width: 100%;
-  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12pt;
+  padding: calc(var(--doc-margin-y, 14mm) * 0.5) var(--doc-margin-x, 15mm);
+}
+.doc-header-top .doc-rail-top-text {
+  flex: 1;
+  min-width: 0;
+}
+.doc-header-top .doc-contact {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  font-size: 8pt;
+}
+.doc-header-top .doc-contact .doc-contact-sep {
+  margin: 0 4pt;
+}
+/* Photo sizing in two-col top header */
+[data-columns="one"].tpl-two-col .doc-header-top .doc-photo,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top .doc-photo {
+  width: 24mm;
+  height: 24mm;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+/* Photo sizing in creative top header */
+[data-columns="one"].tpl-creative .doc-band .doc-photo,
+[data-columns="two"][data-header="top"].tpl-creative .doc-band .doc-photo {
+  width: 21mm;
+  height: 21mm;
+  border-radius: 3mm;
+  object-fit: cover;
+  flex: none;
 }
 
-/* -- doc-header-top: full-width header for two-col template in 1-col ---- */
-[data-columns="one"] .doc-header-top {
-  width: 100%;
-  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
-}
-
-/* -- Portal Pro one-column: dark header band ---------------------------- */
-[data-columns="one"].tpl-portal-pro .doc-rail-top {
+/* -- Portal Pro one-column / top-header: dark header band ---------------- */
+[data-columns="one"].tpl-portal-pro .doc-rail-top,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top {
   background: #1e293b;
   color: #e2e8f0;
 }
-[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-name {
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-name,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-name {
   font-size: var(--doc-name-size, 18pt);
   color: #ffffff;
   font-weight: 700;
   letter-spacing: 0.02em;
   margin-bottom: 2pt;
 }
-[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-headline {
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-headline,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-headline {
   font-size: var(--doc-title-size, 9.5pt);
   color: #94a3b8;
   text-transform: uppercase;
@@ -1683,7 +1767,8 @@
   margin-top: 0;
   font-weight: 500;
 }
-[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-photo {
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-photo,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-photo {
   width: 28mm;
   height: 28mm;
   border-radius: 50%;
@@ -1692,11 +1777,13 @@
   border: 2pt solid rgba(255,255,255,0.2);
   flex: none;
 }
-[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-contact {
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-contact,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-contact {
   font-size: 8pt;
   color: #cbd5e1;
 }
-[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-icon {
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-icon,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-icon {
   width: 0.85em;
   height: 0.85em;
   opacity: 0.7;
@@ -1712,26 +1799,30 @@
   border-bottom: 1.5pt solid #e2e8f0;
 }
 
-/* -- Modern Deep one-column: dark header band --------------------------- */
-[data-columns="one"].tpl-modern-deep .doc-rail-top {
+/* -- Modern Deep one-column / top-header: dark header band --------------- */
+[data-columns="one"].tpl-modern-deep .doc-rail-top,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top {
   background: #1a1f2e;
   color: #d1d5db;
 }
-[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-name {
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-name,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-name {
   font-size: var(--doc-name-size, 17pt);
   color: #ffffff;
   font-weight: 700;
   letter-spacing: 0.01em;
   margin-bottom: 2pt;
 }
-[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-headline {
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-headline,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-headline {
   font-size: var(--doc-title-size, 8.5pt);
   color: #9ca3af;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   margin-top: 0;
 }
-[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-photo {
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-photo,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-photo {
   width: 26mm;
   height: 26mm;
   border-radius: 50%;
@@ -1740,11 +1831,13 @@
   border: 2pt solid rgba(255,255,255,0.15);
   flex: none;
 }
-[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-contact {
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-contact,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-contact {
   font-size: 7.5pt;
   color: #9ca3af;
 }
-[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-icon {
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-icon,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-icon {
   width: 0.8em;
   height: 0.8em;
   opacity: 0.6;
@@ -1760,23 +1853,27 @@
   border-bottom: 1pt solid #e2e8f0;
 }
 
-/* -- Sidebar one-column: dark header band ------------------------------- */
-[data-columns="one"].tpl-sidebar .doc-rail-top {
+/* -- Sidebar one-column / top-header: dark header band ------------------- */
+[data-columns="one"].tpl-sidebar .doc-rail-top,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top {
   background: #242e39;
   color: #dbe3ea;
 }
-[data-columns="one"].tpl-sidebar .doc-rail-top .doc-name {
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-name,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-name {
   font-size: var(--doc-name-size, 20pt);
   font-weight: 750;
   color: #ffffff;
   letter-spacing: -0.01em;
 }
-[data-columns="one"].tpl-sidebar .doc-rail-top .doc-headline {
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-headline,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-headline {
   font-size: var(--doc-title-size, 9pt);
   font-weight: 550;
   color: #9fb0bf;
 }
-[data-columns="one"].tpl-sidebar .doc-rail-top .doc-photo {
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-photo,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-photo {
   width: 30mm;
   height: 30mm;
   border-radius: 50%;
@@ -1784,12 +1881,14 @@
   border: 2.5pt solid rgba(255, 255, 255, 0.28);
   flex: none;
 }
-[data-columns="one"].tpl-sidebar .doc-rail-top .doc-contact {
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-contact,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-contact {
   font-size: 8.5pt;
   color: #dbe3ea;
   word-break: break-word;
 }
-[data-columns="one"].tpl-sidebar .doc-rail-top .doc-icon {
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-icon,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-icon {
   width: 0.85em;
   height: 0.85em;
   opacity: 0.7;
@@ -1805,23 +1904,27 @@
   border-bottom: 0.5pt solid #ccd3da;
 }
 
-/* -- Two Column one-column: light header with border --------------------- */
-[data-columns="one"].tpl-two-col .doc-header-top {
+/* -- Two Column: light header with border -------------------------------- */
+[data-columns="one"].tpl-two-col .doc-header-top,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top {
   background: #f2f4f7;
   border-bottom: 1pt solid #23282e;
   margin-bottom: 2pt;
 }
-[data-columns="one"].tpl-two-col .doc-header-top .doc-name {
+[data-columns="one"].tpl-two-col .doc-header-top .doc-name,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top .doc-name {
   font-size: var(--doc-name-size, 21pt);
   font-weight: 750;
   letter-spacing: -0.02em;
   color: #1b2430;
 }
-[data-columns="one"].tpl-two-col .doc-header-top .doc-headline {
+[data-columns="one"].tpl-two-col .doc-header-top .doc-headline,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top .doc-headline {
   font-weight: 550;
   color: #46505c;
 }
-[data-columns="one"].tpl-two-col .doc-header-top .doc-contact {
+[data-columns="one"].tpl-two-col .doc-header-top .doc-contact,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top .doc-contact {
   font-size: 8.5pt;
   color: #37404b;
 }
