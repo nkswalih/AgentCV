@@ -39,8 +39,11 @@ const ADDABLE: SectionType[] = [
 ]
 
 export function LeftPane() {
-  const { doc, addSection, moveSection, moveSectionToColumn, updateSettings } = useEditor()
+  const { doc, addSection, moveSection, moveSectionToColumn, updateSettings, updateBasics } = useEditor()
   const sensors = useDragSensors()
+  const photoInputRef = useRef<HTMLInputElement>(null)
+  const [photoBusy, setPhotoBusy] = useState(false)
+  const [photoError, setPhotoError] = useState<string | null>(null)
   if (!doc) return null
 
   const currentDoc = doc
@@ -153,8 +156,28 @@ export function LeftPane() {
     dragOverColumnRef.current = null
   }
 
+  async function uploadPhoto(file: File) {
+    setPhotoBusy(true)
+    setPhotoError(null)
+    try {
+      const body = new FormData()
+      body.append('file', file)
+      const res = await fetch('/api/uploads/photo', { method: 'POST', body })
+      if (!res.ok) throw new Error((await res.json()).detail ?? `Upload failed (${res.status})`)
+      const { url } = (await res.json()) as { url: string }
+      updateBasics({ photoUrl: url })
+      updateSettings({ showPhoto: true, photoLayout: { ...currentDoc.settings.photoLayout, show: true } })
+    } catch (e) {
+      setPhotoError(e instanceof Error ? e.message : String(e))
+    } finally {
+      setPhotoBusy(false)
+    }
+  }
+
   const step = 5
   const clamp = (v: number) => Math.max(30, Math.min(70, v))
+  const pl = currentDoc.settings.photoLayout ?? { show: true, grayscale: false, position: 'left', size: 'md', shape: 'circle' }
+  const hs = currentDoc.settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
 
   return (
     <aside className="pane pane-left">
@@ -162,8 +185,12 @@ export function LeftPane() {
         <p className="eyebrow">Layout</p>
       </div>
       <div className="pane-body">
-        {/* -- Layout controls ------------------------------------------------ */}
-        <section className="style-section">
+
+        {/* ============================================================ */}
+        {/*  LAYOUT                                                      */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Layout</p>
           <Segmented
             label="Columns"
             value={columnLayout}
@@ -173,7 +200,6 @@ export function LeftPane() {
             ]}
             onChange={(v) => (v === 'two' ? switchToTwo() : switchToOne())}
           />
-
           {columnLayout === 'two' && (
             <Segmented
               label="Header Position"
@@ -186,7 +212,6 @@ export function LeftPane() {
               onChange={(v) => updateSettings({ headerPosition: v })}
             />
           )}
-
           {columnLayout === 'two' && (
             <div className="field">
               <span className="field-label">Column Width</span>
@@ -230,129 +255,225 @@ export function LeftPane() {
               </div>
             </div>
           )}
-        </section>
+        </div>
 
-        {/* -- Photo Layout -------------------------------------------------- */}
-        <section className="style-section">
-          <p className="eyebrow style-section-title">Photo Layout</p>
-          {(() => {
-            const pl = currentDoc.settings.photoLayout ?? { show: true, grayscale: false, position: 'left', size: 'md', shape: 'circle' }
-            return (
-              <>
-                <Check
-                  label="Show photo"
-                  checked={pl.show}
-                  onChange={(show) => updateSettings({ photoLayout: { ...pl, show } })}
-                />
-                <Check
-                  label="Grayscale"
-                  checked={pl.grayscale}
-                  onChange={(grayscale) => updateSettings({ photoLayout: { ...pl, grayscale } })}
-                />
-                <Segmented
-                  label="Position"
-                  value={pl.position}
-                  options={[
-                    { value: 'left', label: 'Left' },
-                    { value: 'top', label: 'Top' },
-                    { value: 'right', label: 'Right' },
-                  ]}
-                  onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
-                />
-                <Segmented
-                  label="Size"
-                  value={pl.size}
-                  options={[
-                    { value: 'sm', label: 'S' },
-                    { value: 'md', label: 'M' },
-                    { value: 'lg', label: 'L' },
-                    { value: 'xl', label: 'XL' },
-                  ]}
-                  onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })}
-                />
-                <Segmented
-                  label="Shape"
-                  value={pl.shape}
-                  options={[
-                    { value: 'circle', label: 'Circle' },
-                    { value: 'rounded', label: 'Rounded' },
-                    { value: 'square', label: 'Square' },
-                    { value: 'none', label: 'None' },
-                  ]}
-                  onChange={(shape) => updateSettings({ photoLayout: { ...pl, shape } })}
-                />
-              </>
-            )
-          })()}
-        </section>
+        {/* ============================================================ */}
+        {/*  PHOTO                                                       */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Photo</p>
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/png,image/jpeg,image/webp"
+            hidden
+            onChange={(e) => {
+              const file = e.target.files?.[0]
+              if (file) void uploadPhoto(file)
+              e.target.value = ''
+            }}
+          />
+          <div className="photo-control">
+            {currentDoc.basics.photoUrl ? (
+              <img className="photo-thumb" src={currentDoc.basics.photoUrl} alt="" />
+            ) : (
+              <span className="photo-empty">No image</span>
+            )}
+            <div className="grow">
+              <button className="btn btn-sm" disabled={photoBusy} onClick={() => photoInputRef.current?.click()}>
+                {photoBusy ? 'Uploading…' : currentDoc.basics.photoUrl ? 'Replace photo' : 'Upload photo'}
+              </button>
+              <p className="hint" style={{ marginTop: 4 }}>PNG, JPEG, or WebP · 5MB max</p>
+            </div>
+          </div>
+          {photoError && <p className="upload-error">{photoError}</p>}
+          {currentDoc.basics.photoUrl && (
+            <Check
+              label="Show photo"
+              checked={pl.show}
+              onChange={(show) => updateSettings({ photoLayout: { ...pl, show } })}
+            />
+          )}
+          <Check
+            label="Grayscale"
+            checked={pl.grayscale}
+            onChange={(grayscale) => updateSettings({ photoLayout: { ...pl, grayscale } })}
+          />
+          <Segmented
+            label="Position"
+            value={pl.position}
+            options={[
+              { value: 'left', label: 'Left' },
+              { value: 'top', label: 'Top' },
+              { value: 'right', label: 'Right' },
+            ]}
+            onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
+          />
+          <Segmented
+            label="Size"
+            value={pl.size}
+            options={[
+              { value: 'sm', label: 'S' },
+              { value: 'md', label: 'M' },
+              { value: 'lg', label: 'L' },
+              { value: 'xl', label: 'XL' },
+            ]}
+            onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })}
+          />
+          <Segmented
+            label="Shape"
+            value={pl.shape}
+            options={[
+              { value: 'circle', label: 'Circle' },
+              { value: 'rounded', label: 'Rounded' },
+              { value: 'square', label: 'Square' },
+              { value: 'none', label: 'None' },
+            ]}
+            onChange={(shape) => updateSettings({ photoLayout: { ...pl, shape } })}
+          />
+        </div>
 
-        {/* -- Section layout -------------------------------------------------- */}
-        {columnLayout === 'one' ? (
-          /* Single column: existing section list with full SectionCards */
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            modifiers={DRAG_MODIFIERS}
-            onDragEnd={onSingleDragEnd}
-          >
-            <SortableContext
-              items={currentDoc.sections.map((s) => s.id)}
-              strategy={verticalListSortingStrategy}
-            >
-              {currentDoc.sections.map((section) => (
-                <SectionCard key={section.id} section={section} />
+        {/* ============================================================ */}
+        {/*  SECTION HEADINGS                                            */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Section Headings</p>
+          <div className="field">
+            <span className="field-label">Heading style</span>
+            <div className="heading-preview">
+              {([
+                { value: 'none', label: 'Plain' },
+                { value: 'underline', label: 'Underline' },
+                { value: 'boxed', label: 'Boxed' },
+                { value: 'bold', label: 'Bold' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  className="heading-preview-item"
+                  data-active={hs.visual === opt.value}
+                  onClick={() => updateSettings({ headingStyle: { ...hs, visual: opt.value } })}
+                  aria-label={opt.label}
+                >
+                  <span className={`heading-visual-${opt.value}`} />
+                  <span className="heading-preview-label">{opt.label}</span>
+                </button>
               ))}
-            </SortableContext>
-          </DndContext>
-        ) : (
-          /* Two columns: full SectionCards in two drop zones */
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            modifiers={DRAG_MODIFIERS}
-            onDragOver={onDualDragOver}
-            onDragEnd={onDualDragEnd}
-          >
-            <div className="dual-columns">
-              <div className="dual-column">
-                <p className="eyebrow">Left Column</p>
-                <SortableContext
-                  items={leftIds}
-                  strategy={verticalListSortingStrategy}
+            </div>
+          </div>
+          <Segmented
+            label="Capitalization"
+            value={hs.capitalization}
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'uppercase', label: 'AA' },
+              { value: 'lowercase', label: 'aa' },
+              { value: 'capitalize', label: 'Ab' },
+            ]}
+            onChange={(capitalization) => updateSettings({ headingStyle: { ...hs, capitalization } })}
+          />
+          <Check
+            label="Show icons"
+            checked={hs.showIcons}
+            onChange={(showIcons) => updateSettings({ headingStyle: { ...hs, showIcons } })}
+          />
+          {hs.showIcons && (
+            <div className="field">
+              <span className="field-label">Icon style</span>
+              <div className="icon-style-options">
+                <button
+                  className="icon-style-btn"
+                  data-active={hs.iconStyle === 'filled'}
+                  onClick={() => updateSettings({ headingStyle: { ...hs, iconStyle: 'filled' } })}
                 >
-                  <div className="dual-column-body" data-column="left">
-                    {leftSections.length === 0 && (
-                      <div className="dual-column-empty">Drop sections here</div>
-                    )}
-                    {leftSections.map((section) => (
-                      <SectionCard key={section.id} section={section} />
-                    ))}
-                  </div>
-                </SortableContext>
-              </div>
-              <div className="dual-column">
-                <p className="eyebrow">Right Column</p>
-                <SortableContext
-                  items={rightIds}
-                  strategy={verticalListSortingStrategy}
+                  <span className="icon-style-dot" />
+                  Filled
+                </button>
+                <button
+                  className="icon-style-btn"
+                  data-active={hs.iconStyle === 'outlined'}
+                  onClick={() => updateSettings({ headingStyle: { ...hs, iconStyle: 'outlined' } })}
                 >
-                  <div className="dual-column-body" data-column="right">
-                    {rightSections.length === 0 && (
-                      <div className="dual-column-empty">Drop sections here</div>
-                    )}
-                    {rightSections.map((section) => (
-                      <SectionCard key={section.id} section={section} />
-                    ))}
-                  </div>
-                </SortableContext>
+                  <span className="icon-style-dot" />
+                  Outlined
+                </button>
               </div>
             </div>
-          </DndContext>
-        )}
+          )}
+        </div>
 
-        <div className="add-section-block">
-          <p className="eyebrow">Add section</p>
-          <div className="add-menu">
+        {/* ============================================================ */}
+        {/*  CONTENT                                                     */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Content</p>
+          {columnLayout === 'one' ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={DRAG_MODIFIERS}
+              onDragEnd={onSingleDragEnd}
+            >
+              <SortableContext
+                items={currentDoc.sections.map((s) => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {currentDoc.sections.map((section) => (
+                  <SectionCard key={section.id} section={section} />
+                ))}
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={DRAG_MODIFIERS}
+              onDragOver={onDualDragOver}
+              onDragEnd={onDualDragEnd}
+            >
+              <div className="dual-columns">
+                <div className="dual-column">
+                  <p className="eyebrow">Left Column</p>
+                  <SortableContext
+                    items={leftIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="dual-column-body" data-column="left">
+                      {leftSections.length === 0 && (
+                        <div className="dual-column-empty">Drop sections here</div>
+                      )}
+                      {leftSections.map((section) => (
+                        <SectionCard key={section.id} section={section} />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </div>
+                <div className="dual-column">
+                  <p className="eyebrow">Right Column</p>
+                  <SortableContext
+                    items={rightIds}
+                    strategy={verticalListSortingStrategy}
+                  >
+                    <div className="dual-column-body" data-column="right">
+                      {rightSections.length === 0 && (
+                        <div className="dual-column-empty">Drop sections here</div>
+                      )}
+                      {rightSections.map((section) => (
+                        <SectionCard key={section.id} section={section} />
+                      ))}
+                    </div>
+                  </SortableContext>
+                </div>
+              </div>
+            </DndContext>
+          )}
+        </div>
+
+        {/* ============================================================ */}
+        {/*  ADD SECTION                                                 */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Add Section</p>
+          <div className="add-section-pills">
             {ADDABLE.map((type) => (
               <button key={type} className="btn btn-sm" onClick={() => addSection(type)}>
                 <Plus />
@@ -361,6 +482,7 @@ export function LeftPane() {
             ))}
           </div>
         </div>
+
       </div>
     </aside>
   )

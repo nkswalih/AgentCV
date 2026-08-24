@@ -1705,3 +1705,189 @@ input[type='range']::-moz-range-thumb {
     display: none;
   }
 }
+
+/* ======================================================================
+   Left sidebar — reorganised pane sections
+   ====================================================================== */
+
+/* -- pane-section: card container for each major area ------------------- */
+.pane-section {
+  background: var(--ink-800);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-md);
+  padding: 12px;
+}
+.pane-section + .pane-section {
+  margin-top: 8px;
+}
+
+/* -- pane-section-title: eyebrow label inside each card ----------------- */
+.pane-section-title {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-lo);
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--ink-600);
+}
+
+/* -- Tighter field spacing inside pane-section -------------------------- */
+.pane-section .field {
+  margin-bottom: 10px;
+}
+.pane-section .field:last-child {
+  margin-bottom: 0;
+}
+
+/* -- Heading style preview cards ---------------------------------------- */
+.heading-preview {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 5px;
+}
+.heading-preview-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 4px 6px;
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 120ms var(--ease), background 120ms var(--ease);
+}
+.heading-preview-item:hover {
+  border-color: var(--ink-500);
+  background: var(--ink-750);
+}
+.heading-preview-item[data-active='true'] {
+  border-color: var(--cyan-dim);
+  background: var(--cyan-glow);
+}
+.heading-preview-label {
+  font-size: 10px;
+  color: var(--text-dim);
+  line-height: 1;
+}
+.heading-preview-item[data-active='true'] .heading-preview-label {
+  color: var(--cyan);
+}
+
+/* -- Visual variants rendered inside preview cards ---------------------- */
+.heading-visual-none {
+  width: 28px;
+  height: 3px;
+  background: var(--text-mid);
+  border-radius: 1px;
+}
+.heading-preview-item[data-active='true'] .heading-visual-none {
+  background: var(--cyan);
+}
+.heading-visual-underline {
+  width: 28px;
+  height: 3px;
+  background: var(--text-mid);
+  border-radius: 1px;
+  position: relative;
+}
+.heading-visual-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 2px;
+  background: var(--text-mid);
+  border-radius: 1px;
+}
+.heading-preview-item[data-active='true'] .heading-visual-underline,
+.heading-preview-item[data-active='true'] .heading-visual-underline::after {
+  background: var(--cyan);
+}
+.heading-visual-boxed {
+  width: 28px;
+  height: 14px;
+  border: 2px solid var(--text-mid);
+  border-radius: 2px;
+}
+.heading-preview-item[data-active='true'] .heading-visual-boxed {
+  border-color: var(--cyan);
+}
+.heading-visual-bold {
+  width: 28px;
+  height: 4px;
+  background: var(--text-hi);
+  border-radius: 1px;
+}
+.heading-visual-accent-bar {
+  width: 28px;
+  height: 3px;
+  background: var(--text-mid);
+  border-radius: 1px;
+  position: relative;
+  padding-left: 0;
+}
+.heading-visual-accent-bar::before {
+  content: '';
+  position: absolute;
+  left: -6px;
+  top: -3px;
+  width: 3px;
+  height: 9px;
+  background: var(--cyan);
+  border-radius: 1px;
+}
+.heading-preview-item[data-active='true'] .heading-visual-accent-bar {
+  background: var(--cyan);
+}
+.heading-preview-item[data-active='true'] .heading-visual-accent-bar::before {
+  background: var(--cyan);
+}
+
+/* -- Icon style options ------------------------------------------------- */
+.icon-style-options {
+  display: flex;
+  gap: 5px;
+}
+.icon-style-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 4px;
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 120ms var(--ease), background 120ms var(--ease);
+  font-size: 10px;
+  color: var(--text-dim);
+}
+.icon-style-btn:hover {
+  border-color: var(--ink-500);
+}
+.icon-style-btn[data-active='true'] {
+  border-color: var(--cyan-dim);
+  background: var(--cyan-glow);
+  color: var(--cyan);
+}
+.icon-style-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+}
+.icon-style-btn[data-active='true'] .icon-style-dot {
+  background: currentColor;
+}
+
+/* -- Add section: pill-style buttons ------------------------------------ */
+.add-section-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}

@@ -2001,3 +2001,61 @@
   order: -1;
   margin-bottom: 6pt;
 }
+
+/* ======================================================================
+   Section Headings — visual style, capitalisation, icons
+   ====================================================================== */
+
+/* -- Capitalisation ------------------------------------------------------ */
+[data-heading-cap="uppercase"] .doc-section-title {
+  text-transform: uppercase;
+}
+[data-heading-cap="lowercase"] .doc-section-title {
+  text-transform: lowercase;
+}
+[data-heading-cap="capitalize"] .doc-section-title {
+  text-transform: capitalize;
+}
+
+/* -- Visual: none (plain) — base style, no extra decoration ------------- */
+[data-heading-visual="none"] .doc-section-title {
+  border-bottom: none;
+  background: none;
+  padding: 0;
+}
+
+/* -- Visual: underline --------------------------------------------------- */
+[data-heading-visual="underline"] .doc-section-title {
+  border-bottom: 1.5pt solid var(--doc-accent, currentColor);
+  padding-bottom: 3pt;
+}
+
+/* -- Visual: boxed ------------------------------------------------------- */
+[data-heading-visual="boxed"] .doc-section-title {
+  border: 1pt solid var(--doc-accent, currentColor);
+  border-radius: 2pt;
+  padding: 3pt 6pt;
+  display: inline-block;
+}
+
+/* -- Visual: bold -------------------------------------------------------- */
+[data-heading-visual="bold"] .doc-section-title {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* -- Icons: hidden via attribute ----------------------------------------- */
+.doc-section-title .doc-section-icon {
+  display: none;
+}
+[data-heading-icons="true"] .doc-section-title .doc-section-icon {
+  display: inline;
+  margin-right: 4pt;
+  vertical-align: middle;
+}
+
+/* -- Icon style: outlined ----------------------------------------------- */
+[data-heading-icon-style="outlined"] .doc-section-title .doc-section-icon {
+  fill: none;
+  stroke: currentColor;
+}

@@ -318,6 +318,17 @@ class Settings(Base):
         alias="photoLayout",
     )
 
+    # Section heading visual controls
+    heading_style: dict = Field(
+        default_factory=lambda: {
+            "visual": "underline",
+            "capitalization": "uppercase",
+            "showIcons": True,
+            "iconStyle": "filled",
+        },
+        alias="headingStyle",
+    )
+
 
 # --------------------------------------------------------------------------
 # The document, plus API request/response shapes

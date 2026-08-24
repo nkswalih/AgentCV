@@ -247,6 +247,18 @@ export interface Settings {
     /** Photo shape. */
     shape: 'circle' | 'square' | 'rounded' | 'none'
   }
+
+  /** Section heading visual controls. */
+  headingStyle: {
+    /** Visual style of section headings. */
+    visual: 'none' | 'underline' | 'boxed' | 'bold' | 'accent-bar'
+    /** Text capitalisation of section headings. */
+    capitalization: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
+    /** Show icons next to section headings. */
+    showIcons: boolean
+    /** Icon visual style. */
+    iconStyle: 'filled' | 'outlined'
+  }
 }
 
 export interface ResumeDocument {
