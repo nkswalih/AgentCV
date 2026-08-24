@@ -57,3 +57,26 @@ export const Plus = () => (
     <path d="M8 3.5v9M3.5 8h9" />
   </svg>
 )
+
+/* -- Home navigation -- */
+
+export const FileIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <path d="M9.5 1.5H4a.8.8 0 0 0-.8.8v11.4a.8.8 0 0 0 .8.8h8a.8.8 0 0 0 .8-.8V4.8L9.5 1.5Z" />
+    <path d="M9.5 1.5v3.3h3.3M5.5 8h5M5.5 10.5h5M5.5 5.5H7" />
+  </svg>
+)
+
+export const MailIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <rect x="1.8" y="3.2" width="12.4" height="9.6" rx="1" />
+    <path d="m2.2 4.2 5.8 4.3 5.8-4.3" />
+  </svg>
+)
+
+export const BriefcaseIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <rect x="1.8" y="4.8" width="12.4" height="8.7" rx="1" />
+    <path d="M5.5 4.8V3.4a.9.9 0 0 1 .9-.9h3.2a.9.9 0 0 1 .9.9v1.4M1.8 8.2h12.4M7.2 8.2v1.4h1.6V8.2" />
+  </svg>
+)

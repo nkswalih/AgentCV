@@ -3,6 +3,7 @@ import { useRef, useState } from 'react'
 import { useEditor } from '../store'
 import { newId } from '../factories'
 import {
+  ACCENT_PRESETS,
   FONT_CHOICES,
   FONT_GROUP_LABELS,
   FONT_GROUPS,
@@ -10,11 +11,20 @@ import {
   TEMPLATES,
 } from '../templates/registry'
 import { isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
-import { Check, Slider, Text } from './fields'
+import { Check, Segmented, Slider, Text } from './fields'
 import { SectionCard, useDragSensors, DRAG_MODIFIERS } from './SectionCard'
-import { DndContext, closestCenter, type DragEndEvent } from '@dnd-kit/core'
-import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
-import type { Link, SectionType, TemplateId } from '../types'
+import {
+  DndContext,
+  closestCenter,
+  type DragEndEvent,
+  type DragOverEvent,
+} from '@dnd-kit/core'
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  arrayMove,
+} from '@dnd-kit/sortable'
+import type { Link, Section, SectionType, TemplateId } from '../types'
 import { Plus } from './icons'
 
 const ADDABLE: SectionType[] = [
@@ -29,40 +39,262 @@ const ADDABLE: SectionType[] = [
 ]
 
 export function LeftPane() {
-  const { doc, addSection, moveSection } = useEditor()
+  const { doc, addSection, moveSection, moveSectionToColumn, updateSettings } = useEditor()
   const sensors = useDragSensors()
   if (!doc) return null
 
   const currentDoc = doc
+  const { columnLayout, headerPosition, columnWidth = 40 } = currentDoc.settings
+  const leftIds = currentDoc.settings.leftColumn ?? []
+  const rightIds = currentDoc.settings.rightColumn ?? []
 
-  function onDragEnd(e: DragEndEvent) {
+  /** Resolve section IDs to Section objects, skipping any that no longer exist. */
+  function resolveSections(ids: string[]): Section[] {
+    return ids
+      .map((id) => currentDoc.sections.find((s) => s.id === id))
+      .filter((s): s is Section => s != null)
+  }
+
+  const leftSections = resolveSections(leftIds)
+  const rightSections = resolveSections(rightIds)
+
+  /** Auto-distribute sections into two columns when switching from one to two. */
+  function switchToTwo() {
+    const all = currentDoc.sections.map((s) => s.id)
+    const mid = Math.ceil(all.length / 2)
+    updateSettings({
+      columnLayout: 'two',
+      leftColumn: all.slice(0, mid),
+      rightColumn: all.slice(mid),
+    })
+  }
+
+  /** Flatten back to one column, preserving combined order. */
+  function switchToOne() {
+    const merged = [...leftIds, ...rightIds]
+    updateSettings({
+      columnLayout: 'one',
+      leftColumn: [],
+      rightColumn: [],
+      // Also reorder the main sections array to match the merged column order
+    })
+    // Reorder sections to match merged order
+    for (let i = 0; i < merged.length; i++) {
+      const currentIdx = currentDoc.sections.findIndex((s) => s.id === merged[i])
+      if (currentIdx !== -1 && currentIdx !== i) {
+        moveSection(currentIdx, i)
+      }
+    }
+  }
+
+  function onSingleDragEnd(e: DragEndEvent) {
     if (!e.over || e.active.id === e.over.id) return
     const from = currentDoc.sections.findIndex((s) => s.id === e.active.id)
     const to = currentDoc.sections.findIndex((s) => s.id === e.over!.id)
     if (from !== -1 && to !== -1) moveSection(from, to)
   }
 
+  /** Track which column the dragged item is currently over for cross-column moves. */
+  const dragOverColumnRef = useRef<'left' | 'right' | null>(null)
+
+  function onDualDragOver(e: DragOverEvent) {
+    const { active, over } = e
+    if (!over) return
+    const activeId = active.id as string
+    const overId = over.id as string
+
+    // Detect which column the over item belongs to
+    const overInLeft = leftIds.includes(overId)
+    const overInRight = rightIds.includes(overId)
+    const activeInLeft = leftIds.includes(activeId)
+    const activeInRight = rightIds.includes(activeId)
+
+    // If dropped on the column body itself (empty zone)
+    if (overId === 'left-column') {
+      dragOverColumnRef.current = 'left'
+      if (activeInRight) moveSectionToColumn(activeId, 'left', leftIds.length)
+      return
+    }
+    if (overId === 'right-column') {
+      dragOverColumnRef.current = 'right'
+      if (activeInLeft) moveSectionToColumn(activeId, 'right', rightIds.length)
+      return
+    }
+
+    // Cross-column move: item from left dragged over right (or vice versa)
+    if (activeInLeft && overInRight) {
+      dragOverColumnRef.current = 'right'
+      const toIdx = rightIds.indexOf(overId)
+      if (toIdx !== -1) moveSectionToColumn(activeId, 'right', toIdx)
+    } else if (activeInRight && overInLeft) {
+      dragOverColumnRef.current = 'left'
+      const toIdx = leftIds.indexOf(overId)
+      if (toIdx !== -1) moveSectionToColumn(activeId, 'left', toIdx)
+    }
+    // Same column reorder
+    else if (activeInLeft && overInLeft) {
+      dragOverColumnRef.current = 'left'
+      const from = leftIds.indexOf(activeId)
+      const to = leftIds.indexOf(overId)
+      if (from !== -1 && to !== -1 && from !== to) {
+        updateSettings({ leftColumn: arrayMove(leftIds, from, to) })
+      }
+    } else if (activeInRight && overInRight) {
+      dragOverColumnRef.current = 'right'
+      const from = rightIds.indexOf(activeId)
+      const to = rightIds.indexOf(overId)
+      if (from !== -1 && to !== -1 && from !== to) {
+        updateSettings({ rightColumn: arrayMove(rightIds, from, to) })
+      }
+    }
+  }
+
+  function onDualDragEnd() {
+    dragOverColumnRef.current = null
+  }
+
+  const step = 5
+  const clamp = (v: number) => Math.max(30, Math.min(70, v))
+
   return (
     <aside className="pane pane-left">
       <div className="pane-head">
-        <p className="eyebrow">Document structure</p>
+        <p className="eyebrow">Layout</p>
       </div>
       <div className="pane-body">
-        <DndContext
-          sensors={sensors}
-          collisionDetection={closestCenter}
-          modifiers={DRAG_MODIFIERS}
-          onDragEnd={onDragEnd}
-        >
-          <SortableContext
-            items={currentDoc.sections.map((s) => s.id)}
-            strategy={verticalListSortingStrategy}
+        {/* -- Layout controls ------------------------------------------------ */}
+        <section className="style-section">
+          <Segmented
+            label="Columns"
+            value={columnLayout}
+            options={[
+              { value: 'one', label: 'One' },
+              { value: 'two', label: 'Two' },
+            ]}
+            onChange={(v) => (v === 'two' ? switchToTwo() : switchToOne())}
+          />
+
+          {columnLayout === 'two' && (
+            <Segmented
+              label="Header Position"
+              value={headerPosition}
+              options={[
+                { value: 'top', label: 'Top' },
+                { value: 'left', label: 'Left' },
+                { value: 'right', label: 'Right' },
+              ]}
+              onChange={(v) => updateSettings({ headerPosition: v })}
+            />
+          )}
+
+          {columnLayout === 'two' && (
+            <div className="field">
+              <span className="field-label">Column Width</span>
+              <div className="col-width-controls">
+                <div className="col-width-row">
+                  <span className="col-width-label">Left</span>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => updateSettings({ columnWidth: clamp(columnWidth - step) })}
+                    aria-label="Decrease left column width"
+                  >
+                    −
+                  </button>
+                  <span className="col-width-value">{Math.round(columnWidth)}%</span>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => updateSettings({ columnWidth: clamp(columnWidth + step) })}
+                    aria-label="Increase left column width"
+                  >
+                    +
+                  </button>
+                </div>
+                <div className="col-width-row">
+                  <span className="col-width-label">Right</span>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => updateSettings({ columnWidth: clamp(columnWidth + step) })}
+                    aria-label="Decrease right column width"
+                  >
+                    −
+                  </button>
+                  <span className="col-width-value">{Math.round(100 - columnWidth)}%</span>
+                  <button
+                    className="btn btn-sm btn-ghost"
+                    onClick={() => updateSettings({ columnWidth: clamp(columnWidth - step) })}
+                    aria-label="Increase right column width"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* -- Section layout -------------------------------------------------- */}
+        {columnLayout === 'one' ? (
+          /* Single column: existing section list with full SectionCards */
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={DRAG_MODIFIERS}
+            onDragEnd={onSingleDragEnd}
           >
-            {currentDoc.sections.map((section) => (
-              <SectionCard key={section.id} section={section} />
-            ))}
-          </SortableContext>
-        </DndContext>
+            <SortableContext
+              items={currentDoc.sections.map((s) => s.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              {currentDoc.sections.map((section) => (
+                <SectionCard key={section.id} section={section} />
+              ))}
+            </SortableContext>
+          </DndContext>
+        ) : (
+          /* Two columns: full SectionCards in two drop zones */
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={DRAG_MODIFIERS}
+            onDragOver={onDualDragOver}
+            onDragEnd={onDualDragEnd}
+          >
+            <div className="dual-columns">
+              <div className="dual-column">
+                <p className="eyebrow">Left Column</p>
+                <SortableContext
+                  items={leftIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="dual-column-body" data-column="left">
+                    {leftSections.length === 0 && (
+                      <div className="dual-column-empty">Drop sections here</div>
+                    )}
+                    {leftSections.map((section) => (
+                      <SectionCard key={section.id} section={section} />
+                    ))}
+                  </div>
+                </SortableContext>
+              </div>
+              <div className="dual-column">
+                <p className="eyebrow">Right Column</p>
+                <SortableContext
+                  items={rightIds}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="dual-column-body" data-column="right">
+                    {rightSections.length === 0 && (
+                      <div className="dual-column-empty">Drop sections here</div>
+                    )}
+                    {rightSections.map((section) => (
+                      <SectionCard key={section.id} section={section} />
+                    ))}
+                  </div>
+                </SortableContext>
+              </div>
+            </div>
+          </DndContext>
+        )}
 
         <div className="add-section-block">
           <p className="eyebrow">Add section</p>
@@ -211,13 +443,49 @@ function LinksField() {
   )
 }
 
-/** Per-template default sizes the individual controls return to when unset. */
+/** Per-template default sizes the individual controls return to when unset --
+    each design's own typographic scale. Retired ids keep rows so documents
+    saved with them still resolve. */
 const SIZE_FALLBACKS: Record<TemplateId, { name: number; title: number; heading: number }> = {
-  'ats-classic': { name: 21, title: 11, heading: 11 },
+  'ats-classic': { name: 21, title: 11, heading: 10.5 },
   'ats-modern': { name: 23, title: 11, heading: 10 },
-  compact: { name: 18, title: 10, heading: 9.5 },
-  sidebar: { name: 19, title: 10, heading: 11 },
-  banner: { name: 21, title: 10.5, heading: 10.5 },
+  compact: { name: 17.5, title: 10, heading: 9.5 },
+  'classic-pro': { name: 22, title: 10.5, heading: 10 },
+  'modern-min': { name: 24, title: 11, heading: 9 },
+  'two-col': { name: 21, title: 10.5, heading: 10 },
+  sidebar: { name: 20, title: 10, heading: 10 },
+  editorial: { name: 29, title: 12, heading: 10.5 },
+  executive: { name: 20, title: 11, heading: 10 },
+  creative: { name: 23, title: 10, heading: 10 },
+  devtech: { name: 20, title: 10.5, heading: 9.5 },
+  academic: { name: 19, title: 10.5, heading: 10 },
+  timeline: { name: 20, title: 10.5, heading: 10 },
+  'photo-pro': { name: 23, title: 11, heading: 10 },
+  'portal-pro': { name: 18, title: 9.5, heading: 11 },
+  'modern-deep': { name: 17, title: 8.5, heading: 11 },
+  'serif-ats': { name: 22, title: 11, heading: 12 },
+  'jake': { name: 24, title: 11, heading: 11 },
+  banner: { name: 21, title: 10.5, heading: 10 },
+}
+
+/** Fixed identities -- each design's mini swatch wears its own ink rather
+    than following whatever accent the open document happens to have. */
+const MINI_ACCENTS: Partial<Record<TemplateId, string>> = {
+  'classic-pro': '#20252b',
+  'modern-min': '#10151b',
+  executive: '#33383f',
+  'two-col': '#273038',
+  sidebar: '#242e39',
+  editorial: '#171b21',
+  creative: '#2e3a80',
+  devtech: '#0f766e',
+  academic: '#23282e',
+  timeline: '#39424c',
+  'photo-pro': '#23282e',
+  'portal-pro': '#1e293b',
+  'modern-deep': '#1a1f2e',
+  'serif-ats': '#191e24',
+  'jake': '#191e24',
 }
 
 /**
@@ -326,9 +594,19 @@ export function RightPane() {
                 className="template-card"
                 key={template.id}
                 data-active={doc.settings.template === template.id}
-                onClick={() => updateSettings({ template: template.id })}
+                onClick={() =>
+                  // Applying a design applies its type as well, matching the
+                  // creation dialog -- the picker can always change it after.
+                  updateSettings({
+                    template: template.id,
+                    ...(template.font ? { fontFamily: template.font } : {}),
+                  })
+                }
               >
-                <TemplateThumb id={template.id} accent={doc.settings.accentColor} />
+                <TemplateThumb
+                  id={template.id}
+                  accent={MINI_ACCENTS[template.id] ?? doc.settings.accentColor}
+                />
                 <span className="template-meta">
                   <span className="template-name">{template.name}</span>
                   <span className="tag" data-ats={template.atsSafe ? 'true' : 'false'}>
@@ -455,7 +733,7 @@ export function RightPane() {
             Accent colour
           </span>
           <div className="swatches">
-            {['#2563eb', '#0f766e', '#7c3aed', '#b91c1c', '#c2410c', '#1e293b'].map((color) => (
+            {ACCENT_PRESETS.map((color) => (
               <button
                 className="swatch"
                 key={color}
@@ -483,6 +761,14 @@ export function RightPane() {
   )
 }
 
+/** Layout families, for the miniature: each design shows its own structure,
+    not the same lines in a different colour. */
+const RAIL_LEFT: ReadonlySet<string> = new Set(['sidebar', 'portal-pro', 'modern-deep'])
+const RAIL_RIGHT: ReadonlySet<string> = new Set(['two-col'])
+const BAND: ReadonlySet<string> = new Set(['banner', 'creative'])
+const PHOTO_HEAD: ReadonlySet<string> = new Set(['photo-pro'])
+const SPINE: ReadonlySet<string> = new Set(['timeline'])
+
 function TemplateThumb({ id, accent }: { id: string; accent: string }) {
   // The template id travels on a data attribute, never as a class. As a class
   // it collided with the inner parts' own names: `mini-banner` matched both this
@@ -491,12 +777,14 @@ function TemplateThumb({ id, accent }: { id: string; accent: string }) {
   // across the top of the app, over the topbar.
   return (
     <span className="template-mini" data-tpl={id} aria-hidden="true" style={{ '--mini-accent': accent } as React.CSSProperties}>
-      {id === 'sidebar' && <span className="mini-rail" />}
-      {id === 'banner' && <span className="mini-banner" />}
-      <span className="mini-name" />
-      <span className="mini-rule" />
-      <span className="mini-lines" />
-      <span className="mini-lines short" />
+      {RAIL_LEFT.has(id) && <span className="mini-rail" />}
+      {RAIL_RIGHT.has(id) && <span className="mini-rail right" />}
+      {BAND.has(id) && <span className="mini-banner" />}
+      {PHOTO_HEAD.has(id) && <span className="mini-portrait" />}
+      <span className={`mini-name${SPINE.has(id) ? ' spine' : ''}`} />
+      <span className={`mini-rule${SPINE.has(id) ? ' spine' : ''}`} />
+      <span className={`mini-lines${SPINE.has(id) ? ' spine' : ''}`} />
+      {!SPINE.has(id) && <span className="mini-lines short" />}
     </span>
   )
 }
