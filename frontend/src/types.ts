@@ -223,6 +223,16 @@ export interface Settings {
   leftColumn: string[]
   /** Section IDs assigned to the right column when columnLayout is 'two'. */
   rightColumn: string[]
+
+  /** Profile layout controls (reserved for future UI). */
+  profileLayout?: {
+    /** Where the profile/header block appears: 'top' (full-width) | 'left' | 'right'. */
+    position?: 'top' | 'left' | 'right'
+    /** Photo alignment within the header: 'left' | 'right' | 'center'. */
+    photoAlign?: 'left' | 'right' | 'center'
+    /** Contact display: 'inline' (single line) | 'stacked' (one per row). */
+    contactDisplay?: 'inline' | 'stacked'
+  }
 }
 
 export interface ResumeDocument {

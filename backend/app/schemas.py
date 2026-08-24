@@ -303,6 +303,9 @@ class Settings(Base):
     left_column: list[str] = Field(default_factory=list, alias="leftColumn")
     right_column: list[str] = Field(default_factory=list, alias="rightColumn")
 
+    # Profile layout controls (reserved for future UI)
+    profile_layout: dict | None = Field(None, alias="profileLayout")
+
 
 # --------------------------------------------------------------------------
 # The document, plus API request/response shapes
