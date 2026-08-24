@@ -114,11 +114,8 @@ function DroppableColumn({
 }
 
 export function LeftPane() {
-  const { doc, addSection, moveSection, moveSectionToColumn, updateSettings, updateBasics } = useEditor()
+  const { doc, addSection, moveSection, moveSectionToColumn, updateSettings } = useEditor()
   const sensors = useDragSensors()
-  const photoInputRef = useRef<HTMLInputElement>(null)
-  const [photoBusy, setPhotoBusy] = useState(false)
-  const [photoError, setPhotoError] = useState<string | null>(null)
   const [activeId, setActiveId] = useState<string | null>(null)
   if (!doc) return null
 
@@ -255,24 +252,6 @@ export function LeftPane() {
     setActiveId(null)
   }
 
-  async function uploadPhoto(file: File) {
-    setPhotoBusy(true)
-    setPhotoError(null)
-    try {
-      const body = new FormData()
-      body.append('file', file)
-      const res = await fetch('/api/uploads/photo', { method: 'POST', body })
-      if (!res.ok) throw new Error((await res.json()).detail ?? `Upload failed (${res.status})`)
-      const { url } = (await res.json()) as { url: string }
-      updateBasics({ photoUrl: url })
-      updateSettings({ showPhoto: true, photoLayout: { ...currentDoc.settings.photoLayout, show: true } })
-    } catch (e) {
-      setPhotoError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setPhotoBusy(false)
-    }
-  }
-
   const step = 5
   const clamp = (v: number) => Math.max(30, Math.min(70, v))
   const pl = currentDoc.settings.photoLayout ?? { show: true, grayscale: false, position: 'left', size: 'md', shape: 'circle' }
@@ -351,154 +330,6 @@ export function LeftPane() {
                     +
                   </button>
                 </div>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* ============================================================ */}
-        {/*  PHOTO                                                       */}
-        {/* ============================================================ */}
-        <div className="pane-section">
-          <p className="pane-section-title">Photo</p>
-          <input
-            ref={photoInputRef}
-            type="file"
-            accept="image/png,image/jpeg,image/webp"
-            hidden
-            onChange={(e) => {
-              const file = e.target.files?.[0]
-              if (file) void uploadPhoto(file)
-              e.target.value = ''
-            }}
-          />
-          <div className="photo-control">
-            {currentDoc.basics.photoUrl ? (
-              <img className="photo-thumb" src={currentDoc.basics.photoUrl} alt="" />
-            ) : (
-              <span className="photo-empty">No image</span>
-            )}
-            <div className="grow">
-              <button className="btn btn-sm" disabled={photoBusy} onClick={() => photoInputRef.current?.click()}>
-                {photoBusy ? 'Uploading…' : currentDoc.basics.photoUrl ? 'Replace photo' : 'Upload photo'}
-              </button>
-              <p className="hint" style={{ marginTop: 4 }}>PNG, JPEG, or WebP · 5MB max</p>
-            </div>
-          </div>
-          {photoError && <p className="upload-error">{photoError}</p>}
-          {currentDoc.basics.photoUrl && (
-            <Check
-              label="Show photo"
-              checked={pl.show}
-              onChange={(show) => updateSettings({ photoLayout: { ...pl, show } })}
-            />
-          )}
-          <Check
-            label="Grayscale"
-            checked={pl.grayscale}
-            onChange={(grayscale) => updateSettings({ photoLayout: { ...pl, grayscale } })}
-          />
-          <Segmented
-            label="Position"
-            value={pl.position}
-            options={[
-              { value: 'left', label: 'Left' },
-              { value: 'top', label: 'Top' },
-              { value: 'right', label: 'Right' },
-            ]}
-            onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
-          />
-          <Segmented
-            label="Size"
-            value={pl.size}
-            options={[
-              { value: 'sm', label: 'S' },
-              { value: 'md', label: 'M' },
-              { value: 'lg', label: 'L' },
-              { value: 'xl', label: 'XL' },
-            ]}
-            onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })}
-          />
-          <Segmented
-            label="Shape"
-            value={pl.shape}
-            options={[
-              { value: 'circle', label: 'Circle' },
-              { value: 'rounded', label: 'Rounded' },
-              { value: 'square', label: 'Square' },
-              { value: 'none', label: 'None' },
-            ]}
-            onChange={(shape) => updateSettings({ photoLayout: { ...pl, shape } })}
-          />
-        </div>
-
-        {/* ============================================================ */}
-        {/*  SECTION HEADINGS                                            */}
-        {/* ============================================================ */}
-        <div className="pane-section">
-          <p className="pane-section-title">Section Headings</p>
-          <div className="field">
-            <span className="field-label">Heading style</span>
-            <div className="heading-preview">
-              {([
-                { value: 'none', label: 'Plain' },
-                { value: 'underline', label: 'Underline' },
-                { value: 'boxed', label: 'Boxed' },
-                { value: 'bold', label: 'Bold' },
-              ] as const).map((opt) => (
-                <button
-                  key={opt.value}
-                  className="heading-preview-item"
-                  data-active={hs.visual === opt.value}
-                  onClick={() => updateSettings({ headingStyle: { ...hs, visual: opt.value } })}
-                  aria-label={opt.label}
-                >
-                  <span className={`heading-visual-${opt.value}`} />
-                  <span className="heading-preview-label">{opt.label}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-          <Segmented
-            label="Capitalization"
-            value={hs.capitalization}
-            options={[
-              { value: 'none', label: 'None' },
-              { value: 'uppercase', label: 'AA' },
-              { value: 'lowercase', label: 'aa' },
-              { value: 'capitalize', label: 'Ab' },
-            ]}
-            onChange={(capitalization) => updateSettings({ headingStyle: { ...hs, capitalization } })}
-          />
-          <Check
-            label="Show icons"
-            checked={hs.showIcons}
-            onChange={(showIcons) => updateSettings({ headingStyle: { ...hs, showIcons } })}
-          />
-          {hs.showIcons && (
-            <div className="field">
-              <span className="field-label">Icon style</span>
-              <div className="icon-style-options">
-                <button
-                  className="icon-style-btn"
-                  data-active={hs.iconStyle === 'filled'}
-                  onClick={() => updateSettings({ headingStyle: { ...hs, iconStyle: 'filled' } })}
-                >
-                  <span className="icon-style-dot">
-                    <DocIcon name="briefcase" variant="fill" />
-                  </span>
-                  Filled
-                </button>
-                <button
-                  className="icon-style-btn"
-                  data-active={hs.iconStyle === 'outlined'}
-                  onClick={() => updateSettings({ headingStyle: { ...hs, iconStyle: 'outlined' } })}
-                >
-                  <span className="icon-style-dot">
-                    <DocIcon name="briefcase" variant="outline" />
-                  </span>
-                  Outlined
-                </button>
               </div>
             </div>
           )}
@@ -609,6 +440,122 @@ export function LeftPane() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* ============================================================ */}
+        {/*  PHOTO                                                       */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Photo</p>
+          <Check
+            label="Grayscale"
+            checked={pl.grayscale}
+            onChange={(grayscale) => updateSettings({ photoLayout: { ...pl, grayscale } })}
+          />
+          <Segmented
+            label="Position"
+            value={pl.position}
+            options={[
+              { value: 'left', label: 'Left' },
+              { value: 'top', label: 'Top' },
+              { value: 'right', label: 'Right' },
+            ]}
+            onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
+          />
+          <Segmented
+            label="Size"
+            value={pl.size}
+            options={[
+              { value: 'sm', label: 'S' },
+              { value: 'md', label: 'M' },
+              { value: 'lg', label: 'L' },
+              { value: 'xl', label: 'XL' },
+            ]}
+            onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })}
+          />
+          <Segmented
+            label="Shape"
+            value={pl.shape}
+            options={[
+              { value: 'circle', label: 'Circle' },
+              { value: 'rounded', label: 'Rounded' },
+              { value: 'square', label: 'Square' },
+              { value: 'none', label: 'None' },
+            ]}
+            onChange={(shape) => updateSettings({ photoLayout: { ...pl, shape } })}
+          />
+        </div>
+
+        {/* ============================================================ */}
+        {/*  SECTION HEADINGS                                            */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Section Headings</p>
+          <div className="field">
+            <span className="field-label">Heading style</span>
+            <div className="heading-preview">
+              {([
+                { value: 'none', label: 'Plain' },
+                { value: 'underline', label: 'Underline' },
+                { value: 'boxed', label: 'Boxed' },
+                { value: 'bold', label: 'Bold' },
+              ] as const).map((opt) => (
+                <button
+                  key={opt.value}
+                  className="heading-preview-item"
+                  data-active={hs.visual === opt.value}
+                  onClick={() => updateSettings({ headingStyle: { ...hs, visual: opt.value } })}
+                  aria-label={opt.label}
+                >
+                  <span className={`heading-visual-${opt.value}`} />
+                  <span className="heading-preview-label">{opt.label}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <Segmented
+            label="Capitalization"
+            value={hs.capitalization}
+            options={[
+              { value: 'none', label: 'None' },
+              { value: 'uppercase', label: 'AA' },
+              { value: 'lowercase', label: 'aa' },
+              { value: 'capitalize', label: 'Ab' },
+            ]}
+            onChange={(capitalization) => updateSettings({ headingStyle: { ...hs, capitalization } })}
+          />
+          <Check
+            label="Show icons"
+            checked={hs.showIcons}
+            onChange={(showIcons) => updateSettings({ headingStyle: { ...hs, showIcons } })}
+          />
+          {hs.showIcons && (
+            <div className="field">
+              <span className="field-label">Icon style</span>
+              <div className="icon-style-options">
+                <button
+                  className="icon-style-btn"
+                  data-active={hs.iconStyle === 'filled'}
+                  onClick={() => updateSettings({ headingStyle: { ...hs, iconStyle: 'filled' } })}
+                >
+                  <span className="icon-style-dot">
+                    <DocIcon name="briefcase" variant="fill" />
+                  </span>
+                  Filled
+                </button>
+                <button
+                  className="icon-style-btn"
+                  data-active={hs.iconStyle === 'outlined'}
+                  onClick={() => updateSettings({ headingStyle: { ...hs, iconStyle: 'outlined' } })}
+                >
+                  <span className="icon-style-dot">
+                    <DocIcon name="briefcase" variant="outline" />
+                  </span>
+                  Outlined
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
       </div>
