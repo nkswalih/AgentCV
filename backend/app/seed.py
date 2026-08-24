@@ -20,7 +20,30 @@ from .schemas import (
     SkillsSection,
     SummaryItem,
     SummarySection,
+    TemplateId,
 )
+
+# The face each design was drawn with. Creating a resume through the dialog
+# stamps it so the preview the person chose is the document they get; they can
+# still switch fonts afterwards like any other setting.
+TEMPLATE_FONTS: dict[TemplateId, str] = {
+    TemplateId.CLASSIC_PRO: "Georgia",
+    TemplateId.MODERN_MIN: "Inter",
+    TemplateId.TWO_COL: "Inter",
+    TemplateId.SIDEBAR: "Inter",
+    TemplateId.EDITORIAL: "Georgia",
+    TemplateId.EXECUTIVE: "Garamond",
+    TemplateId.COMPACT: "Arial",
+    TemplateId.CREATIVE: "Lato",
+    TemplateId.DEVTECH: "IBM Plex Sans",
+    TemplateId.ACADEMIC: "Times New Roman",
+    TemplateId.TIMELINE: "IBM Plex Sans",
+    TemplateId.PHOTO_PRO: "Georgia",
+    TemplateId.PORTAL_PRO: "Georgia",
+    TemplateId.MODERN_DEEP: "Merriweather",
+    TemplateId.SERIF_ATS: "Times New Roman",
+    TemplateId.JAKE: "Times New Roman",
+}
 
 
 def starter_document() -> ResumeDocument:

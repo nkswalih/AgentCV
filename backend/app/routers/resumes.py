@@ -11,6 +11,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .. import models, schemas
+from .. import seed
 from ..db import get_db
 from ..seed import starter_document
 
@@ -41,6 +42,13 @@ def create_resume(
     payload: schemas.ResumeCreate, db: Session = Depends(get_db)
 ) -> models.Resume:
     document = payload.document or starter_document()
+    if payload.template is not None:
+        document.settings.template = payload.template
+        if payload.document is None:
+            # Shorthand create: the named designs ship with their own face.
+            font = seed.TEMPLATE_FONTS.get(payload.template)
+            if font:
+                document.settings.font_family = font
     resume = models.Resume(
         name=payload.name,
         template=document.settings.template.value,

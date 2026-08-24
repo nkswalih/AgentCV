@@ -237,6 +237,31 @@ class TemplateId(str, Enum):
     COMPACT = "compact"
     SIDEBAR = "sidebar"
     BANNER = "banner"
+    # The design system: each id is its own composition, not a recolour.
+    CLASSIC_PRO = "classic-pro"
+    MODERN_MIN = "modern-min"
+    TWO_COL = "two-col"
+    EDITORIAL = "editorial"
+    EXECUTIVE = "executive"
+    CREATIVE = "creative"
+    DEVTECH = "devtech"
+    ACADEMIC = "academic"
+    TIMELINE = "timeline"
+    PHOTO_PRO = "photo-pro"
+    PORTAL_PRO = "portal-pro"
+    MODERN_DEEP = "modern-deep"
+    SERIF_ATS = "serif-ats"
+    JAKE = "jake"
+    # Retained so documents saved under the old colour studies still validate;
+    # the picker no longer offers them.
+    ATLANTIC_BLUE = "atlantic-blue"
+    TRUE_BLUE = "true-blue"
+    EDITORIAL_RULE = "editorial-rule"
+    REFINED = "refined"
+    CLASSIC_SANS = "classic-sans"
+    CLEAN_SLATE = "clean-slate"
+    QUIET_FOCUS = "quiet-focus"
+    CLEAR = "clear"
 
 
 class PaperSize(str, Enum):
@@ -246,7 +271,9 @@ class PaperSize(str, Enum):
 
 class Settings(Base):
     template: TemplateId = TemplateId.ATS_MODERN
-    accent_color: str = Field("#2563eb", alias="accentColor")
+    # Neutral grey rather than blue: resumes read as documents, not brands,
+    # unless the author chooses an accent deliberately.
+    accent_color: str = Field("#374151", alias="accentColor")
     font_family: str = Field("Inter", alias="fontFamily")
     font_size: float = Field(10.5, alias="fontSize", ge=7, le=16)
     line_height: float = Field(1.4, alias="lineHeight", ge=1.0, le=2.2)
@@ -268,6 +295,13 @@ class Settings(Base):
     title_size: float | None = Field(None, alias="titleSize", ge=8, le=24)
     heading_size: float | None = Field(None, alias="headingSize", ge=7, le=20)
     entry_size: float | None = Field(None, alias="entrySize", ge=7, le=20)
+
+    # Layout controls
+    column_layout: str = Field("one", alias="columnLayout")
+    header_position: str = Field("top", alias="headerPosition")
+    column_width: float = Field(40.0, alias="columnWidth", ge=30, le=70)
+    left_column: list[str] = Field(default_factory=list, alias="leftColumn")
+    right_column: list[str] = Field(default_factory=list, alias="rightColumn")
 
 
 # --------------------------------------------------------------------------
@@ -300,6 +334,9 @@ class Resume(ResumeSummary):
 class ResumeCreate(Base):
     name: str = "Untitled Resume"
     document: ResumeDocument | None = None
+    # Shorthand for the creation dialog: a starter document stamped with the
+    # chosen design, so one round-trip creates a resume already wearing it.
+    template: TemplateId | None = None
 
 
 class ResumeUpdate(Base):
