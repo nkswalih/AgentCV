@@ -13,7 +13,28 @@ export type SectionType =
   | 'languages'
   | 'custom'
 
-export type TemplateId = 'ats-classic' | 'ats-modern' | 'compact' | 'sidebar' | 'banner'
+export type TemplateId =
+  | 'ats-classic'
+  | 'ats-modern'
+  | 'compact'
+  | 'sidebar'
+  | 'banner'
+  // -- the design system --
+  | 'classic-pro'
+  | 'modern-min'
+  | 'two-col'
+  | 'editorial'
+  | 'executive'
+  | 'creative'
+  | 'devtech'
+  | 'academic'
+  | 'timeline'
+  | 'photo-pro'
+  // -- reference replicas --
+  | 'portal-pro'
+  | 'modern-deep'
+  | 'serif-ats'
+  | 'jake'
 export type PaperSize = 'A4' | 'Letter'
 
 export interface Link {
@@ -192,6 +213,16 @@ export interface Settings {
   titleSize: number | null
   headingSize: number | null
   entrySize: number | null
+
+  /** Layout controls */
+  columnLayout: 'one' | 'two'
+  headerPosition: 'top' | 'left' | 'right'
+  /** Left column width as percentage (30-70). Right = 100 - columnWidth. */
+  columnWidth: number
+  /** Section IDs assigned to the left column when columnLayout is 'two'. */
+  leftColumn: string[]
+  /** Section IDs assigned to the right column when columnLayout is 'two'. */
+  rightColumn: string[]
 }
 
 export interface ResumeDocument {

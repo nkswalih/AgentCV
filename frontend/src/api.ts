@@ -1,4 +1,4 @@
-import type { Resume, ResumeDocument, ResumeSummary } from './types'
+import type { Resume, ResumeDocument, ResumeSummary, TemplateId } from './types'
 
 // Same-origin: Vite proxies /api to the backend in dev, and the backend serves
 // the built frontend in production.
@@ -37,10 +37,10 @@ export const api = {
 
   get: (id: string) => request<Resume>(`/resumes/${id}`),
 
-  create: (name?: string) =>
+  create: (name?: string, template?: TemplateId) =>
     request<Resume>('/resumes', {
       method: 'POST',
-      body: JSON.stringify({ name: name ?? 'Untitled Resume' }),
+      body: JSON.stringify({ name: name ?? 'Untitled Resume', template }),
     }),
 
   update: (id: string, patch: { name?: string; document?: ResumeDocument }) =>

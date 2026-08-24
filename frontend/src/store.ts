@@ -51,6 +51,7 @@ interface EditorState {
       Partial<Pick<SkillsSection, 'layout' | 'marker' | 'columns'>>,
   ) => void
   moveSection: (from: number, to: number) => void
+  moveSectionToColumn: (sectionId: string, toColumn: 'left' | 'right', toIndex: number) => void
 
   addItem: (sectionId: string) => void
   removeItem: (sectionId: string, itemId: string) => void
@@ -182,13 +183,21 @@ export const useEditor = create<EditorState>()(
 
       addSection(type) {
         edit((doc) => {
-          doc.sections.push(emptySection(type))
+          const section = emptySection(type)
+          doc.sections.push(section)
+          // In two-column mode, new sections go to the left column
+          if (doc.settings.columnLayout === 'two') {
+            doc.settings.leftColumn.push(section.id)
+          }
         })
       },
 
       removeSection(sectionId) {
         edit((doc) => {
           doc.sections = doc.sections.filter((s) => s.id !== sectionId)
+          // Clean up column assignments
+          doc.settings.leftColumn = doc.settings.leftColumn.filter((id) => id !== sectionId)
+          doc.settings.rightColumn = doc.settings.rightColumn.filter((id) => id !== sectionId)
         })
       },
 
@@ -199,6 +208,17 @@ export const useEditor = create<EditorState>()(
       moveSection(from, to) {
         edit((doc) => {
           doc.sections = arrayMove(doc.sections, from, to)
+        })
+      },
+
+      moveSectionToColumn(sectionId, toColumn, toIndex) {
+        edit((doc) => {
+          const fromCol = doc.settings.leftColumn.includes(sectionId) ? 'left' : 'right'
+          const fromArr = fromCol === 'left' ? doc.settings.leftColumn : doc.settings.rightColumn
+          const toArr = toColumn === 'left' ? doc.settings.leftColumn : doc.settings.rightColumn
+          const fromIdx = fromArr.indexOf(sectionId)
+          if (fromIdx !== -1) fromArr.splice(fromIdx, 1)
+          toArr.splice(toIndex, 0, sectionId)
         })
       },
 
