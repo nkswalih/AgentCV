@@ -12,16 +12,9 @@
 
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 
+import { PAPER_MM, PX_PER_MM, useFitToPage } from '../fit'
 import { ResumePage } from '../templates/ResumePage'
 import type { ResumeDocument } from '../types'
-
-/** CSS mm at 96dpi. Used to convert paper dimensions into layout pixels. */
-const PX_PER_MM = 96 / 25.4
-
-const PAPER_MM = {
-  A4: { w: 210, h: 297 },
-  Letter: { w: 216, h: 279 },
-} as const
 
 /** Zoom bounds and per-step factor. Fit stays capped at actual size; only an
     explicit zoom may enlarge past 100%, for proofing fine details. */
@@ -125,6 +118,15 @@ export function PagePreview({ doc }: { doc: ResumeDocument }) {
   const atMin = scale <= MIN_ZOOM + 0.001
   const atMax = scale >= MAX_ZOOM - 0.001
 
+  // Keep the document on one sheet. Measured through the preview's own zoom,
+  // which is divided back out so the comparison stays in layout pixels.
+  const { fit } = useFitToPage({
+    ref: pageRef,
+    paper: doc.settings.paperSize,
+    compensate: scale,
+    watch: doc,
+  })
+
   return (
     <div className="preview-wrap">
       <div className="stage" ref={stageRef}>
@@ -139,7 +141,7 @@ export function PagePreview({ doc }: { doc: ResumeDocument }) {
             <span className="crop crop-br" aria-hidden="true" />
 
             <div ref={pageRef}>
-              <ResumePage doc={doc} />
+              <ResumePage doc={doc} fit={fit} />
             </div>
 
             {/* Dashed rules where Chromium will actually break the page. */}

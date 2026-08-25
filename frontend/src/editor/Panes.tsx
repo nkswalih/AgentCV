@@ -3,16 +3,16 @@ import { Fragment, useRef, useState } from 'react'
 import { useEditor } from '../store'
 import { newId } from '../factories'
 import {
-  ACCENT_PRESETS,
+  COLOR_PRESETS,
   FONT_CHOICES,
   FONT_GROUP_LABELS,
   FONT_GROUPS,
-  PHOTO_TEMPLATES,
   TEMPLATES,
 } from '../templates/registry'
 import { DocIcon, isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
 import { Check, Segmented, Slider, Text } from './fields'
 import { SectionCard, useDragSensors, DRAG_MODIFIERS } from './SectionCard'
+import { PhotoAdjustDialog } from './PhotoAdjustDialog'
 import {
   DndContext,
   DragOverlay,
@@ -28,7 +28,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import type { Link, Section, SectionType, TemplateId } from '../types'
+import type { ColorsState, Link, Section, SectionType, TemplateId } from '../types'
 import { Grip, Plus } from './icons'
 
 const ADDABLE: SectionType[] = [
@@ -117,6 +117,7 @@ export function LeftPane() {
   const { doc, addSection, moveSection, moveSectionToColumn, updateSettings } = useEditor()
   const sensors = useDragSensors()
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [photoAdjustOpen, setPhotoAdjustOpen] = useState(false)
   if (!doc) return null
 
   const currentDoc = doc
@@ -254,7 +255,7 @@ export function LeftPane() {
 
   const step = 5
   const clamp = (v: number) => Math.max(30, Math.min(70, v))
-  const pl = currentDoc.settings.photoLayout ?? { show: true, grayscale: false, position: 'left', size: 'md', shape: 'circle' }
+  const pl = currentDoc.settings.photoLayout
   const hs = currentDoc.settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
 
   return (
@@ -462,17 +463,7 @@ export function LeftPane() {
             ]}
             onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
           />
-          <Segmented
-            label="Size"
-            value={pl.size}
-            options={[
-              { value: 'sm', label: 'S' },
-              { value: 'md', label: 'M' },
-              { value: 'lg', label: 'L' },
-              { value: 'xl', label: 'XL' },
-            ]}
-            onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })}
-          />
+          <Slider label="Size" value={pl.size} min={14} max={44} step={1} unit="mm" onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })} />
           <Segmented
             label="Shape"
             value={pl.shape}
@@ -480,10 +471,14 @@ export function LeftPane() {
               { value: 'circle', label: 'Circle' },
               { value: 'rounded', label: 'Rounded' },
               { value: 'square', label: 'Square' },
-              { value: 'none', label: 'None' },
             ]}
             onChange={(shape) => updateSettings({ photoLayout: { ...pl, shape } })}
           />
+          {currentDoc.basics.photoUrl && (
+            <button className="btn btn-sm photo-adjust-trigger" type="button" onClick={() => setPhotoAdjustOpen(true)}>
+              Adjust / crop photo
+            </button>
+          )}
         </div>
 
         {/* ============================================================ */}
@@ -559,6 +554,7 @@ export function LeftPane() {
         </div>
 
       </div>
+      {photoAdjustOpen && <PhotoAdjustDialog onClose={() => setPhotoAdjustOpen(false)} />}
     </aside>
   )
 }
@@ -568,6 +564,7 @@ function PhotoField() {
   const inputRef = useRef<HTMLInputElement>(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [adjustOpen, setAdjustOpen] = useState(false)
   if (!doc) return null
 
   async function upload(file: File) {
@@ -609,9 +606,16 @@ function PhotoField() {
           <span className="photo-empty">No image</span>
         )}
         <div className="grow">
-          <button className="btn btn-sm" disabled={busy} onClick={() => inputRef.current?.click()}>
-            {busy ? 'Uploading…' : doc.basics.photoUrl ? 'Replace photo' : 'Upload photo'}
-          </button>
+          <div className="photo-actions">
+            <button className="btn btn-sm" disabled={busy} onClick={() => inputRef.current?.click()}>
+              {busy ? 'Uploading…' : doc.basics.photoUrl ? 'Replace photo' : 'Upload photo'}
+            </button>
+            {doc.basics.photoUrl && (
+              <button className="btn btn-sm btn-ghost" type="button" onClick={() => setAdjustOpen(true)}>
+                Adjust crop
+              </button>
+            )}
+          </div>
           <p className="hint">PNG, JPEG, or WebP · 5MB max</p>
         </div>
       </div>
@@ -619,10 +623,11 @@ function PhotoField() {
       {doc.basics.photoUrl && (
         <Check
           label="Show on resume"
-          checked={doc.settings.showPhoto}
+          checked={doc.settings.photoLayout.show}
           onChange={(showPhoto) => updateSettings({ showPhoto, photoLayout: { ...doc.settings.photoLayout, show: showPhoto } })}
         />
       )}
+      {adjustOpen && <PhotoAdjustDialog onClose={() => setAdjustOpen(false)} />}
     </div>
   )
 }
@@ -795,7 +800,6 @@ function SizeControl({
 export function RightPane() {
   const { doc, updateBasics, updateSettings } = useEditor()
   if (!doc) return null
-  const hasPhoto = PHOTO_TEMPLATES.has(doc.settings.template)
 
   return (
     <aside className="pane pane-right">
@@ -806,9 +810,6 @@ export function RightPane() {
         <section className="style-section">
           <p className="eyebrow style-section-title">Identity</p>
           <PhotoField />
-          {!hasPhoto && doc.basics.photoUrl && (
-            <p className="hint">Choose Sidebar or Banner to place the photo on the page.</p>
-          )}
           <Text
             label="Full name"
             value={doc.basics.fullName}
@@ -978,24 +979,11 @@ export function RightPane() {
           />
         </section>
 
+        <ColorsSection />
+
         <section className="style-section">
-          <p className="eyebrow style-section-title">Ink & page</p>
-          <span className="field-label" style={{ marginBottom: 7 }}>
-            Accent colour
-          </span>
-          <div className="swatches">
-            {ACCENT_PRESETS.map((color) => (
-              <button
-                className="swatch"
-                key={color}
-                style={{ background: color }}
-                data-active={doc.settings.accentColor === color}
-                aria-label={`Use ${color} accent`}
-                onClick={() => updateSettings({ accentColor: color })}
-              />
-            ))}
-          </div>
-          <label className="field" style={{ marginTop: 12 }}>
+          <p className="eyebrow style-section-title">Page</p>
+          <label className="field">
             <span className="field-label">Paper</span>
             <select
               className="select"
@@ -1012,9 +1000,233 @@ export function RightPane() {
   )
 }
 
+type ApplyKey = keyof ColorsState['apply']
+
+/** Two-column checkbox layout of the reference: where the accent may reach. */
+const APPLY_OPTIONS: { column: 1 | 2; key: ApplyKey; label: string }[] = [
+  { column: 1, key: 'name', label: 'Name' },
+  { column: 1, key: 'jobTitle', label: 'Job title' },
+  { column: 1, key: 'headings', label: 'Headings' },
+  { column: 1, key: 'headerIcons', label: 'Header icons' },
+  { column: 2, key: 'dots', label: 'Dots / bars / bubbles' },
+  { column: 2, key: 'dates', label: 'Dates' },
+  { column: 2, key: 'entrySubtitle', label: 'Entry subtitle' },
+  { column: 2, key: 'linkIcons', label: 'Link icons' },
+]
+
+const APPLY_ALL: ColorsState['apply'] = {
+  name: true,
+  jobTitle: true,
+  dates: true,
+  dots: true,
+  headings: true,
+  entrySubtitle: true,
+  headerIcons: true,
+  linkIcons: true,
+}
+
+/**
+ * One surface-colour control of the trio: a rounded swatch that opens the
+ * native colour picker, labelled beneath, with a reset back to the template's
+ * own default once an explicit colour has been chosen.
+ */
+function ColorTile({
+  label,
+  value,
+  fallback,
+  onChange,
+  onReset,
+}: {
+  label: string
+  value: string | undefined
+  fallback: string
+  onChange: (value: string) => void
+  onReset: () => void
+}) {
+  return (
+    <div className="color-tile" data-set={!!value}>
+      <label className="color-swatch" style={{ background: value ?? fallback }}>
+        <input
+          type="color"
+          value={value ?? fallback}
+          onChange={(e) => onChange(e.target.value)}
+          aria-label={`${label} colour`}
+        />
+        {!value && <span className="color-swatch-auto">A</span>}
+      </label>
+      <span className="color-tile-label">
+        {label}
+        {value && (
+          <button
+            type="button"
+            className="btn btn-ghost btn-icon color-reset"
+            aria-label={`Reset ${label} to template default`}
+            title="Reset to template default"
+            onClick={onReset}
+          >
+            ↺
+          </button>
+        )}
+      </span>
+    </div>
+  )
+}
+
+const BG_TYPES = [
+  { value: 'single', label: 'Single' },
+  { value: 'multi', label: 'Multi' },
+  { value: 'image', label: 'Image' },
+] as const
+
+/**
+ * The Colors card: surface tints, backdrop treatment, preset palettes shown as
+ * color-pair tiles, a custom escape hatch, and per-element accent switches --
+ * one organized card, previews over words.
+ */
+function ColorsSection() {
+  const { doc, updateSettings } = useEditor()
+  if (!doc) return null
+  const c = doc.settings.colors
+
+  /** Merge a patch into the colors state, creating it on first touch. */
+  const setC = (patch: Partial<ColorsState>) =>
+    updateSettings({
+      colors: {
+        bgType: 'single',
+        presetId: 'none',
+        apply: { ...APPLY_ALL },
+        ...doc.settings.colors,
+        ...patch,
+      },
+    })
+
+  const setApply = (key: ApplyKey, v: boolean) =>
+    setC({ apply: { ...(c?.apply ?? APPLY_ALL), [key]: v } })
+
+  const pickColor = (field: 'page' | 'header' | 'border', value: string) =>
+    setC({ [field]: value, presetId: 'custom' } as Partial<ColorsState>)
+
+  const applyPreset = (id: string) => {
+    const p = COLOR_PRESETS.find((x) => x.id === id)
+    if (!p) return
+    // A preset is a package deal: its accent rides along with the surfaces.
+    updateSettings({
+      accentColor: p.accent,
+      colors: {
+        bgType: c?.bgType ?? 'single',
+        presetId: id,
+        apply: { ...(c?.apply ?? APPLY_ALL) },
+        page: p.page,
+        header: p.header,
+        border: p.border,
+      },
+    })
+  }
+
+  const previewVars = {
+    '--pv-page': c?.page ?? '#ffffff',
+    '--pv-header': c?.header ?? '#eef1f5',
+  } as React.CSSProperties
+
+  return (
+    <section className="style-section">
+      <p className="eyebrow style-section-title">Colors</p>
+
+      {/* -- Surface colours ------------------------------------------ */}
+      <div className="color-trio">
+        <ColorTile
+          label="Full Page"
+          value={c?.page}
+          fallback="#ffffff"
+          onChange={(v) => pickColor('page', v)}
+          onReset={() => setC({ page: undefined })}
+        />
+        <ColorTile
+          label="Header"
+          value={c?.header}
+          fallback="#eef1f5"
+          onChange={(v) => pickColor('header', v)}
+          onReset={() => setC({ header: undefined })}
+        />
+        <ColorTile
+          label="Border"
+          value={c?.border}
+          fallback="#d4dae2"
+          onChange={(v) => pickColor('border', v)}
+          onReset={() => setC({ border: undefined })}
+        />
+      </div>
+
+      {/* -- Backdrop treatment --------------------------------------- */}
+      <div className="bgtype-row" role="group" aria-label="Background type">
+        {BG_TYPES.map((t) => (
+          <button
+            key={t.value}
+            type="button"
+            className="bgtype-tile"
+            data-active={(c?.bgType ?? 'single') === t.value}
+            onClick={() => setC({ bgType: t.value })}
+          >
+            <span className={`bgtype-preview bg-${t.value}`} style={previewVars} aria-hidden="true" />
+            <span className="color-tile-label">{t.label}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* -- Preset palettes ------------------------------------------- */}
+      <div className="preset-grid">
+        {COLOR_PRESETS.map((p) => (
+          <button
+            key={p.id}
+            type="button"
+            className="preset-tile"
+            data-active={c?.presetId === p.id}
+            onClick={() => applyPreset(p.id)}
+            aria-label={`${p.id} palette`}
+            title={`${p.id} palette`}
+          >
+            <span className="preset-band" style={{ background: p.header }} aria-hidden="true" />
+            <span className="preset-body" style={{ background: p.page }} aria-hidden="true">
+              <span className="preset-t" style={{ color: p.accent }}>T</span>
+            </span>
+          </button>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        className="preset-custom"
+        data-active={c?.presetId === 'custom'}
+        onClick={() => setC({ presetId: 'custom' })}
+      >
+        <Plus />
+        Custom
+      </button>
+
+      {/* -- Where the accent reaches ---------------------------------- */}
+      <div className="apply-accent">
+        <p className="eyebrow apply-accent-title">Apply Accent Color</p>
+        <div className="apply-grid">
+          {[1, 2].map((col) => (
+            <div key={col}>
+              {APPLY_OPTIONS.filter((o) => o.column === col).map((o) => (
+                <Check
+                  key={o.key}
+                  label={o.label}
+                  checked={(c?.apply ?? APPLY_ALL)[o.key]}
+                  onChange={(v) => setApply(o.key, v)}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  )
+}
+
 /** Layout families, for the miniature: each design shows its own structure,
-    not the same lines in a different colour. */
-const RAIL_LEFT: ReadonlySet<string> = new Set(['sidebar', 'portal-pro', 'modern-deep'])
+    not the same lines in a different colour. */const RAIL_LEFT: ReadonlySet<string> = new Set(['sidebar', 'portal-pro', 'modern-deep'])
 const RAIL_RIGHT: ReadonlySet<string> = new Set(['two-col'])
 const BAND: ReadonlySet<string> = new Set(['banner', 'creative'])
 const PHOTO_HEAD: ReadonlySet<string> = new Set(['photo-pro'])
