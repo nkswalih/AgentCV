@@ -14,6 +14,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .db import init_db
 from .pdf import renderer
@@ -63,4 +64,23 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 # When the frontend has been built, serve it from the same origin so the whole
 # app runs off one process. Mounted last so it never shadows /api routes.
 if FRONTEND_DIST.is_dir():
-    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+
+    class SpaFiles(StaticFiles):
+        """Static files with a single-page-app fallback.
+
+        The router owns the URL space: /resume/<id>, /print/<id> and the rest
+        exist only in the browser, so a plain static mount answers them with
+        404 and the app looks broken on this origin (while working fine on the
+        Vite dev server). Anything that is not a real file falls back to
+        index.html and lets the client router take it from there.
+        """
+
+        async def get_response(self, path: str, scope):  # type: ignore[override]
+            try:
+                return await super().get_response(path, scope)
+            except StarletteHTTPException as exc:
+                if exc.status_code == 404:
+                    return await super().get_response("index.html", scope)
+                raise
+
+    app.mount("/", SpaFiles(directory=FRONTEND_DIST, html=True), name="frontend")

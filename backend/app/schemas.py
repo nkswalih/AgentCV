@@ -312,8 +312,11 @@ class Settings(Base):
             "show": True,
             "grayscale": False,
             "position": "left",
-            "size": "md",
+            "size": 24,
             "shape": "circle",
+            "focusX": 50,
+            "focusY": 50,
+            "zoom": 1,
         },
         alias="photoLayout",
     )
@@ -328,6 +331,11 @@ class Settings(Base):
         },
         alias="headingStyle",
     )
+
+    # Colors card: page/header/border tints, backdrop type, preset choice and
+    # where the accent may reach. Free-form dict so the UI can evolve without
+    # schema churn; the frontend owns the shape and its defaults.
+    colors: dict | None = Field(None, alias="colors")
 
 
 # --------------------------------------------------------------------------

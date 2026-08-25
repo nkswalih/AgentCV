@@ -25,15 +25,52 @@ const PHOTO_LAYOUT_DEFAULTS = {
   show: true,
   grayscale: false,
   position: 'left',
-  size: 'md',
+  size: 24,
   shape: 'circle',
+  focusX: 50,
+  focusY: 50,
+  zoom: 1,
 } as const
+
+const LEGACY_PHOTO_SIZES: Record<string, number> = {
+  sm: 18,
+  md: 24,
+  lg: 30,
+  xl: 36,
+}
+
+const clampPhotoSize = (value: unknown) => {
+  const legacy = typeof value === 'string' ? LEGACY_PHOTO_SIZES[value] : undefined
+  const numeric = legacy ?? (typeof value === 'number' ? value : PHOTO_LAYOUT_DEFAULTS.size)
+  return Math.max(14, Math.min(44, numeric))
+}
+
+const clampPercent = (value: unknown) =>
+  Math.max(0, Math.min(100, typeof value === 'number' ? value : 50))
+
+const clampPhotoZoom = (value: unknown) =>
+  Math.max(1, Math.min(3, typeof value === 'number' ? value : 1))
 
 const HEADING_STYLE_DEFAULTS = {
   visual: 'underline',
   capitalization: 'uppercase',
   showIcons: true,
   iconStyle: 'filled',
+} as const
+
+const COLORS_DEFAULTS = {
+  bgType: 'single',
+  presetId: 'none',
+  apply: {
+    name: true,
+    dots: true,
+    jobTitle: true,
+    dates: true,
+    headings: true,
+    entrySubtitle: true,
+    headerIcons: true,
+    linkIcons: true,
+  },
 } as const
 
 /**
@@ -43,6 +80,13 @@ const HEADING_STYLE_DEFAULTS = {
  * only genuinely absent keys are filled.
  */
 export function normalizeSettings(settings: Settings): Settings {
+  // The API serialises an unset optional as JSON null, so null has to read
+  // exactly like undefined here: both mean "never chosen". They also have to be
+  // resolved BEFORE the spreads below, which would dereference a null -- and
+  // rewritten on the way out, because `...settings` carries the null through.
+  const colors = settings.colors ?? undefined
+  const profileLayout = settings.profileLayout ?? undefined
+
   return {
     ...LAYOUT_DEFAULTS,
     ...settings,
@@ -51,9 +95,28 @@ export function normalizeSettings(settings: Settings): Settings {
     columnWidth: settings.columnWidth ?? LAYOUT_DEFAULTS.columnWidth,
     leftColumn: settings.leftColumn ?? LAYOUT_DEFAULTS.leftColumn,
     rightColumn: settings.rightColumn ?? LAYOUT_DEFAULTS.rightColumn,
-    ...(settings.profileLayout !== undefined && { profileLayout: settings.profileLayout }),
-    photoLayout: { ...PHOTO_LAYOUT_DEFAULTS, ...settings.photoLayout },
+    profileLayout,
+    photoLayout: {
+      ...PHOTO_LAYOUT_DEFAULTS,
+      ...settings.photoLayout,
+      size: clampPhotoSize(settings.photoLayout?.size),
+      shape: (settings.photoLayout as { shape?: string } | undefined)?.shape === 'none'
+        ? 'square'
+        : settings.photoLayout?.shape ?? PHOTO_LAYOUT_DEFAULTS.shape,
+      focusX: clampPercent(settings.photoLayout?.focusX),
+      focusY: clampPercent(settings.photoLayout?.focusY),
+      zoom: clampPhotoZoom(settings.photoLayout?.zoom),
+    },
     headingStyle: { ...HEADING_STYLE_DEFAULTS, ...settings.headingStyle },
+    // Colors stays optional: an absent card state means every template look is
+    // untouched. When present, only the shape's required parts are filled.
+    colors:
+      colors && {
+        ...colors,
+        bgType: colors.bgType ?? COLORS_DEFAULTS.bgType,
+        presetId: colors.presetId ?? COLORS_DEFAULTS.presetId,
+        apply: { ...COLORS_DEFAULTS.apply, ...colors.apply },
+      },
   }
 }
 
