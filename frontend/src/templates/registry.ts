@@ -302,3 +302,28 @@ export const ACCENT_PRESETS = [
   '#c2410c',
   '#1e293b',
 ]
+
+export interface ColorPreset {
+  id: string
+  /** Page background, header/rail fill, rule colour, accent ink. */
+  page: string
+  header: string
+  border: string
+  accent: string
+}
+
+/**
+ * Preset color combinations for the Colors card. Each tile previews its pair:
+ * header fill on the left, page tint on the right, an accent "T" over both --
+ * the combination reads at a glance before anything is applied.
+ */
+export const COLOR_PRESETS: ColorPreset[] = [
+  { id: 'paper',   page: '#ffffff', header: '#eef1f5', border: '#d4dae2', accent: '#374151' },
+  { id: 'azure',   page: '#f5f8ff', header: '#dbe7ff', border: '#b6cdf5', accent: '#2563eb' },
+  { id: 'teal',    page: '#f2faf8', header: '#d2ece6', border: '#a9d8cd', accent: '#0f766e' },
+  { id: 'violet',  page: '#f8f5ff', header: '#e6dcfb', border: '#cbbaf2', accent: '#7c3aed' },
+  { id: 'crimson', page: '#fff5f5', header: '#fbdedb', border: '#f0bcc0', accent: '#b91c1c' },
+  { id: 'ember',   page: '#fff8f2', header: '#fbe4d1', border: '#f0ccb2', accent: '#c2410c' },
+  { id: 'ink',     page: '#f6f7f8', header: '#232a33', border: '#3d4650', accent: '#e2e8f0' },
+  { id: 'forest',  page: '#f4f8f2', header: '#dde9d8', border: '#bcd2b4', accent: '#3f6212' },
+]

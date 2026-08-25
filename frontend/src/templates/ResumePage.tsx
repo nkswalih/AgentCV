@@ -8,8 +8,8 @@
 import type { CSSProperties } from 'react'
 
 import type { ResumeDocument, Section, SectionType, TemplateId } from '../types'
-import { Contact, DocSection, hasContact } from './parts'
-import { FONT_STACKS, PHOTO_TEMPLATES } from './registry'
+import { Contact, DocSection, hasContact, ProfilePhoto } from './parts'
+import { FONT_STACKS } from './registry'
 
 /** Sections that live in the Sidebar template's left rail. */
 const SIDEBAR_RAIL: ReadonlySet<SectionType> = new Set([
@@ -109,11 +109,35 @@ interface Props {
   doc: ResumeDocument
   /** Set on the print route: hides editor-only placeholder text. */
   forExport?: boolean
+  /** One-page fit factor from useFitToPage. 1 (or omitted) leaves the document
+      at its natural size. */
+  fit?: number
 }
 
-export function ResumePage({ doc, forExport = false }: Props) {
+export function ResumePage({ doc, forExport = false, fit }: Props) {
   const { basics, sections, settings } = doc
   const template = settings.template
+  const fitted = fit != null && fit < 0.999
+
+  // Photo layout — fully independent of column/header layout.
+  const pl = settings.photoLayout ?? {
+    show: true,
+    grayscale: false,
+    position: 'left' as const,
+    size: 24,
+    shape: 'circle' as const,
+    focusX: 50,
+    focusY: 50,
+    zoom: 1,
+  }
+  const showPhoto = pl.show && !!basics.photoUrl
+
+  // Colors card. Undefined fields mean "template default": nothing is emitted
+  // and every design keeps its own look until a colour is chosen.
+  const colors = settings.colors
+
+  // Section heading style controls.
+  const hs = settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
 
   // Style knobs travel as custom properties so a settings change costs a
   // recalculation rather than a React re-render of the whole document. Element
@@ -128,19 +152,17 @@ export function ResumePage({ doc, forExport = false }: Props) {
     '--doc-margin-y': `${settings.marginY}mm`,
     '--doc-accent': settings.accentColor,
     '--doc-col-width': `${settings.columnWidth ?? 40}%`,
+    '--doc-photo-size': `${pl.size}mm`,
     ...(settings.nameSize != null && { '--doc-name-size': `${settings.nameSize}pt` }),
     ...(settings.titleSize != null && { '--doc-title-size': `${settings.titleSize}pt` }),
     ...(settings.headingSize != null && { '--doc-heading-size': `${settings.headingSize}pt` }),
     ...(settings.entrySize != null && { '--doc-entry-size': `${settings.entrySize}pt` }),
+    ...(colors?.page && { '--doc-page-bg': colors.page }),
+    ...(colors?.header && { '--doc-header-bg': colors.header }),
+    ...(colors?.border && { '--doc-border-color': colors.border }),
+    ...(colors?.bgType === 'image' && basics.photoUrl && { '--doc-bg-image': `url(${JSON.stringify(basics.photoUrl)})` }),
+    ...(fitted && { '--doc-fit': fit }),
   } as CSSProperties
-
-  // Photo layout — fully independent of column/header layout.
-  const pl = settings.photoLayout ?? { show: true, grayscale: false, position: 'left', size: 'md', shape: 'circle' }
-  const showPhoto =
-    pl.show && !!basics.photoUrl && PHOTO_TEMPLATES.has(template)
-
-  // Section heading style controls.
-  const hs = settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
 
   // Sidebar templates keep their tpl-* class in all layout modes so their
   // template-specific styling (colors, fonts, typography) is preserved.
@@ -150,6 +172,7 @@ export function ResumePage({ doc, forExport = false }: Props) {
     style,
     'data-paper': settings.paperSize,
     'data-export': forExport ? 'true' : 'false',
+    ...(fitted && { 'data-fit': 'on' }),
     'data-columns': settings.columnLayout,
     'data-header': settings.headerPosition,
     'data-photo-position': pl.position,
@@ -160,6 +183,20 @@ export function ResumePage({ doc, forExport = false }: Props) {
     'data-heading-cap': hs.capitalization,
     ...(hs.showIcons && { 'data-heading-icons': 'true' }),
     ...(hs.showIcons && { 'data-heading-icon-style': hs.iconStyle }),
+    ...(colors && {
+      'data-colors': 'on',
+      'data-bg': colors.bgType,
+      // Accent switches: "on" is the default reading, so the attribute simply
+      // mirrors each flag and CSS keys off the pair.
+      'data-accent-name': String(colors.apply.name),
+      'data-accent-jobtitle': String(colors.apply.jobTitle),
+      'data-accent-headings': String(colors.apply.headings),
+      'data-accent-dates': String(colors.apply.dates),
+      'data-accent-dots': String(colors.apply.dots),
+      'data-accent-subtitle': String(colors.apply.entrySubtitle),
+      'data-accent-hicons': String(colors.apply.headerIcons),
+      'data-accent-linkicons': String(colors.apply.linkIcons),
+    }),
   }
 
   // Nothing is invented for the page: an empty field simply does not render.
@@ -200,9 +237,13 @@ export function ResumePage({ doc, forExport = false }: Props) {
 
     const railContent = (
       <>
-        {name && <h1 className="doc-name">{name}</h1>}
-        {headline && <p className="doc-headline">{headline}</p>}
-        {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+        <div className="doc-profile-stack">
+          <div className="doc-header-text">
+            {name && <h1 className="doc-name">{name}</h1>}
+            {headline && <p className="doc-headline">{headline}</p>}
+          </div>
+          {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
+        </div>
         {hasContact(basics) && (
           <Contact basics={basics} stacked icons={settings.showIcons} />
         )}
@@ -219,8 +260,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
       // One-column: full-width dark header band with identity, sections below
       return (
         <div {...rootProps}>
-          <aside className="doc-rail doc-rail-top">
-            {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+          <aside className="doc-rail doc-rail-top doc-photo-layout">
+            {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
             <div className="doc-rail-top-text">
               {name && <h1 className="doc-name">{name}</h1>}
               {headline && <p className="doc-headline">{headline}</p>}
@@ -257,8 +298,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
     // headerPos === 'top': full-width dark header, two-column content below
     return (
       <div {...rootProps}>
-        <aside className="doc-rail doc-rail-top">
-          {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+        <aside className="doc-rail doc-rail-top doc-photo-layout">
+          {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
           <div className="doc-rail-top-text">
             {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
@@ -290,9 +331,13 @@ export function ResumePage({ doc, forExport = false }: Props) {
 
     const railContent = (
       <>
-        {name && <h1 className="doc-name">{name}</h1>}
-        {headline && <p className="doc-headline">{headline}</p>}
-        {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+        <div className="doc-profile-stack">
+          <div className="doc-header-text">
+            {name && <h1 className="doc-name">{name}</h1>}
+            {headline && <p className="doc-headline">{headline}</p>}
+          </div>
+          {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
+        </div>
         {hasContact(basics) && (
           <Contact basics={basics} stacked icons={settings.showIcons} />
         )}
@@ -309,8 +354,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
       // One-column: full-width dark header band with identity, sections below
       return (
         <div {...rootProps}>
-          <aside className="doc-rail doc-rail-top">
-            {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+          <aside className="doc-rail doc-rail-top doc-photo-layout">
+            {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
             <div className="doc-rail-top-text">
               {name && <h1 className="doc-name">{name}</h1>}
               {headline && <p className="doc-headline">{headline}</p>}
@@ -347,8 +392,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
     // headerPos === 'top': full-width dark header, two-column content below
     return (
       <div {...rootProps}>
-        <aside className="doc-rail doc-rail-top">
-          {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+        <aside className="doc-rail doc-rail-top doc-photo-layout">
+          {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
           <div className="doc-rail-top-text">
             {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
@@ -379,12 +424,12 @@ export function ResumePage({ doc, forExport = false }: Props) {
     const main = rightSections.length > 0 ? rightSections : sections.filter((s) => !SIDEBAR_RAIL.has(s.type))
 
     const sidebarHeader = (
-      <header className="doc-header">
+      <header className="doc-header doc-profile-stack">
         <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
         </div>
-        {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+        {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
       </header>
     )
 
@@ -392,8 +437,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
       // One-column: full-width dark header band with identity, sections below
       return (
         <div {...rootProps}>
-          <aside className="doc-rail doc-rail-top">
-            {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+          <aside className="doc-rail doc-rail-top doc-photo-layout">
+            {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
             <div className="doc-rail-top-text">
               {name && <h1 className="doc-name">{name}</h1>}
               {headline && <p className="doc-headline">{headline}</p>}
@@ -460,8 +505,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
     // headerPos === 'top': full-width dark header, two-column content below
     return (
       <div {...rootProps}>
-        <aside className="doc-rail doc-rail-top">
-          {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+        <aside className="doc-rail doc-rail-top doc-photo-layout">
+          {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
           <div className="doc-rail-top-text">
             {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
@@ -492,9 +537,12 @@ export function ResumePage({ doc, forExport = false }: Props) {
     const main = leftSections.length > 0 ? leftSections : sections.filter((s) => !TWOCOL_RAIL.has(s.type))
 
     const twoColHeader = (
-      <header className="doc-header">
-        {name && <h1 className="doc-name">{name}</h1>}
-        {headline && <p className="doc-headline">{headline}</p>}
+      <header className="doc-header doc-photo-layout">
+        <div className="doc-header-text">
+          {name && <h1 className="doc-name">{name}</h1>}
+          {headline && <p className="doc-headline">{headline}</p>}
+        </div>
+        {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
       </header>
     )
 
@@ -502,8 +550,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
       // One-column: full-width header with border, sections below
       return (
         <div {...rootProps}>
-          <header className="doc-header doc-header-top">
-            {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+          <header className="doc-header doc-header-top doc-photo-layout">
+            {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
             <div className="doc-rail-top-text">
               {name && <h1 className="doc-name">{name}</h1>}
               {headline && <p className="doc-headline">{headline}</p>}
@@ -570,8 +618,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
     // headerPos === 'top': full-width header with border, two-column content below
     return (
       <div {...rootProps}>
-        <header className="doc-header doc-header-top">
-          {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
+        <header className="doc-header doc-header-top doc-photo-layout">
+          {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
           <div className="doc-rail-top-text">
             {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
@@ -599,9 +647,9 @@ export function ResumePage({ doc, forExport = false }: Props) {
   /* -- Creative: identity lives in a deep band; body stays disciplined --- */
   if (template === 'creative') {
     const bandHeader = (
-      <header className="doc-band">
-        {showPhoto && <img className="doc-photo" src={basics.photoUrl!} alt="" />}
-        <div>
+      <header className="doc-band doc-photo-layout">
+        {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
+        <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
           <Contact basics={basics} icons={settings.showIcons} />
@@ -673,9 +721,9 @@ export function ResumePage({ doc, forExport = false }: Props) {
   /* -- Photo Pro: portrait set INTO the masthead ------------------------- */
   if (template === 'photo-pro') {
     const photoHeader = (
-      <header className={`doc-photohead${showPhoto ? '' : ' no-photo'}`}>
-        {showPhoto && <img className="doc-portrait" src={basics.photoUrl!} alt="" />}
-        <div>
+      <header className={`doc-photohead doc-photo-layout${showPhoto ? '' : ' no-photo'}`}>
+        {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
+        <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
           <Contact basics={basics} icons={settings.showIcons} />
@@ -747,8 +795,9 @@ export function ResumePage({ doc, forExport = false }: Props) {
   /* -- Editorial: split masthead -- identity left, reach right ----------- */
   if (template === 'editorial' && hasContact(basics)) {
     const edHeader = (
-      <header className="doc-masthead">
-        <div>
+      <header className="doc-masthead doc-photo-layout">
+        {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
+        <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
         </div>
@@ -827,7 +876,8 @@ export function ResumePage({ doc, forExport = false }: Props) {
   // ATS-safe family and remaining designs: one column, heading then sections.
 
   const headerEl = (
-    <header className={`doc-header${splitHeader ? ' doc-header-split' : ''}`}>
+    <header className={`doc-header doc-photo-layout${splitHeader ? ' doc-header-split' : ''}`}>
+      {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
       <div className="doc-header-text">
         {name && <h1 className="doc-name">{name}</h1>}
         {headline && <p className="doc-headline">{headline}</p>}
