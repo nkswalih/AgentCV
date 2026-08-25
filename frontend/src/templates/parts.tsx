@@ -13,11 +13,32 @@ import type {
   Section,
   SectionItem,
   SectionType,
+  Settings,
   SkillGroup,
   SkillsSection,
   SummaryItem,
 } from '../types'
 import { DocIcon, iconForLink, SECTION_ICONS, type DocIconName } from './doc-icons'
+
+export function ProfilePhoto({
+  src,
+  layout,
+}: {
+  src: string
+  layout: Settings['photoLayout']
+}) {
+  const style = {
+    '--photo-focus-x': `${layout.focusX}%`,
+    '--photo-focus-y': `${layout.focusY}%`,
+    '--photo-zoom': layout.zoom,
+  } as CSSProperties
+
+  return (
+    <span className="doc-photo-frame" style={style}>
+      <img className="doc-photo" src={src} alt="" />
+    </span>
+  )
+}
 
 /**
  * Every field that carries visible text, per section type.

@@ -233,8 +233,11 @@ const BASE: ResumeDocument = {
       show: true,
       grayscale: false,
       position: 'left',
-      size: 'md',
+      size: 24,
       shape: 'circle',
+      focusX: 50,
+      focusY: 50,
+      zoom: 1,
     },
     headingStyle: {
       visual: 'underline',
