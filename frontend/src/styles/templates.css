@@ -2067,3 +2067,250 @@
   margin-right: 4pt;
   vertical-align: -0.08em;
 }
+
+/* ======================================================================
+   Colors card rendering
+   Everything here is opt-in: the rules only bite when the document root
+   carries data-colors="on", i.e. the author touched the Colors card.
+   ====================================================================== */
+
+/* -- Surfaces ------------------------------------------------------------ */
+.page[data-colors='on'] {
+  background: var(--doc-page-bg, #ffffff);
+}
+.page[data-colors='on'][data-bg='multi'] {
+  background: linear-gradient(
+    155deg,
+    var(--doc-page-bg, #ffffff) 58%,
+    var(--doc-header-bg, var(--doc-page-bg, #ffffff))
+  );
+}
+.page[data-colors='on'][data-bg='image'] {
+  position: relative;
+  isolation: isolate;
+  background: var(--doc-page-bg, #ffffff);
+}
+.page[data-colors='on'][data-bg='image']::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image: var(--doc-bg-image);
+  background-size: cover;
+  background-position: center;
+  opacity: 0.08;
+}
+
+/* -- Header / rail fills --------------------------------------------------
+   Additive: containers that read as the page's header zone pick up the
+   header colour; designs without such a zone are unaffected. */
+.page[data-colors='on'] .doc-rail,
+.page[data-colors='on'] .doc-rail-top,
+.page[data-colors='on'] .doc-header-top {
+  background: var(--doc-header-bg, transparent);
+}
+
+/* -- Rules and borders ----------------------------------------------------
+   The border colour slots in ahead of the accent in the existing fallback
+   chains, so with no border chosen these resolve exactly as before. */
+.page[data-colors='on'] .doc-section-title {
+  border-color: var(--doc-border-color, var(--doc-accent, currentColor));
+}
+.page[data-colors='on'] .tl-list::before,
+.page[data-colors='on'] .tpl-timeline .tl-item::before {
+  border-color: var(--doc-border-color, var(--doc-accent, currentColor));
+  background: var(--doc-border-color, var(--doc-accent, currentColor));
+}
+
+/* -- Where the accent may reach ------------------------------------------ */
+.page[data-colors='on'][data-accent-name='true'] .doc-name {
+  color: var(--doc-accent);
+}
+.page[data-colors='on'][data-accent-jobtitle='true'] .doc-item-title {
+  color: var(--doc-accent);
+}
+.page[data-colors='on'][data-accent-dates='true'] .doc-item-date,
+.page[data-colors='on'][data-accent-dates='true'] .tl-when {
+  color: var(--doc-accent);
+}
+.page[data-colors='on'][data-accent-headings='true'] .doc-section-title {
+  color: var(--doc-accent);
+}
+.page[data-colors='on'][data-accent-subtitle='true'] .doc-item-sub {
+  color: var(--doc-accent);
+}
+.page[data-colors='on'][data-accent-dots='true'] .doc-bullets li::marker,
+.page[data-colors='on'][data-accent-dots='true'] .doc-skill-bullets li::marker,
+.page[data-colors='on'][data-accent-dots='true'] .doc-skilllines li {
+  color: var(--doc-accent);
+}
+.page[data-colors='on'][data-accent-hicons='true'] .doc-contact-item .doc-icon,
+.page[data-colors='on'][data-accent-hicons='true'] .doc-contact-row .doc-icon {
+  color: var(--doc-accent);
+}
+.page[data-colors='on'][data-accent-linkicons='true'] a.doc-link .doc-icon {
+  color: var(--doc-accent);
+}
+
+/* ======================================================================
+   One-page fit
+   Shrinks the whole document so it stays on a single sheet. zoom rather
+   than transform: it scales the pt and mm values the skins hardcode, and
+   the text reflows into the smaller measure instead of being photographed
+   at a smaller size. The compensating width and min-height keep the sheet
+   box itself exactly one page, so Chromium still paginates correctly.
+   ====================================================================== */
+.page[data-fit='on'] {
+  zoom: var(--doc-fit, 1);
+  width: calc(210mm / var(--doc-fit, 1));
+  min-height: calc(297mm / var(--doc-fit, 1));
+}
+.page[data-fit='on'][data-paper='Letter'] {
+  width: calc(216mm / var(--doc-fit, 1));
+  min-height: calc(279mm / var(--doc-fit, 1));
+}
+
+/* ======================================================================
+   Unified photo layout
+   This final layer intentionally outranks the old per-skin photo dimensions.
+   Skins may keep their borders and margins, but size, crop, shape and position
+   have one user-controlled source of truth in every template and layout mode.
+   ====================================================================== */
+
+.page .doc-photo-frame {
+  display: block;
+  width: min(var(--doc-photo-size, 24mm), 100%);
+  max-width: 100%;
+  aspect-ratio: 1;
+  flex: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  order: -1;
+}
+
+.page[data-photo-size][data-photo-shape] .doc-photo-frame .doc-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: var(--photo-focus-x, 50%) var(--photo-focus-y, 50%);
+  transform: scale(var(--photo-zoom, 1));
+  transform-origin: var(--photo-focus-x, 50%) var(--photo-focus-y, 50%);
+}
+
+.page[data-photo-shape='circle'] .doc-photo-frame {
+  border-radius: 50%;
+}
+.page[data-photo-shape='rounded'] .doc-photo-frame {
+  border-radius: 12%;
+}
+.page[data-photo-shape='square'] .doc-photo-frame {
+  border-radius: 0;
+}
+.page[data-photo-grayscale='true'] .doc-photo {
+  filter: grayscale(1);
+}
+
+/* Horizontal identity regions: Left/Right flank the text; Top stacks above. */
+.page .doc-photo-layout {
+  display: flex;
+  align-items: center;
+  gap: 12pt;
+}
+.page .doc-rail-top-text,
+.page .doc-header-text {
+  flex: 1;
+  min-width: 0;
+}
+.page[data-photo-position='left'] .doc-photo-layout > .doc-photo-frame {
+  order: -1;
+}
+.page[data-photo-position='right'] .doc-photo-layout > .doc-photo-frame {
+  order: 1;
+}
+.page[data-photo-position='top'] .doc-photo-layout {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.page[data-photo-position='top'] .doc-photo-layout > .doc-photo-frame {
+  order: -1;
+  margin-bottom: 6pt;
+}
+
+/* A header placed inside a two-column side region behaves like a rail, not a
+   wide masthead: Top goes above the identity; Left/Right sit underneath and
+   align to that edge. */
+.page[data-columns='two'][data-header='left'] .doc-photo-layout,
+.page[data-columns='two'][data-header='right'] .doc-photo-layout {
+  flex-direction: column;
+  align-items: stretch;
+}
+.page[data-columns='two'][data-header='left'] .doc-photo-layout > .doc-header-text,
+.page[data-columns='two'][data-header='right'] .doc-photo-layout > .doc-header-text {
+  order: 0;
+}
+.page[data-columns='two'][data-header='left'][data-photo-position='left'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header='right'][data-photo-position='left'] .doc-photo-layout > .doc-photo-frame {
+  order: 1;
+  align-self: flex-start;
+  margin-block: 6pt 0;
+}
+.page[data-columns='two'][data-header='left'][data-photo-position='right'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header='right'][data-photo-position='right'] .doc-photo-layout > .doc-photo-frame {
+  order: 1;
+  align-self: flex-end;
+  margin-block: 6pt 0;
+}
+.page[data-columns='two'][data-header='left'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header='right'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame {
+  order: -1;
+  align-self: flex-start;
+  margin-block: 0 6pt;
+}
+
+/* Narrow two-column rails: Top sits above the name. Left/Right stay below the
+   identity and align to that rail edge, which remains readable at 30-70%. */
+.page .doc-profile-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.page .doc-profile-stack .doc-header-text {
+  order: 0;
+}
+.page .doc-profile-stack .doc-photo-frame {
+  order: 1;
+  margin-block: 6pt;
+}
+.page[data-photo-position='left'] .doc-profile-stack .doc-photo-frame {
+  align-self: flex-start;
+}
+.page[data-photo-position='right'] .doc-profile-stack .doc-photo-frame {
+  align-self: flex-end;
+}
+.page[data-photo-position='top'] .doc-profile-stack .doc-photo-frame {
+  order: -1;
+  align-self: flex-start;
+  margin-block: 0 6pt;
+}
+
+/* Retain each design's frame treatment without reintroducing fixed geometry. */
+.page.tpl-sidebar .doc-photo-frame {
+  border: 2.5pt solid rgba(255, 255, 255, 0.28);
+}
+.page.tpl-portal-pro .doc-photo-frame {
+  border: 2pt solid rgba(255, 255, 255, 0.2);
+}
+.page.tpl-modern-deep .doc-photo-frame {
+  border: 2pt solid rgba(255, 255, 255, 0.15);
+}
+.page.tpl-creative .doc-photo-frame {
+  border: 2pt solid rgba(238, 241, 252, 0.45);
+}
+.page.tpl-photo-pro .doc-photo-frame {
+  border: 0.75pt solid #c9cfd6;
+}
