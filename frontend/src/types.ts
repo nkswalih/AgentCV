@@ -242,10 +242,15 @@ export interface Settings {
     grayscale: boolean
     /** Photo position relative to the profile/header text. */
     position: 'left' | 'top' | 'right'
-    /** Photo size preset. */
-    size: 'sm' | 'md' | 'lg' | 'xl'
+    /** Photo size in millimetres. */
+    size: number
     /** Photo shape. */
-    shape: 'circle' | 'square' | 'rounded' | 'none'
+    shape: 'circle' | 'square' | 'rounded'
+    /** Crop focal point, as percentages of the source image. */
+    focusX: number
+    focusY: number
+    /** Crop zoom multiplier used by the photo adjustment dialog. */
+    zoom: number
   }
 
   /** Section heading visual controls. */
@@ -258,6 +263,37 @@ export interface Settings {
     showIcons: boolean
     /** Icon visual style. */
     iconStyle: 'filled' | 'outlined'
+  }
+
+  /**
+   * Colors card state. Undefined fields mean "template default" — the resume
+   * keeps its designed look until a value is explicitly chosen.
+   */
+  colors?: ColorsState
+}
+
+export interface ColorsState {
+  /** Full page background tint. */
+  page?: string
+  /** Header / rail / band background. */
+  header?: string
+  /** Rule and border colour (section title lines, boxed borders, spines). */
+  border?: string
+  /** Page backdrop treatment. */
+  bgType: 'single' | 'multi' | 'image'
+  /** Which preset tile is active; 'custom' when hand-picked. */
+  presetId: string
+  /** Where the accent colour is allowed to reach. All default to on, so an
+      untouched document looks exactly as each template designed it. */
+  apply: {
+    name: boolean
+    dots: boolean
+    jobTitle: boolean
+    dates: boolean
+    headings: boolean
+    entrySubtitle: boolean
+    headerIcons: boolean
+    linkIcons: boolean
   }
 }
 

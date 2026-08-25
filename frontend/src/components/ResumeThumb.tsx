@@ -9,17 +9,10 @@
 
 import { useLayoutEffect, useRef, useState, type CSSProperties } from 'react'
 
+import { PAPER_MM, PX_PER_MM, useFitToPage } from '../fit'
 import { PreviewScope } from '../templates/parts'
 import { ResumePage } from '../templates/ResumePage'
-import type { PaperSize, ResumeDocument } from '../types'
-
-/** CSS mm at 96dpi -- matches the editor preview's coordinate system. */
-const PX_PER_MM = 96 / 25.4
-
-const PAPER_MM: Record<PaperSize, { w: number; h: number }> = {
-  A4: { w: 210, h: 297 },
-  Letter: { w: 216, h: 279 },
-}
+import type { ResumeDocument } from '../types'
 
 export function ResumeThumb({ doc }: { doc?: ResumeDocument }) {
   const windowRef = useRef<HTMLDivElement>(null)
@@ -30,6 +23,14 @@ export function ResumeThumb({ doc }: { doc?: ResumeDocument }) {
   const size = PAPER_MM[doc?.settings.paperSize ?? 'A4']
   const pageW = size.w * PX_PER_MM
   const sheetH = size.h * PX_PER_MM
+
+  // The miniature shows what the sheet will look like, fit included.
+  const { fit } = useFitToPage({
+    ref: contentRef,
+    paper: doc?.settings.paperSize ?? 'A4',
+    compensate: scale || 1,
+    watch: doc,
+  })
 
   // Scale to whatever width the grid hands this card.
   useLayoutEffect(() => {
@@ -42,13 +43,24 @@ export function ResumeThumb({ doc }: { doc?: ResumeDocument }) {
     return () => observer.disconnect()
   }, [doc, pageW])
 
-  // Real rendered height decides how many sheets the document spans.
+  // Real rendered height decides how many sheets the document spans. This has
+  // to re-run when the fit changes -- and keep watching, because webfonts and
+  // images land after the first measurement -- or the badge freezes on the
+  // count from before the document was fitted and claims two pages forever.
   useLayoutEffect(() => {
     const el = contentRef.current
     if (!el || !doc || scale === 0) return
-    const naturalH = el.getBoundingClientRect().height / scale
-    setPages(Math.max(1, Math.ceil(naturalH / sheetH - 0.001)))
-  }, [doc, scale, sheetH])
+
+    const measure = () => {
+      const naturalH = el.getBoundingClientRect().height / scale
+      setPages(Math.max(1, Math.ceil(naturalH / sheetH - 0.001)))
+    }
+    measure()
+
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [doc, scale, sheetH, fit])
 
   return (
     <div
@@ -65,7 +77,7 @@ export function ResumeThumb({ doc }: { doc?: ResumeDocument }) {
               style={{ '--preview-scale': scale } as CSSProperties}
             >
               <PreviewScope>
-                <ResumePage doc={doc} />
+                <ResumePage doc={doc} fit={fit} />
               </PreviewScope>
             </div>
           </div>
