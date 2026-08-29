@@ -157,6 +157,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     ...(settings.titleSize != null && { '--doc-title-size': `${settings.titleSize}pt` }),
     ...(settings.headingSize != null && { '--doc-heading-size': `${settings.headingSize}pt` }),
     ...(settings.entrySize != null && { '--doc-entry-size': `${settings.entrySize}pt` }),
+    ...(settings.contactSize != null && { '--doc-contact-size': `${settings.contactSize}pt` }),
     ...(colors?.page && { '--doc-page-bg': colors.page }),
     ...(colors?.header && { '--doc-header-bg': colors.header }),
     ...(colors?.border && { '--doc-border-color': colors.border }),
@@ -203,9 +204,11 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   const name = basics.fullName.trim()
   const headline = basics.headline.trim()
 
-  // Sections reordered by the template's own reading logic (Technical,
-  // Academic); everything else keeps the author's order untouched.
-  const order = orderFor(template)
+  // Template-specific reading order is only applied in two-column mode, where
+  // the layout requires sections in a particular sequence.  In one-column mode
+  // the author's drag-and-drop order is always respected.
+  const isTwoCol = settings.columnLayout === 'two'
+  const order = isTwoCol ? orderFor(template) : null
   const ordered = order
     ? [...sections].sort(
         (a, b) => order.indexOf(a.type) - order.indexOf(b.type),
@@ -213,7 +216,6 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     : sections
 
   // -- Layout column resolution (shared by all templates) ------------------
-  const isTwoCol = settings.columnLayout === 'two'
   const headerPos = settings.headerPosition ?? 'top'
   const leftIds = settings.leftColumn ?? []
   const rightIds = settings.rightColumn ?? []
@@ -953,30 +955,8 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     )
   }
 
-  // -- One-column mode: header position with single content flow --------
-  if (headerPos === 'left') {
-    return (
-      <div {...rootProps}>
-        {headerEl}
-        <div className="doc-body">
-          {renderSections(ordered)}
-        </div>
-      </div>
-    )
-  }
-
-  if (headerPos === 'right') {
-    return (
-      <div {...rootProps}>
-        <div className="doc-body">
-          {renderSections(ordered)}
-        </div>
-        {headerEl}
-      </div>
-    )
-  }
-
-  // Header Top (default): header full width, single content below
+  // -- One-column mode: header is always at the top; Left/Right/Center
+  //    controls text-align only, handled via data-header attribute in CSS.
   return (
     <div {...rootProps}>
       {headerEl}

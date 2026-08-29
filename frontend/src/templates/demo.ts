@@ -224,6 +224,7 @@ const BASE: ResumeDocument = {
     titleSize: null,
     headingSize: null,
     entrySize: null,
+    contactSize: null,
     columnLayout: 'one',
     headerPosition: 'top',
     columnWidth: 40,
@@ -238,6 +239,9 @@ const BASE: ResumeDocument = {
       focusX: 50,
       focusY: 50,
       zoom: 1,
+      border: false,
+      borderWidth: 1,
+      borderColor: '#000000',
     },
     headingStyle: {
       visual: 'underline',

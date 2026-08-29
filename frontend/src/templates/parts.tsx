@@ -31,6 +31,8 @@ export function ProfilePhoto({
     '--photo-focus-x': `${layout.focusX}%`,
     '--photo-focus-y': `${layout.focusY}%`,
     '--photo-zoom': layout.zoom,
+    '--photo-border-width': layout.border ? `${layout.borderWidth}pt` : '0',
+    '--photo-border-color': layout.borderColor,
   } as CSSProperties
 
   return (
