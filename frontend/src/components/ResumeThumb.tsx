@@ -14,7 +14,7 @@ import { PreviewScope } from '../templates/parts'
 import { ResumePage } from '../templates/ResumePage'
 import type { ResumeDocument } from '../types'
 
-export function ResumeThumb({ doc }: { doc?: ResumeDocument }) {
+export function ResumeThumb({ doc, fitToHeight }: { doc?: ResumeDocument; fitToHeight?: boolean }) {
   const windowRef = useRef<HTMLDivElement>(null)
   const contentRef = useRef<HTMLDivElement>(null)
   const [scale, setScale] = useState(0)
@@ -32,16 +32,26 @@ export function ResumeThumb({ doc }: { doc?: ResumeDocument }) {
     watch: doc,
   })
 
-  // Scale to whatever width the grid hands this card.
+  // Scale to fit the container — by width normally, or by height when
+  // fitToHeight is requested (used by the preview modal so the whole page
+  // is visible without scrolling).
   useLayoutEffect(() => {
     const el = windowRef.current
     if (!el || !doc) return
-    const measure = () => setScale(el.clientWidth / pageW)
+    const measure = () => {
+      if (fitToHeight && el.clientHeight > 0) {
+        const byH = el.clientHeight / sheetH
+        const byW = el.clientWidth / pageW
+        setScale(Math.min(byW, byH))
+      } else {
+        setScale(el.clientWidth / pageW)
+      }
+    }
     measure()
     const observer = new ResizeObserver(measure)
     observer.observe(el)
     return () => observer.disconnect()
-  }, [doc, pageW])
+  }, [doc, pageW, sheetH, fitToHeight])
 
   // Real rendered height decides how many sheets the document spans. This has
   // to re-run when the fit changes -- and keep watching, because webfonts and

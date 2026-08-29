@@ -2,9 +2,8 @@
  * The creation dialog: apply a design before the resume exists.
  *
  * Every card renders the real ResumePage with sample content -- never an
- * abstraction -- so what is picked here is what prints later. Filter chips
- * group the gallery the way people shop for designs; All keeps everything
- * honest.
+ * abstraction -- so what is picked here is what prints later. Click a card
+ * to preview the design at larger scale before committing.
  */
 
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
@@ -17,20 +16,21 @@ import { demoDocument } from '../templates/demo'
 import { TEMPLATES, type TemplateTag } from '../templates/registry'
 import type { TemplateId } from '../types'
 
-const CHIP_LABELS: Partial<Record<TemplateTag | 'all', string>> = {
+const CHIP_LABELS: Record<TemplateTag | 'all', string> = {
   all: 'All Templates',
   popular: 'Popular',
   simple: 'Simple',
   modern: 'Modern',
+  creative: 'Creative',
+  professional: 'Professional',
+  photo: 'Photo',
+  twocol: 'Two Column',
+  executive: 'Executive',
+  technical: 'Technical',
+  academic: 'Academic',
 }
 
-const FILTERS: (TemplateTag | 'all')[] = ['all', 'popular', 'simple', 'modern']
-
-const PHOTO_LABEL: Record<string, string> = {
-  none: '',
-  optional: ' · photo optional',
-  designed: ' · photo designed-in',
-}
+const FILTERS: (TemplateTag | 'all')[] = ['all', 'popular', 'simple', 'modern', 'creative']
 
 interface PickerApi {
   open: () => void
@@ -59,20 +59,25 @@ function TemplatePicker({ onClose }: { onClose: () => void }) {
   const [filter, setFilter] = useState<TemplateTag | 'all'>('all')
   const [busyId, setBusyId] = useState<TemplateId | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [previewId, setPreviewId] = useState<TemplateId | null>(null)
 
-  // Close on Escape -- same contract as the export dialog.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && !busyId) onClose()
+      if (e.key === 'Escape') {
+        if (previewId) setPreviewId(null)
+        else if (!busyId) onClose()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose, busyId])
+  }, [onClose, busyId, previewId])
 
   const visible = TEMPLATES.filter((t) => {
     if (filter === 'all') return true
     return t.tags.includes(filter)
   })
+
+  const previewTpl = previewId ? TEMPLATES.find((t) => t.id === previewId) : null
 
   async function pick(id: TemplateId) {
     if (busyId) return
@@ -98,59 +103,104 @@ function TemplatePicker({ onClose }: { onClose: () => void }) {
       >
         <div className="modal-head">
           <div>
-            <h2 className="modal-title">Apply a design</h2>
-            <p className="hint">Every card is your page wearing the design -- pick one and start typing.</p>
+            <h2 className="modal-title">Apply a design template</h2>
+            {!previewId && (
+              <p className="hint">Every card is your page wearing the design — pick one and start typing.</p>
+            )}
           </div>
           <button className="btn btn-ghost" onClick={onClose} disabled={!!busyId} aria-label="Close">
             ✕
           </button>
         </div>
 
-        <div className="tp-filters" role="tablist" aria-label="Template categories">
-          {FILTERS.map((f) => (
-            <button
-              key={f}
-              className="chip"
-              data-active={filter === f}
-              onClick={() => setFilter(f)}
-            >
-              {CHIP_LABELS[f]}
-            </button>
-          ))}
-        </div>
-
-        {error && (
-          <div className="banner" role="alert">
-            {error}
+        {/* ---- Preview mode ---- */}
+        {previewTpl ? (
+          <div className="tp-preview">
+            <div className="tp-preview-layout">
+              <div className="tp-preview-thumb">
+                <ResumeThumb doc={demoDocument(previewTpl.id)} />
+              </div>
+              <div className="tp-preview-info">
+                <div>
+                  <button
+                    type="button"
+                    className="btn btn-ghost tp-preview-back"
+                    onClick={() => setPreviewId(null)}
+                  >
+                    ← Back to all templates
+                  </button>
+                  <h3 className="tp-preview-name">{previewTpl.name}</h3>
+                  <span className="tag" data-ats={previewTpl.atsSafe ? 'true' : 'false'}>
+                    {previewTpl.atsSafe ? 'ATS-safe' : 'Design-led'}
+                  </span>
+                </div>
+                <p className="tp-preview-note">{previewTpl.note}</p>
+                <ul className="tp-preview-features">
+                  <li>A4 / US-Letter Size</li>
+                  <li>Editable Text</li>
+                  <li>Fully Customizable</li>
+                  <li>Print Ready Format</li>
+                  <li>Online Resume with Shareable Link</li>
+                </ul>
+                <button
+                  type="button"
+                  className="btn btn-primary tp-preview-apply"
+                  disabled={!!busyId}
+                  onClick={() => void pick(previewTpl.id)}
+                >
+                  {busyId === previewTpl.id ? 'Creating…' : 'Use this template'}
+                </button>
+              </div>
+            </div>
           </div>
-        )}
+        ) : (
+          <>
+            {/* ---- Filter chips ---- */}
+            <div className="tp-filters" role="tablist" aria-label="Template categories">
+              {FILTERS.map((f) => (
+                <button
+                  key={f}
+                  className="chip"
+                  data-active={filter === f}
+                  onClick={() => setFilter(f)}
+                >
+                  {CHIP_LABELS[f]}
+                </button>
+              ))}
+            </div>
 
-        <div className="modal-body tp-grid">
-          {visible.map((t) => (
-            <button
-              key={t.id}
-              className="tp-card"
-              onClick={() => void pick(t.id)}
-              disabled={!!busyId}
-              aria-busy={busyId === t.id}
-            >
-              <ResumeThumb doc={demoDocument(t.id)} />
-              <span className="tp-meta">
-                <span className="tp-name">{t.name}</span>
-                <span className="tag" data-ats={t.atsSafe ? 'true' : 'false'}>
-                  {t.atsSafe ? 'ATS-safe' : 'Design-led'}
-                </span>
-              </span>
-              <span className="tp-note">
-                {t.layout}
-                {PHOTO_LABEL[t.photo]}
-              </span>
-              <span className="tp-note dim">{t.note}</span>
-              {busyId === t.id && <span className="tp-busy">Creating…</span>}
-            </button>
-          ))}
-          {visible.length === 0 && <p className="hint">Nothing in this category yet.</p>}
-        </div>
+            {error && (
+              <div className="banner" role="alert">
+                {error}
+              </div>
+            )}
+
+            {/* ---- Template grid ---- */}
+            <div className="modal-body tp-grid">
+              {visible.map((t) => (
+                <button
+                  key={t.id}
+                  className="tp-card"
+                  onClick={() => setPreviewId(t.id)}
+                  disabled={!!busyId}
+                  aria-busy={busyId === t.id}
+                >
+                  <div className="tp-card-thumb">
+                    <ResumeThumb doc={demoDocument(t.id)} />
+                  </div>
+                  <span className="tp-meta">
+                    <span className="tp-name">{t.name}</span>
+                    <span className="tag tag-sm" data-ats={t.atsSafe ? 'true' : 'false'}>
+                      {t.atsSafe ? 'ATS-safe' : 'Design-led'}
+                    </span>
+                  </span>
+                  {busyId === t.id && <span className="tp-busy">Creating…</span>}
+                </button>
+              ))}
+              {visible.length === 0 && <p className="hint">Nothing in this category yet.</p>}
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
