@@ -333,13 +333,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
 
     const railContent = (
       <>
-        <div className="doc-profile-stack">
-          <div className="doc-header-text">
-            {name && <h1 className="doc-name">{name}</h1>}
-            {headline && <p className="doc-headline">{headline}</p>}
-          </div>
-          {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
-        </div>
+        {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
         {hasContact(basics) && (
           <Contact basics={basics} stacked icons={settings.showIcons} />
         )}
@@ -348,9 +342,24 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
         ))}
       </>
     )
-    const mainContent = main.map((s) => (
-      <DocSection key={s.id} section={s} />
-    ))
+
+    const mainHeader = (
+      <div className="doc-header">
+        <div className="doc-header-text">
+          {name && <h1 className="doc-name">{name}</h1>}
+          {headline && <p className="doc-headline">{headline}</p>}
+        </div>
+      </div>
+    )
+
+    const mainContent = (
+      <>
+        {mainHeader}
+        {main.map((s) => (
+          <DocSection key={s.id} section={s} />
+        ))}
+      </>
+    )
 
     if (!isTwoCol) {
       // One-column: full-width dark header band with identity, sections below
