@@ -1,7 +1,14 @@
-import { Fragment, useRef, useState } from 'react'
+import { Fragment, useEffect, useRef, useState } from 'react'
 
 import { useEditor } from '../store'
-import { newId } from '../factories'
+import { newId, applyTemplatePreset } from '../factories'
+import {
+  loadCustomTemplates,
+  saveCustomTemplate,
+  removeCustomTemplate,
+  applyCustomTemplate,
+  type CustomTemplate,
+} from '../customTemplates'
 import {
   COLOR_PRESETS,
   FONT_CHOICES,
@@ -291,6 +298,18 @@ export function LeftPane() {
               onChange={(v) => updateSettings({ headerPosition: v })}
             />
           )}
+          {columnLayout === 'one' && (
+            <Segmented
+              label="Header Position"
+              value={headerPosition === 'top' ? 'center' : headerPosition}
+              options={[
+                { value: 'center', label: 'Center' },
+                { value: 'left', label: 'Left' },
+                { value: 'right', label: 'Right' },
+              ]}
+              onChange={(v) => updateSettings({ headerPosition: v })}
+            />
+          )}
           {columnLayout === 'two' && (
             <div className="field">
               <span className="field-label">Column Width</span>
@@ -446,6 +465,7 @@ export function LeftPane() {
         {/* ============================================================ */}
         {/*  PHOTO                                                       */}
         {/* ============================================================ */}
+        {currentDoc.settings.showPhoto && (
         <div className="pane-section">
           <p className="pane-section-title">Photo</p>
           <Check
@@ -474,12 +494,35 @@ export function LeftPane() {
             ]}
             onChange={(shape) => updateSettings({ photoLayout: { ...pl, shape } })}
           />
+          <Check
+            label="Border"
+            checked={pl.border}
+            onChange={(border) => updateSettings({ photoLayout: { ...pl, border } })}
+          />
+          {pl.border && (
+            <>
+              <Slider label="Border Width" value={pl.borderWidth} min={0.5} max={10} step={0.5} unit="pt" onChange={(borderWidth) => updateSettings({ photoLayout: { ...pl, borderWidth } })} />
+              <label className="field">
+                <span className="field-label">Border Color</span>
+                <div className="color-input-row">
+                  <input
+                    type="color"
+                    className="color-input"
+                    value={pl.borderColor}
+                    onChange={(e) => updateSettings({ photoLayout: { ...pl, borderColor: e.target.value } })}
+                  />
+                  <span className="color-input-value">{pl.borderColor}</span>
+                </div>
+              </label>
+            </>
+          )}
           {currentDoc.basics.photoUrl && (
             <button className="btn btn-sm photo-adjust-trigger" type="button" onClick={() => setPhotoAdjustOpen(true)}>
               Adjust / crop photo
             </button>
           )}
         </div>
+        )}
 
         {/* ============================================================ */}
         {/*  SECTION HEADINGS                                            */}
@@ -799,7 +842,33 @@ function SizeControl({
 
 export function RightPane() {
   const { doc, updateBasics, updateSettings } = useEditor()
+  const [customTpls, setCustomTpls] = useState<CustomTemplate[]>(() => loadCustomTemplates())
+  const [saveOpen, setSaveOpen] = useState(false)
+  const [saveName, setSaveName] = useState('')
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (saveOpen) {
+      setSaveName('')
+      setTimeout(() => nameInputRef.current?.focus(), 50)
+    }
+  }, [saveOpen])
+
   if (!doc) return null
+
+  function handleSaveTemplate() {
+    if (!saveName.trim() || !doc) return
+    const saved = saveCustomTemplate(saveName, doc.settings)
+    if (saved) {
+      setCustomTpls(loadCustomTemplates())
+      setSaveOpen(false)
+    }
+  }
+
+  function handleDeleteCustom(id: string) {
+    removeCustomTemplate(id)
+    setCustomTpls(loadCustomTemplates())
+  }
 
   return (
     <aside className="pane pane-right">
@@ -846,14 +915,20 @@ export function RightPane() {
                 className="template-card"
                 key={template.id}
                 data-active={doc.settings.template === template.id}
-                onClick={() =>
-                  // Applying a design applies its type as well, matching the
-                  // creation dialog -- the picker can always change it after.
-                  updateSettings({
-                    template: template.id,
-                    ...(template.font ? { fontFamily: template.font } : {}),
-                  })
-                }
+                onClick={() => {
+                  const preset = applyTemplatePreset(template.id)
+                  // Auto-distribute sections when switching to a two-column layout.
+                  if (preset.columnLayout === 'two') {
+                    const all = doc.sections.map((s) => s.id)
+                    const mid = Math.ceil(all.length / 2)
+                    preset.leftColumn = all.slice(0, mid)
+                    preset.rightColumn = all.slice(mid)
+                  } else {
+                    preset.leftColumn = []
+                    preset.rightColumn = []
+                  }
+                  updateSettings(preset)
+                }}
               >
                 <TemplateThumb
                   id={template.id}
@@ -871,7 +946,100 @@ export function RightPane() {
           <p className="hint" style={{ marginTop: 8 }}>
             ATS-safe templates use a single column and real text headings. Design-led layouts can be reordered by some parsers.
           </p>
+          <button
+            type="button"
+            className="btn btn-sm btn-ghost save-custom-tpl-btn"
+            onClick={() => setSaveOpen(true)}
+          >
+            + Save current as custom template
+          </button>
+          {customTpls.length > 0 && (
+            <>
+              <p className="eyebrow style-section-title" style={{ marginTop: 12 }}>Custom Templates</p>
+              <div className="template-grid">
+                {customTpls.map((ct) => (
+                  <button
+                    className="template-card custom-template-card"
+                    key={ct.id}
+                    data-active={
+                      doc.settings.template === ct.baseTemplate &&
+                      doc.settings.fontFamily === ct.settings.fontFamily &&
+                      doc.settings.accentColor === ct.settings.accentColor
+                    }
+                    onClick={() => {
+                      const patch = applyCustomTemplate(ct, doc.sections)
+                      updateSettings(patch)
+                    }}
+                  >
+                    <TemplateThumb
+                      id={ct.baseTemplate}
+                      accent={ct.settings.accentColor}
+                    />
+                    <span className="template-meta">
+                      <span className="template-name">{ct.name}</span>
+                      <span className="tag">Custom</span>
+                    </span>
+                    <span
+                      className="custom-tpl-delete"
+                      role="button"
+                      tabIndex={0}
+                      title="Delete custom template"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        handleDeleteCustom(ct.id)
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.stopPropagation()
+                          handleDeleteCustom(ct.id)
+                        }
+                      }}
+                    >
+                      ×
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </section>
+
+        {/* Save custom template modal */}
+        {saveOpen && (
+          <div
+            className="modal-overlay"
+            role="dialog"
+            aria-label="Save custom template"
+            onClick={() => setSaveOpen(false)}
+          >
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <div className="modal-head">
+                <p className="modal-title">Save Custom Template</p>
+              </div>
+              <div className="modal-body">
+                <Text
+                  label="Template name"
+                  value={saveName}
+                  onChange={setSaveName}
+                  placeholder="My custom template"
+                />
+              </div>
+              <div className="modal-foot">
+                <button type="button" className="btn btn-ghost" onClick={() => setSaveOpen(false)}>
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={!saveName.trim()}
+                  onClick={handleSaveTemplate}
+                >
+                  Save
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <section className="style-section">
           <p className="eyebrow style-section-title">Typography</p>
@@ -937,6 +1105,14 @@ export function RightPane() {
             min={8}
             max={16}
             onChange={(entrySize) => updateSettings({ entrySize })}
+          />
+          <SizeControl
+            label="Contact info"
+            value={doc.settings.contactSize}
+            fallback={9}
+            min={7}
+            max={12}
+            onChange={(contactSize) => updateSettings({ contactSize })}
           />
           <Slider
             label="Line height"

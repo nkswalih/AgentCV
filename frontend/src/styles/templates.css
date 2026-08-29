@@ -69,7 +69,7 @@
 }
 .doc-contact {
   margin-top: 5pt;
-  font-size: 9pt;
+  font-size: var(--doc-contact-size, 9pt);
   color: #374151;
 }
 
@@ -333,7 +333,7 @@
 }
 .tpl-ats-classic .doc-contact {
   margin-top: 5pt;
-  font-size: 9pt;
+  font-size: var(--doc-contact-size, 9pt);
   color: #3f4854;
 }
 .tpl-ats-classic .doc-section-title {
@@ -356,7 +356,6 @@
 /* -- ATS Modern: left-aligned sans, one decisive accent rule ------------- */
 .tpl-ats-modern .doc-header {
   padding-bottom: 8pt;
-  border-bottom: 2pt solid var(--doc-accent, #374151);
 }
 .tpl-ats-modern .doc-name {
   font-size: var(--doc-name-size, 23pt);
@@ -393,7 +392,7 @@
 }
 .tpl-compact .doc-contact {
   margin-top: 3pt;
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
 }
 .tpl-compact .doc-section {
   margin-top: calc(var(--doc-gap, 1) * 6pt);
@@ -433,20 +432,8 @@
   margin-top: 3pt;
 }
 .tpl-classic-pro .doc-contact {
-  font-size: 9pt;
-  padding-bottom: 5pt;
-  /* The signature: a heavy rule carried by a hairline, the way stationery
-     printers have finished a letterhead for a century. */
-  border-bottom: 1.75pt solid #20252b;
-  position: relative;
+  font-size: var(--doc-contact-size, 9pt);
 }
-.tpl-classic-pro .doc-contact::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -3pt;
-  border-bottom: 0.5pt solid #20252b;
 }
 .tpl-classic-pro .doc-section {
   margin-top: calc(var(--doc-gap, 1) * 7pt);
@@ -521,29 +508,11 @@
 }
 .tpl-executive .doc-header {
   text-align: center;
-  border-top: 0.5pt solid #33383f;
-  border-bottom: 1.5pt solid #33383f;
   padding: 7pt 0 7pt;
   position: relative;
 }
 /* The heavier partner rules sit just outside the hairlines -- a frame, not a
    pair of stray bars. */
-.tpl-executive .doc-header::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  top: 2pt;
-  border-top: 1.5pt solid #33383f;
-}
-.tpl-executive .doc-header::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 2pt;
-  border-bottom: 0.5pt solid #33383f;
-}
 .tpl-executive .doc-name {
   font-size: var(--doc-name-size, 20pt);
   font-weight: 600;
@@ -642,7 +611,7 @@
 }
 .tpl-editorial .doc-masthead .doc-contact {
   text-align: right;
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
   color: #3f4854;
   flex: none;
   line-height: 1.5;
@@ -736,7 +705,6 @@
   justify-content: space-between;
   gap: 16pt;
   padding-bottom: 6pt;
-  border-bottom: 1.5pt solid #0f766e;
 }
 .tpl-devtech .doc-header-side .doc-contact {
   display: flex;
@@ -744,7 +712,7 @@
   align-items: flex-end;
   gap: 1pt;
   margin-top: 0;
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
   text-align: right;
   color: #4b5563;
 }
@@ -797,7 +765,6 @@
   justify-content: space-between;
   gap: 16pt;
   padding-bottom: 5pt;
-  border-bottom: 1.5pt solid #39424c;
 }
 .tpl-timeline .doc-header-side {
   text-align: right;
@@ -805,7 +772,7 @@
 }
 .tpl-timeline .doc-header-side .doc-contact {
   margin-top: 0;
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
   color: #57606b;
 }
 .tpl-timeline .doc-name {
@@ -905,7 +872,7 @@
 }
 .tpl-photo-pro .doc-contact {
   margin-top: 5pt;
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
 }
 .tpl-photo-pro .doc-section-title {
   font-size: var(--doc-heading-size, 10pt);
@@ -981,7 +948,7 @@
   margin-bottom: 3.5pt;
 }
 .tpl-two-col .doc-rail .doc-contact {
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
   color: #37404b;
 }
 .tpl-two-col .doc-item-date {
@@ -1023,7 +990,7 @@
   margin: 0 0 4pt;
 }
 .tpl-sidebar .doc-rail .doc-contact {
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
   color: #dbe3ea;
   word-break: break-word;
 }
@@ -1108,7 +1075,7 @@
 }
 .tpl-banner .doc-contact {
   margin-top: 5pt;
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
   color: rgba(255, 255, 255, 0.94);
 }
 .tpl-banner .doc-contact-sep {
@@ -1184,7 +1151,7 @@
 }
 .tpl-creative .doc-band .doc-contact {
   margin-top: 4pt;
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
   color: #c9d2f2;
 }
 .tpl-creative .doc-band .doc-contact-sep {
@@ -1262,7 +1229,7 @@
   border: 2pt solid rgba(255,255,255,0.2);
 }
 .tpl-portal-pro .doc-rail .doc-contact {
-  font-size: 8pt;
+  font-size: var(--doc-contact-size, 8pt);
   color: #cbd5e1;
   margin-top: 4pt;
 }
@@ -1348,7 +1315,7 @@
   border: 2pt solid rgba(255,255,255,0.15);
 }
 .tpl-modern-deep .doc-rail .doc-contact {
-  font-size: 7.5pt;
+  font-size: var(--doc-contact-size, 7.5pt);
   color: #9ca3af;
   margin-top: 4pt;
 }
@@ -1414,8 +1381,6 @@
 .tpl-serif-ats .doc-header {
   text-align: center;
   padding-bottom: 6pt;
-  border-bottom: 0.75pt solid #191e24;
-  margin-bottom: 2pt;
 }
 .tpl-serif-ats .doc-name {
   font-size: var(--doc-name-size, 22pt);
@@ -1434,7 +1399,7 @@
 }
 .tpl-serif-ats .doc-contact {
   margin-top: 5pt;
-  font-size: 9pt;
+  font-size: var(--doc-contact-size, 9pt);
   color: #374151;
 }
 .tpl-serif-ats .doc-contact-item {
@@ -1492,7 +1457,7 @@
 }
 .tpl-jake .doc-contact {
   margin-top: 1pt;
-  font-size: 10pt;
+  font-size: var(--doc-contact-size, 10pt);
   color: #000;
   text-align: center;
 }
@@ -1665,7 +1630,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0;
-  font-size: 8pt;
+  font-size: var(--doc-contact-size, 8pt);
 }
 [data-columns="one"].tpl-creative .doc-band .doc-contact .doc-contact-sep,
 [data-columns="two"][data-header="top"].tpl-creative .doc-band .doc-contact .doc-contact-sep {
@@ -1696,7 +1661,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0;
-  font-size: 8pt;
+  font-size: var(--doc-contact-size, 8pt);
 }
 .doc-rail-top-text .doc-contact .doc-contact-sep {
   margin: 0 4pt;
@@ -1779,7 +1744,7 @@
 }
 [data-columns="one"].tpl-portal-pro .doc-rail-top .doc-contact,
 [data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-contact {
-  font-size: 8pt;
+  font-size: var(--doc-contact-size, 8pt);
   color: #cbd5e1;
 }
 [data-columns="one"].tpl-portal-pro .doc-rail-top .doc-icon,
@@ -1833,7 +1798,7 @@
 }
 [data-columns="one"].tpl-modern-deep .doc-rail-top .doc-contact,
 [data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-contact {
-  font-size: 7.5pt;
+  font-size: var(--doc-contact-size, 7.5pt);
   color: #9ca3af;
 }
 [data-columns="one"].tpl-modern-deep .doc-rail-top .doc-icon,
@@ -1883,7 +1848,7 @@
 }
 [data-columns="one"].tpl-sidebar .doc-rail-top .doc-contact,
 [data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-contact {
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
   color: #dbe3ea;
   word-break: break-word;
 }
@@ -1925,7 +1890,7 @@
 }
 [data-columns="one"].tpl-two-col .doc-header-top .doc-contact,
 [data-columns="two"][data-header="top"].tpl-two-col .doc-header-top .doc-contact {
-  font-size: 8.5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
   color: #37404b;
 }
 [data-columns="one"].tpl-two-col .doc-main .doc-section-title {
@@ -2186,6 +2151,7 @@
   overflow: hidden;
   box-sizing: border-box;
   order: -1;
+  border: var(--photo-border-width, 0) solid var(--photo-border-color, transparent);
 }
 
 .page[data-photo-size][data-photo-shape] .doc-photo-frame .doc-photo {
@@ -2239,6 +2205,22 @@
 .page[data-photo-position='top'] .doc-photo-layout > .doc-photo-frame {
   order: -1;
   margin-bottom: 6pt;
+}
+/* When photo is hidden, header-position (left/right/center) must still work.
+   Keep flex-direction: column so the contact sits below the name. Only
+   override align-items so data-header controls the horizontal position. */
+.page[data-photo-position='top'] .doc-photo-layout:not(:has(.doc-photo-frame)) {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.page[data-photo-position='top'][data-header='left'] .doc-photo-layout:not(:has(.doc-photo-frame)) {
+  align-items: flex-start;
+}
+.page[data-photo-position='top'][data-header='right'] .doc-photo-layout:not(:has(.doc-photo-frame)) {
+  align-items: flex-end;
+}
+.page[data-photo-position='top'][data-header='center'] .doc-photo-layout:not(:has(.doc-photo-frame)) {
+  align-items: center;
 }
 
 /* A header placed inside a two-column side region behaves like a rail, not a
@@ -2313,4 +2295,49 @@
 }
 .page.tpl-photo-pro .doc-photo-frame {
   border: 0.75pt solid #c9cfd6;
+}
+
+/* -- Header alignment in one-column mode ---------------------------------- */
+/* When the header is not full-width (left / right / center), the text block
+   must NOT grow to fill the row, otherwise justify-content has nowhere to
+   push the group. Override the default flex:1 so items size to content. */
+[data-columns="one"][data-header="left"] .doc-header .doc-header-text,
+[data-columns="one"][data-header="right"] .doc-header .doc-header-text,
+[data-columns="one"][data-header="center"] .doc-header .doc-header-text {
+  flex: 0 1 auto;
+}
+/* Contact should not be wider than the name text so everything aligns to
+   the same horizontal axis. */
+[data-columns="one"][data-header="left"] .doc-header .doc-contact,
+[data-columns="one"][data-header="right"] .doc-header .doc-contact,
+[data-columns="one"][data-header="center"] .doc-header .doc-contact {
+  width: auto;
+}
+/* text-align overrides the template's own centered / right alignment so the
+   header-position segmented actually changes the visible layout. */
+[data-columns="one"][data-header="left"] .doc-header-text,
+[data-columns="one"][data-header="left"] .doc-contact {
+  text-align: left;
+}
+[data-columns="one"][data-header="right"] .doc-header-text,
+[data-columns="one"][data-header="right"] .doc-contact {
+  text-align: right;
+}
+[data-columns="one"][data-header="center"] .doc-header-text,
+[data-columns="one"][data-header="center"] .doc-contact {
+  text-align: center;
+}
+/* doc-photo-layout makes .doc-header a flex container. When flex-direction
+   is column (photo on top), justify-content controls the vertical axis —
+   use align-items for horizontal position instead. When flex-direction is
+   row (photo left/right), justify-content controls horizontal position. */
+[data-columns="one"][data-header="center"] .doc-header.doc-photo-layout,
+[data-columns="one"][data-header="top"] .doc-header.doc-photo-layout {
+  align-items: center;
+}
+[data-columns="one"][data-header="left"] .doc-header.doc-photo-layout {
+  align-items: flex-start;
+}
+[data-columns="one"][data-header="right"] .doc-header.doc-photo-layout {
+  align-items: flex-end;
 }

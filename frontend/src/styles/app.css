@@ -991,6 +991,7 @@ input[type='range']::-moz-range-thumb {
   border: 1px solid var(--ink-600);
   border-radius: var(--r-md);
   box-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
+  padding: 16px;
 }
 .modal-head {
   display: flex;
@@ -1068,10 +1069,15 @@ input[type='range']::-moz-range-thumb {
 /* The creation dialog is wider than the export one -- it holds a gallery of
    real page miniatures, and height stays bounded with its own scroll. */
 .modal-wide {
-  width: 880px;
-  max-height: min(88vh, 780px);
+  width: 1100px;
+  max-width: calc(100vw - 40px);
+  max-height: min(90vh, 860px);
   display: flex;
   flex-direction: column;
+}
+.modal-wide:has(.tp-preview) {
+  max-height: min(92vh, 900px);
+  overflow: hidden;
 }
 .modal-wide .modal-body {
   overflow-y: auto;
@@ -1080,7 +1086,8 @@ input[type='range']::-moz-range-thumb {
 .tp-filters {
   display: flex;
   gap: 6px;
-  padding: 12px 14px 0;
+  padding: 12px 16px 0;
+  flex-wrap: wrap;
 }
 
 .chip {
@@ -1105,21 +1112,32 @@ input[type='range']::-moz-range-thumb {
   color: var(--text-hi);
 }
 
-/* Cards flow edge to edge; each shows the design at near-letter scale. */
+/* ---- 4-column template grid ---- */
 .tp-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(196px, 1fr));
-  gap: 12px;
-  padding-top: 14px !important;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+  padding: 14px 16px 16px !important;
+}
+
+@media (max-width: 1050px) {
+  .tp-grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 780px) {
+  .tp-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 520px) {
+  .tp-grid { grid-template-columns: 1fr; }
+  .modal-wide { width: 100%; max-height: 100vh; border-radius: 0; }
 }
 
 .tp-card {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
   text-align: left;
-  padding: 10px;
+  padding: 6px;
   background: var(--ink-850);
   border: 1px solid var(--ink-600);
   border-radius: var(--r-md);
@@ -1139,26 +1157,32 @@ input[type='range']::-moz-range-thumb {
   cursor: wait;
 }
 
+.tp-card-thumb {
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--paper);
+}
+
 .tp-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
-  margin-top: 2px;
+  gap: 6px;
+  padding: 2px 2px 0;
 }
 .tp-name {
-  font-size: var(--t-sm);
-  font-weight: 600;
-}
-.tp-note {
   font-size: var(--t-xs);
-  color: var(--text-mid);
-  line-height: 1.45;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-.tp-note.dim {
-  margin-top: -3px;
-  color: var(--text-lo);
+.tag-sm {
+  font-size: 9px;
+  padding: 1px 5px;
+  flex-shrink: 0;
 }
+
 .tp-busy {
   position: absolute;
   inset: 0;
@@ -1168,6 +1192,88 @@ input[type='range']::-moz-range-thumb {
   border-radius: inherit;
   font-size: var(--t-sm);
   color: var(--text-hi);
+}
+
+/* ---- Preview mode ---- */
+.tp-preview {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0 16px 16px;
+  overflow: hidden;
+}
+.tp-preview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+.tp-preview-thumb {
+  background: var(--bg-300);
+  border-radius: var(--r-md);
+  border: 1px solid var(--ink-600);
+  overflow: hidden;
+  min-height: 0;
+}
+.tp-preview-thumb .thumb-window {
+  border-radius: 0;
+  border: none;
+}
+.tp-preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 4px 0;
+  overflow-y: auto;
+}
+.tp-preview-back {
+  font-size: var(--t-xs);
+  margin-bottom: 8px;
+}
+.tp-preview-name {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 8px 0 6px;
+  line-height: 1.1;
+}
+.tp-preview-note {
+  font-size: var(--t-sm);
+  color: var(--text-lo);
+  line-height: 1.6;
+  margin: 0;
+}
+.tp-preview-features {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.tp-preview-features li {
+  font-size: var(--t-sm);
+  color: var(--text-mid);
+  padding-left: 18px;
+  position: relative;
+}
+.tp-preview-features li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--cyan);
+  font-weight: 700;
+}
+.tp-preview-apply {
+  margin-top: auto;
+  width: 100%;
+  padding: 12px 20px;
+  font-size: var(--t-base);
+  font-weight: 600;
 }
 
 /* Format cards -- the whole surface is clickable, note explains the tradeoff. */
@@ -2080,6 +2186,27 @@ input[type='range']::-moz-range-thumb {
   text-transform: uppercase;
   pointer-events: none;
 }
+.color-input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.color-input {
+  width: 28px;
+  height: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  padding: 1px;
+  background: transparent;
+  cursor: pointer;
+}
+.color-input::-webkit-color-swatch-wrapper { padding: 0; }
+.color-input::-webkit-color-swatch { border: none; border-radius: 3px; }
+.color-input-value {
+  font-size: 11px;
+  color: var(--c-text-muted);
+  font-family: var(--font-mono);
+}
 .color-tile-label {
   display: inline-flex;
   align-items: center;
@@ -2231,4 +2358,40 @@ input[type='range']::-moz-range-thumb {
 .apply-grid .checkbox {
   font-size: var(--t-xs);
   gap: 5px;
+}
+
+/* -- Custom templates ----------------------------------------------------- */
+.save-custom-tpl-btn {
+  margin-top: 8px;
+  width: 100%;
+  text-align: center;
+  font-size: var(--t-xs);
+}
+.custom-template-card {
+  position: relative;
+}
+.custom-tpl-delete {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+.custom-template-card:hover .custom-tpl-delete {
+  opacity: 1;
+}
+.custom-tpl-delete:hover {
+  background: rgba(220, 50, 50, 0.85);
 }
