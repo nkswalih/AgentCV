@@ -118,7 +118,7 @@ function TemplatePicker({ onClose }: { onClose: () => void }) {
           <div className="tp-preview">
             <div className="tp-preview-layout">
               <div className="tp-preview-thumb">
-                <ResumeThumb doc={demoDocument(previewTpl.id)} />
+                <ResumeThumb doc={demoDocument(previewTpl.id)} fitToHeight />
               </div>
               <div className="tp-preview-info">
                 <div>

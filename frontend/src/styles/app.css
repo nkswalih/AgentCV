@@ -1069,7 +1069,7 @@ input[type='range']::-moz-range-thumb {
 /* The creation dialog is wider than the export one -- it holds a gallery of
    real page miniatures, and height stays bounded with its own scroll. */
 .modal-wide {
-  width: 1100px;
+  width: 800px;
   max-width: calc(100vw - 40px);
   max-height: min(90vh, 860px);
   display: flex;
