@@ -1,6 +1,6 @@
 /** Constructors for new sections and items, with fresh ids. */
 
-import type { Section, SectionItem, SectionType, Settings } from './types'
+import type { Section, SectionItem, SectionType, Settings, TemplateId } from './types'
 
 export const newId = () =>
   // crypto.randomUUID is available in every browser this app targets.
@@ -30,6 +30,9 @@ const PHOTO_LAYOUT_DEFAULTS = {
   focusX: 50,
   focusY: 50,
   zoom: 1,
+  border: false,
+  borderWidth: 1,
+  borderColor: '#000000',
 } as const
 
 const LEGACY_PHOTO_SIZES: Record<string, number> = {
@@ -95,6 +98,7 @@ export function normalizeSettings(settings: Settings): Settings {
     columnWidth: settings.columnWidth ?? LAYOUT_DEFAULTS.columnWidth,
     leftColumn: settings.leftColumn ?? LAYOUT_DEFAULTS.leftColumn,
     rightColumn: settings.rightColumn ?? LAYOUT_DEFAULTS.rightColumn,
+    contactSize: settings.contactSize ?? null,
     profileLayout,
     photoLayout: {
       ...PHOTO_LAYOUT_DEFAULTS,
@@ -106,6 +110,9 @@ export function normalizeSettings(settings: Settings): Settings {
       focusX: clampPercent(settings.photoLayout?.focusX),
       focusY: clampPercent(settings.photoLayout?.focusY),
       zoom: clampPhotoZoom(settings.photoLayout?.zoom),
+      border: settings.photoLayout?.border ?? PHOTO_LAYOUT_DEFAULTS.border,
+      borderWidth: typeof settings.photoLayout?.borderWidth === 'number' ? settings.photoLayout.borderWidth : PHOTO_LAYOUT_DEFAULTS.borderWidth,
+      borderColor: settings.photoLayout?.borderColor ?? PHOTO_LAYOUT_DEFAULTS.borderColor,
     },
     headingStyle: { ...HEADING_STYLE_DEFAULTS, ...settings.headingStyle },
     // Colors stays optional: an absent card state means every template look is
@@ -195,4 +202,96 @@ export function emptySection(type: SectionType, title?: string): Section {
   // The cast is needed because `type` and `items` are correlated in the union
   // but TypeScript can't see that through a runtime-chosen `type`.
   return { ...base, ...presentation } as Section
+}
+
+// ---------------------------------------------------------------------------
+// Template presets — every setting a design needs, applied on selection.
+// ---------------------------------------------------------------------------
+
+interface TemplatePreset {
+  fontFamily: string
+  columnLayout: 'one' | 'two'
+  headerPosition: 'top' | 'left' | 'right' | 'center'
+  sectionSpacing: number
+  marginX: number
+  marginY: number
+  lineHeight: number
+  accentColor: string
+  showIcons: boolean
+  showPhoto: boolean
+  photoPosition: 'left' | 'top' | 'right'
+  photoShape: 'circle' | 'square' | 'rounded'
+  photoSize: number
+  columnWidth: number
+}
+
+const TEMPLATE_PRESETS: Record<TemplateId, TemplatePreset> = {
+  'ats-classic':  { fontFamily: 'Georgia',          columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1,   marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#374151', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'ats-modern':   { fontFamily: 'Inter',            columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1,   marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#374151', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'classic-pro':  { fontFamily: 'Georgia',          columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.7, marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#20252b', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'modern-min':   { fontFamily: 'Inter',            columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.6, marginX: 15, marginY: 14, lineHeight: 1.5,  accentColor: '#10151b', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'executive':    { fontFamily: 'Garamond',         columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.75,marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#33383f', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'compact':      { fontFamily: 'Arial',            columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.6, marginX: 12, marginY: 12, lineHeight: 1.35, accentColor: '#374151', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'creative':     { fontFamily: 'Lato',             columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.65,marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#2e3a80', showIcons: false, showPhoto: true,  photoPosition: 'top', photoShape: 'rounded', photoSize: 24, columnWidth: 40 },
+  'devtech':      { fontFamily: 'IBM Plex Sans',    columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.65,marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#0f766e', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'academic':     { fontFamily: 'Times New Roman',  columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1,   marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#374151', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'timeline':     { fontFamily: 'IBM Plex Sans',    columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.6, marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#39424c', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'photo-pro':    { fontFamily: 'Georgia',          columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.7, marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#23282e', showIcons: false, showPhoto: true,  photoPosition: 'top', photoShape: 'circle', photoSize: 30, columnWidth: 40 },
+  'portal-pro':   { fontFamily: 'Georgia',          columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.8, marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#1e293b', showIcons: false, showPhoto: true,  photoPosition: 'top', photoShape: 'rounded', photoSize: 26, columnWidth: 32 },
+  'modern-deep':  { fontFamily: 'Merriweather',     columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.7, marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#1a1f2e', showIcons: false, showPhoto: true,  photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 32 },
+  'serif-ats':    { fontFamily: 'Times New Roman',  columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1,   marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#191e24', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'jake':         { fontFamily: 'Times New Roman',  columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.6, marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#191e24', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'banner':       { fontFamily: 'Inter',            columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.8, marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#374151', showIcons: false, showPhoto: true,  photoPosition: 'top', photoShape: 'rounded', photoSize: 28, columnWidth: 40 },
+  'editorial':    { fontFamily: 'Georgia',          columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.7, marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#171b21', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'two-col':      { fontFamily: 'Inter',            columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.8, marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#273038', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 50 },
+  'sidebar':      { fontFamily: 'Inter',            columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.55,marginX: 15, marginY: 14, lineHeight: 1.4,  accentColor: '#242e39', showIcons: false, showPhoto: true,  photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 32 },
+}
+
+/**
+ * Build a full settings patch that resets every visual/layout setting to match
+ * the chosen template's designed defaults. Content (basics, sections, order)
+ * is never touched -- only the settings object is replaced.
+ */
+export function applyTemplatePreset(template: TemplateId): Partial<Settings> {
+  const p = TEMPLATE_PRESETS[template]
+  return {
+    template,
+    fontFamily: p.fontFamily,
+    columnLayout: p.columnLayout,
+    headerPosition: p.headerPosition,
+    sectionSpacing: p.sectionSpacing,
+    marginX: p.marginX,
+    marginY: p.marginY,
+    lineHeight: p.lineHeight,
+    accentColor: p.accentColor,
+    showIcons: p.showIcons,
+    // Typography: null = "let the template's CSS defaults apply"
+    fontSize: 10.5,
+    nameSize: null,
+    titleSize: null,
+    headingSize: null,
+    entrySize: null,
+    contactSize: null,
+    // Photo: per-template defaults
+    showPhoto: p.showPhoto,
+    photoLayout: {
+      show: p.showPhoto,
+      grayscale: false,
+      position: p.photoPosition,
+      size: p.photoSize,
+      shape: p.photoShape,
+      focusX: 50,
+      focusY: 50,
+      zoom: 1,
+      border: false,
+      borderWidth: 1,
+      borderColor: '#000000',
+    },
+    // Headings: standard underline style
+    headingStyle: { ...HEADING_STYLE_DEFAULTS },
+    // Colors: null = template CSS defaults
+    colors: undefined,
+    // Layout
+    columnWidth: p.columnWidth,
+  }
 }

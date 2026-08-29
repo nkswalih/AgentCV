@@ -213,10 +213,11 @@ export interface Settings {
   titleSize: number | null
   headingSize: number | null
   entrySize: number | null
+  contactSize: number | null
 
   /** Layout controls */
   columnLayout: 'one' | 'two'
-  headerPosition: 'top' | 'left' | 'right'
+  headerPosition: 'top' | 'left' | 'right' | 'center'
   /** Left column width as percentage (30-70). Right = 100 - columnWidth. */
   columnWidth: number
   /** Section IDs assigned to the left column when columnLayout is 'two'. */
@@ -251,6 +252,12 @@ export interface Settings {
     focusY: number
     /** Crop zoom multiplier used by the photo adjustment dialog. */
     zoom: number
+    /** Border around the photo. */
+    border: boolean
+    /** Border width in pt. */
+    borderWidth: number
+    /** Border colour as CSS value. */
+    borderColor: string
   }
 
   /** Section heading visual controls. */
