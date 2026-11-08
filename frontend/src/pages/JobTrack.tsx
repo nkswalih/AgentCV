@@ -11,7 +11,7 @@ export function JobTrack() {
       <div className="dash-inner">
         <header className="page-head">
           <h1 className="page-title">Job Track</h1>
-          <p className="hint">
+          <p className="page-sub">
             Applications in one board -- applied, interviewing, offered, closed.
           </p>
         </header>
