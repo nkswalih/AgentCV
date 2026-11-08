@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react'
 
 import { useEditor } from '../store'
 import { ExportDialog } from '../editor/ExportDialog'
+import { LogoMark } from '../editor/icons'
 import { PagePreview } from '../editor/PagePreview'
 import { LeftPane, RightPane } from '../editor/Panes'
 
@@ -52,8 +53,8 @@ export function Editor() {
     <div className="shell">
       <header className="topbar">
         <Link className="wordmark" to="/" aria-label="Back to resumes">
-          <span className="regmark" aria-hidden="true" />
-          AgentCV
+          <LogoMark size={30} />
+          <span>agentcv</span>
         </Link>
         <span className="topbar-divider" aria-hidden="true" />
         <input
