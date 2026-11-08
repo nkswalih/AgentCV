@@ -293,7 +293,7 @@ const REGISTERED_NURSE: ResumeDocument = {
   basics: {
     fullName: 'Fatima Sheikh', headline: 'Registered Nurse, ICU',
     email: 'fatima.sheikh@example.com', phone: '+91 96540 88213', location: 'Hyderabad, India',
-    website: '', photoUrl: '', summary: '',
+    website: '', photoUrl: '/id_model_agenticv5.png', summary: '',
     links: [],
   },
   sections: [
@@ -887,7 +887,7 @@ const CS_MANAGER: ResumeDocument = {
   basics: {
     fullName: 'Tanvi Joshi', headline: 'Customer Success Manager',
     email: 'tanvi.joshi@example.com', phone: '+91 96860 77234', location: 'Pune, India',
-    website: '', photoUrl: PHOTOS[0], summary: '',
+    website: '', photoUrl: PHOTOS[2], summary: '',
     links: [{ id: 'l1', label: 'LinkedIn', url: 'linkedin.com/in/tanvijoshi' }],
   },
   sections: [
@@ -934,12 +934,12 @@ const VARIANT_BY_TEMPLATE: Record<TemplateId, ResumeDocument> = {
   'classic-pro': CONSULTANT_CLASSIC,
   'modern-min': PRODUCT_MANAGER,
   executive: VP_OPERATIONS,
-  compact: REGISTERED_NURSE,
+  compact: SALES_DIRECTOR,
   creative: DESIGNER,
   devtech: ENGINEER,
   academic: ACADEMIC,
   timeline: PROJECT_MANAGER,
-  'photo-pro': SALES_DIRECTOR,
+  'photo-pro': REGISTERED_NURSE,
   'portal-pro': CONSULTANT_PORTAL,
   'modern-deep': UX_DESIGNER,
   'serif-ats': ATTORNEY,
