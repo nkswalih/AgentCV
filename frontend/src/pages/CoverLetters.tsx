@@ -11,7 +11,7 @@ export function CoverLetters() {
       <div className="dash-inner">
         <header className="page-head">
           <h1 className="page-title">Cover Letters</h1>
-          <p className="hint">
+          <p className="page-sub">
             One tailored letter per application, drafted from the resume it matches.
           </p>
         </header>
