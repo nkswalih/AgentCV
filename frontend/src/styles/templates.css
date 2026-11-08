@@ -1208,15 +1208,15 @@
 }
 .tpl-portal-pro .doc-rail .doc-name {
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: var(--doc-name-size, 30pt);
+  font-size: var(--doc-name-size, 24pt);
   color: #ffffff;
   font-weight: 700;
   letter-spacing: 0.01em;
   margin-bottom: 2pt;
-  line-height: 1.25;
+  line-height: 2.25;
 }
 .tpl-portal-pro .doc-rail .doc-headline {
-  font-size: var(--doc-title-size, 16pt);
+  font-size: var(--doc-title-size, 14pt);
   color: #b0bec5;
   font-style: italic;
   letter-spacing: 0.02em;
@@ -1248,10 +1248,10 @@
   opacity: 0.8;
 }
 .tpl-portal-pro .doc-rail .doc-section {
-  margin-top: 12pt;
+  margin-top: 17pt;
 }
 .tpl-portal-pro .doc-rail .doc-section-title {
-  font-size: 14pt;
+  font-size: 12pt;
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #ffffff;
@@ -1300,12 +1300,12 @@
   padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
 }
 .tpl-portal-pro .doc-main .doc-section-title {
-  font-size: var(--doc-heading-size, 14pt);
+  font-size: var(--doc-heading-size, 12pt);
   text-transform: uppercase;
   letter-spacing: 0.06em;
   color: #1a2235;
   font-weight: 700;
-  margin-bottom: 6pt;
+  margin-bottom: 12pt;
   padding: 5pt 12pt;
   background: #efefef;
   border-radius: 3pt;
@@ -1316,7 +1316,7 @@
 }
 .tpl-portal-pro .doc-main .doc-summary {
   text-align: justify;
-  line-height: 1.5;
+  line-height: 1.25;
 }
 
 /* -- Modern Deep: dark rail with square photo and underline-bar headers -- */
