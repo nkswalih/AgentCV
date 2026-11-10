@@ -285,7 +285,26 @@ export type ColorTarget = 'full' | 'header' | 'border'
 /** Full Page treatment: a single accent, a preset scheme, or a photo. */
 export type FullPageMode = 'single' | 'multi' | 'image'
 
+/** Border treatment: a painted frame or a photographic one. */
+export type BorderMode = 'single' | 'image'
+
+/** Frame thickness presets, measured in millimetres on the sheet. */
+export type BorderSize = 'S' | 'M' | 'L'
+
+/** Which edges of the sheet the frame occupies. */
+export interface BorderSides {
+  top: boolean
+  right: boolean
+  bottom: boolean
+  left: boolean
+}
+
 export interface ColorsState {
+  /** Which Colors tab is in effect. Only that tab's treatment is rendered, so
+      switching tabs can never leave a header band or frame behind. Defaults to
+      'full'. */
+  activeTarget?: ColorTarget
+
   /** Full page treatment. Defaults to 'single'. */
   bgType: FullPageMode
 
@@ -339,6 +358,22 @@ export interface ColorsState {
   headerBgImage?: string
   /** Header image overlay strength, 0–1. */
   headerBgImageTint?: number
+
+  // -- Border ------------------------------------------------------------
+  /** Border treatment. Defaults to 'single'. */
+  borderType?: BorderMode
+  /** Border Single swatch id, 'custom' once hand-picked, or 'none'. */
+  borderSingleId?: string
+  /** The fill Border · Single owns, kept through a detour into Image. */
+  borderSingleColor?: string
+  /** Frame thickness preset. Defaults to 'M'. */
+  borderSize?: BorderSize
+  /** Edges the frame occupies. Defaults to all four. */
+  borderSides?: BorderSides
+  /** Border Image source URL. */
+  borderBgImage?: string
+  /** Accent colours sampled from the border image. */
+  borderPalette?: string[]
 
   // -- Legacy keys -------------------------------------------------------
   /** Retained so old documents load; not applied while bgType is 'single'. */

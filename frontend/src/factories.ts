@@ -62,6 +62,7 @@ const HEADING_STYLE_DEFAULTS = {
 } as const
 
 const COLORS_DEFAULTS = {
+  activeTarget: 'full' as const,
   bgType: 'single' as const,
   singlePresetId: 'default',
   multiPresetId: 'slate',
@@ -72,6 +73,10 @@ const COLORS_DEFAULTS = {
   headerSingleId: 'none',
   headerPresetId: 'slate',
   headerBgImageTint: 0.38,
+  borderType: 'single' as const,
+  borderSingleId: 'none',
+  borderSize: 'M' as const,
+  borderSides: { top: true, right: true, bottom: true, left: true },
   apply: {
     name: true,
     dots: true,
@@ -104,9 +109,27 @@ export function normalizeSettings(settings: Settings): Settings {
   const colors = settings.colors ?? undefined
   const profileLayout = settings.profileLayout ?? undefined
 
+  // The selected Colors tab owns the document accent. Restore that tab's ink on
+  // load -- otherwise a Header or Border accent would outlive its tab and the
+  // Full Page accent would appear not to work after a reload.
+  const colorTarget = colors?.activeTarget ?? COLORS_DEFAULTS.activeTarget
+  const storedAccent = settings.accentColor
+  const accentForTarget = !colors
+    ? storedAccent
+    : colorTarget === 'header'
+      ? colors.headerAccentColor ?? storedAccent
+      : colorTarget === 'border'
+        ? colors.borderSingleColor ?? storedAccent
+        : (colors.bgType ?? 'single') === 'multi'
+          ? colors.multiAccent ?? storedAccent
+          : (colors.bgType ?? 'single') === 'single'
+            ? colors.singleAccent ?? storedAccent
+            : storedAccent
+
   return {
     ...LAYOUT_DEFAULTS,
     ...settings,
+    accentColor: accentForTarget,
     columnLayout: settings.columnLayout ?? LAYOUT_DEFAULTS.columnLayout,
     headerPosition: settings.headerPosition ?? LAYOUT_DEFAULTS.headerPosition,
     columnWidth: settings.columnWidth ?? LAYOUT_DEFAULTS.columnWidth,
@@ -141,8 +164,24 @@ export function normalizeSettings(settings: Settings): Settings {
       const headerType = colors.headerType ?? COLORS_DEFAULTS.headerType
       const resolvedHeaderType =
         headerType === 'image' && !colors.headerBgImage ? 'single' : headerType
+      // Border follows the same shape rule: an Image frame without an image
+      // falls back to an unpainted sheet rather than an invisible frame.
+      const borderType = colors.borderType ?? COLORS_DEFAULTS.borderType
+      const resolvedBorderType =
+        borderType === 'image' && !colors.borderBgImage ? 'single' : borderType
+      const borderSize = colors.borderSize
+      const resolvedBorderSize =
+        borderSize === 'S' || borderSize === 'M' || borderSize === 'L'
+          ? borderSize
+          : COLORS_DEFAULTS.borderSize
+      const target = colors.activeTarget
+      const resolvedTarget =
+        target === 'full' || target === 'header' || target === 'border'
+          ? target
+          : COLORS_DEFAULTS.activeTarget
       return {
         ...colors,
+        activeTarget: resolvedTarget,
         bgType: resolvedType,
         singlePresetId: colors.singlePresetId ?? COLORS_DEFAULTS.singlePresetId,
         // Only a document saved in Single mode has an accent that is genuinely
@@ -169,6 +208,20 @@ export function normalizeSettings(settings: Settings): Settings {
             ? colors.headerAccentColor ?? settings.accentColor
             : undefined),
         headerBgImageTint: clampTint(colors.headerBgImageTint),
+        borderType: resolvedBorderType,
+        borderSingleId: colors.borderSingleId ?? COLORS_DEFAULTS.borderSingleId,
+        // A Single frame saved without its fill (an older shape) takes the ink
+        // it was pointing at rather than silently rendering no frame at all.
+        borderSingleColor:
+          colors.borderSingleColor ??
+          (resolvedBorderType === 'single' &&
+          colors.borderSingleId &&
+          colors.borderSingleId !== 'none'
+            ? settings.accentColor
+            : undefined),
+        borderSize: resolvedBorderSize,
+        borderSides: { ...COLORS_DEFAULTS.borderSides, ...colors.borderSides },
+        borderPalette: Array.isArray(colors.borderPalette) ? colors.borderPalette : undefined,
         apply: { ...COLORS_DEFAULTS.apply, ...colors.apply },
       }
     })(),
