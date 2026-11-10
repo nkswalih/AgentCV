@@ -176,3 +176,34 @@ export function itemLabel(type: SectionType, item: SectionItem): string {
       return (item as CustomItem).title || 'New entry'
   }
 }
+
+/** The quieter second line of a collapsed row: company, school, skills... */
+export function itemSubtitle(type: SectionType, item: SectionItem): string {
+  switch (type) {
+    case 'summary':
+      return ''
+    case 'experience': {
+      const it = item as ExperienceItem
+      return [it.company, it.location].filter(Boolean).join(' · ')
+    }
+    case 'education': {
+      const it = item as EducationItem
+      return [it.institution, it.grade].filter(Boolean).join(' · ')
+    }
+    case 'skills': {
+      const it = item as SkillGroup
+      const skills = it.skills.filter(Boolean)
+      return it.category ? skills.slice(0, 6).join(', ') : skills.slice(3, 8).join(', ')
+    }
+    case 'projects': {
+      const it = item as ProjectItem
+      return it.role || [it.startDate, it.endDate].filter(Boolean).join(' – ')
+    }
+    case 'certifications':
+      return (item as CertificationItem).issuer
+    case 'languages':
+      return (item as LanguageItem).proficiency
+    case 'custom':
+      return (item as CustomItem).subtitle
+  }
+}

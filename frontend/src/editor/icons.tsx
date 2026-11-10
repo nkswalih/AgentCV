@@ -114,6 +114,49 @@ export const ChevronDown = () => (
   </svg>
 )
 
+/** Downward arrow onto a tray -- the primary "download" action. */
+export const DownloadIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <path d="M8 2.6v7.6M5 7.4 8 10.4l3-3M2.8 11.2v1.3a1 1 0 0 0 1 1h8.4a1 1 0 0 0 1-1v-1.3" />
+  </svg>
+)
+
+export const Pencil = () => (
+  <svg {...base} aria-hidden="true">
+    <path d="M11.1 2.9 13.1 4.9 6.4 11.6l-2.9.9.9-2.9 6.7-6.7Z" />
+    <path d="m9.9 4.1 2 2" />
+  </svg>
+)
+
+export const LinkIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <path d="M6.7 9.3a2.7 2.7 0 0 0 3.8 0l1.9-1.9a2.7 2.7 0 0 0-3.8-3.8l-1 1" />
+    <path d="M9.3 6.7a2.7 2.7 0 0 0-3.8 0L3.6 8.6a2.7 2.7 0 0 0 3.8 3.8l1-1" />
+  </svg>
+)
+
+/** Bulleted list -- the section-level actions control in a card footer. */
+export const ListIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <path d="M5.6 4.2h7.9M5.6 8h7.9M5.6 11.8h7.9" />
+    <circle cx="2.8" cy="4.2" r="0.7" fill="currentColor" stroke="none" />
+    <circle cx="2.8" cy="8" r="0.7" fill="currentColor" stroke="none" />
+    <circle cx="2.8" cy="11.8" r="0.7" fill="currentColor" stroke="none" />
+  </svg>
+)
+
+export const CheckIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <path d="m3.4 8.4 3 3 6.2-6.8" />
+  </svg>
+)
+
+export const XIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <path d="m4.2 4.2 7.6 7.6M11.8 4.2l-7.6 7.6" />
+  </svg>
+)
+
 /* -- Home navigation -- */
 
 export const FileIcon = () => (
