@@ -2286,23 +2286,23 @@
   color: var(--doc-header-text, #ffffff);
 }
 
-/* A top header's image fills the band's width and starts at the sheet edge,
-   so the photograph reads as a band rather than a floating rectangle. */
-.page[data-header-paint='image'][data-header-side='full'] .doc-main > [data-doc-header] {
+/* A top header band is flush with the sheet: Single, Multi and Image share the
+   same geometry, so switching treatment never shifts the band by a margin.
+   The padded designs put the page margin on the root, so the band reaches the
+   sheet edges by cancelling that margin and paying it back as padding. */
+.page[data-header-paint][data-header-side='full'] .doc-main > [data-doc-header] {
   margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -1) 0;
   padding: calc(var(--doc-margin-y, 14mm) * 0.62) var(--doc-margin-x, 15mm)
     calc(var(--doc-margin-y, 14mm) * 0.42);
 }
-.page[data-header-paint='image'][data-header-side='full'] .doc-rail > [data-doc-header] {
+.page[data-header-paint][data-header-side='full'] .doc-rail > [data-doc-header] {
   margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -0.58) 0;
   padding: calc(var(--doc-margin-y, 14mm) * 0.62) calc(var(--doc-margin-x, 15mm) * 0.58)
     calc(var(--doc-margin-y, 14mm) * 0.42);
 }
 
-/* The padded single-column designs put the page margin on the root, so the
-   band reaches the sheet edges by cancelling that margin and paying it back as
-   padding. Grid designs own their own padding and are left alone. */
-.page[data-header-paint='image'][data-header-side='full']:not(:is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)) > [data-doc-header] {
+/* Grid designs own their own padding and are left alone. */
+.page[data-header-paint][data-header-side='full']:not(:is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)) > [data-doc-header] {
   margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -1) 0;
   padding: calc(var(--doc-margin-y, 14mm) * 0.62) var(--doc-margin-x, 15mm)
     calc(var(--doc-margin-y, 14mm) * 0.42);
