@@ -170,9 +170,10 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   const headerPaint = headerSingleActive || headerMultiActive || headerImageActive
   const headerBg =
     colors?.headerBackgroundColor ?? (headerMultiActive ? headerPreset.background : undefined)
-  const headerText =
-    colors?.headerTextColor ??
-    (headerMultiActive ? headerPreset.text : headerImageActive ? '#ffffff' : readableInk(headerBg))
+  const headerText = headerImageActive
+    ? '#ffffff'
+    : colors?.headerTextColor ??
+      (headerMultiActive ? headerPreset.text : readableInk(headerBg))
   const headerAccent =
     headerType === 'image'
       ? undefined
@@ -182,14 +183,12 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       ? colors?.headerPageAccentColor
       : undefined
   const headerTint = colors?.headerBgImageTint ?? 0.38
+  // Only a real page fill or ink repaints the sheet. An accent on its own just
+  // recolours headings and must not reset the template's body ink.
   const headerPagePaint =
     headerMultiActive &&
     colors?.headerPresetId === 'custom' &&
-    !!(
-      colors?.headerPageBackgroundColor ||
-      colors?.headerPageTextColor ||
-      colors?.headerPageAccentColor
-    )
+    !!(colors?.headerPageBackgroundColor || colors?.headerPageTextColor)
   const headerSide =
     settings.columnLayout === 'two' && (settings.headerPosition ?? 'top') !== 'top'
       ? settings.headerPosition ?? 'top'

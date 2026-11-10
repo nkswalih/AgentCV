@@ -2283,6 +2283,19 @@
   color: var(--doc-header-text, #ffffff);
 }
 
+/* A side header's image fills that column's width and starts at the sheet
+   edge, so the photograph reads as a band rather than a floating rectangle. */
+.page[data-header-paint='image'] .doc-main > [data-doc-header] {
+  margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -1) 0;
+  padding: calc(var(--doc-margin-y, 14mm) * 0.62) var(--doc-margin-x, 15mm)
+    calc(var(--doc-margin-y, 14mm) * 0.42);
+}
+.page[data-header-paint='image'] .doc-rail > [data-doc-header] {
+  margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -0.58) 0;
+  padding: calc(var(--doc-margin-y, 14mm) * 0.62) calc(var(--doc-margin-x, 15mm) * 0.58)
+    calc(var(--doc-margin-y, 14mm) * 0.42);
+}
+
 /* The padded single-column designs put the page margin on the root, so the
    band reaches the sheet edges by cancelling that margin and paying it back as
    padding. Grid designs own their own padding and are left alone. */
@@ -2299,6 +2312,9 @@
   :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]),
 .page[data-header-paint='multi']
   :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) {
+  /* Decorations inside a painted panel (markers, rules, dates) belong to the
+     panel, not to the page accent below it. */
+  --doc-accent: var(--doc-header-text, currentColor);
   background: var(--doc-header-bg, transparent);
   color: var(--doc-header-text, currentColor);
 }
@@ -2311,16 +2327,23 @@
   color: inherit !important;
   border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 38%, transparent) !important;
 }
-/* Section headings are the one exception: they keep the accent the header
-   scheme supplied, which is what ties the band to the page below it. */
-.page[data-header-paint][data-accent-headings='true']
-  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
-  .doc-section-title {
-  color: var(--doc-accent, var(--doc-header-accent, currentColor)) !important;
-  border-color: var(--doc-accent, var(--doc-header-accent, currentColor)) !important;
-}
-
 /* -- Header ink wins over the accent switches and the Multi/Image reset -- */
+.page[data-header-paint][data-header-side] [data-doc-header]
+  :is(
+    .doc-name,
+    .doc-headline,
+    .doc-contact,
+    .doc-contact-item,
+    .doc-contact-item .doc-icon,
+    .doc-contact-row,
+    .doc-contact-sep,
+    .doc-header-text,
+    .doc-rail-top-text,
+    a.doc-link,
+    .doc-icon
+  ) {
+  color: var(--doc-header-text, currentColor) !important;
+}
 .page[data-header-paint] [data-doc-header],
 .page[data-header-paint] [data-doc-header] * {
   color: var(--doc-header-text, currentColor) !important;
