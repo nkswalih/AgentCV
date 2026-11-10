@@ -18,7 +18,12 @@ export function downloadHtmlExport(resumeName: string): void {
 
   // The preview may be scaled to fit its pane via an ancestor transform; the
   // clone carries none of it, so the exported page keeps natural size.
-  const body = page.cloneNode(true) as Element
+  const body = page.cloneNode(true) as HTMLElement
+
+  // Custom properties keep the authored, relative URL when cloned. Resolve the
+  // live absolute URL so an image backdrop still loads from the exported file.
+  const liveImage = [...getComputedStyle(page).backgroundImage.matchAll(/url\("?([^")]+)"?\)/g)].pop()
+  if (liveImage) body.style.setProperty('--doc-bg-image', `url(${JSON.stringify(liveImage[1])})`)
 
   const safeName = resumeName.trim() || 'Resume'
   const html = `<!doctype html>

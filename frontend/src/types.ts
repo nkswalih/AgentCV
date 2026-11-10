@@ -319,6 +319,8 @@ export interface ColorsState {
   headerType?: FullPageMode
   /** Header Single accent id, 'default' for the template accent, or 'none'. */
   headerSingleId?: string
+  /** The fill Header · Single owns, kept through a detour into Multi. */
+  headerSingleColor?: string
   /** Header Multi scheme id, or 'custom' once a colour is hand-picked. */
   headerPresetId?: string
   /** The header band's fill. */
