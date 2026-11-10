@@ -28,6 +28,8 @@ export function Print() {
   const [error, setError] = useState<string | null>(null)
   const [fontsReady, setFontsReady] = useState(false)
   const [timedOut, setTimedOut] = useState(false)
+  const [bgReady, setBgReady] = useState(false)
+  const [headerReady, setHeaderReady] = useState(false)
   const pageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -66,6 +68,49 @@ export function Print() {
     }
   }, [])
 
+  // CSS background images do not participate in document.fonts or the fit
+  // measurement. Preload the backdrop so the PDF never captures a blank sheet.
+  const bgImage = doc?.settings.colors?.bgImage
+  useEffect(() => {
+    if (!bgImage) {
+      setBgReady(true)
+      return
+    }
+    setBgReady(false)
+    let live = true
+    const img = new Image()
+    const settle = () => {
+      if (live) setBgReady(true)
+    }
+    img.onload = settle
+    img.onerror = settle
+    img.src = bgImage
+    return () => {
+      live = false
+    }
+  }, [bgImage])
+
+  // Same handshake for the Header · Image band, which is a separate field.
+  const headerImage = doc?.settings.colors?.headerBgImage
+  useEffect(() => {
+    if (!headerImage) {
+      setHeaderReady(true)
+      return
+    }
+    setHeaderReady(false)
+    let live = true
+    const img = new Image()
+    const settle = () => {
+      if (live) setHeaderReady(true)
+    }
+    img.onload = settle
+    img.onerror = settle
+    img.src = headerImage
+    return () => {
+      live = false
+    }
+  }, [headerImage])
+
   useEffect(() => {
     const timer = setTimeout(() => setTimedOut(true), SETTLE_TIMEOUT_MS)
     return () => clearTimeout(timer)
@@ -84,7 +129,7 @@ export function Print() {
   }
   if (!doc) return null
 
-  const ready = fontsReady && (settled || timedOut)
+  const ready = fontsReady && bgReady && headerReady && (settled || timedOut)
 
   return (
     <div data-print-ready={ready ? 'true' : 'false'}>

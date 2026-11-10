@@ -101,12 +101,6 @@ function HomeShell() {
         </div>
 
         <div className="side-foot">
-          <button type="button" className="side-link" title="Coming soon">
-            Upgrade to Pro
-          </button>
-          <button type="button" className="side-link" title="Coming soon">
-            Student Benefits
-          </button>
           <button type="button" className="side-link side-account" title="Coming soon">
             <span className="avatar" aria-hidden="true">
               <UserIcon />

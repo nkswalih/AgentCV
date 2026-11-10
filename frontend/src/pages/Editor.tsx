@@ -1,13 +1,27 @@
 /** The editor route: top bar + document structure + page + style inspector. */
 
 import { Link, useParams } from 'react-router-dom'
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
+import { api } from '../api'
 import { useEditor } from '../store'
 import { ExportDialog } from '../editor/ExportDialog'
-import { LogoMark } from '../editor/icons'
+import {
+  ChevronDown,
+  DownloadIcon,
+  Kebab,
+  LinkIcon,
+  LogoMark,
+  MailIcon,
+} from '../editor/icons'
 import { PagePreview } from '../editor/PagePreview'
 import { LeftPane, RightPane } from '../editor/Panes'
+
+/** The share sheet is optional, so ask the browser before assuming it. */
+type FileShareNavigator = Navigator & {
+  canShare?: (data?: { files?: File[] }) => boolean
+  share?: (data?: { files?: File[]; title?: string; text?: string }) => Promise<void>
+}
 
 function SaveState() {
   const state = useEditor((s) => s.saveState)
@@ -30,9 +44,53 @@ export function Editor() {
   const saveNow = useEditor((s) => s.saveNow)
   const [exportOpen, setExportOpen] = useState(false)
 
+  // The topbar's two popovers share the usual outside-click + Escape contract.
+  const [nameOpen, setNameOpen] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const nameRef = useRef<HTMLDivElement>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  const [toast, setToast] = useState<string | null>(null)
+  const [emailBusy, setEmailBusy] = useState(false)
+
   useEffect(() => {
     if (id) void load(id)
   }, [id, load])
+
+  useEffect(() => {
+    if (!nameOpen && !menuOpen) return
+    const onDown = (e: MouseEvent) => {
+      const target = e.target as Node
+      if (nameRef.current && !nameRef.current.contains(target)) setNameOpen(false)
+      if (menuRef.current && !menuRef.current.contains(target)) setMenuOpen(false)
+    }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setNameOpen(false)
+        setMenuOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [nameOpen, menuOpen])
+
+  useEffect(() => {
+    if (!nameOpen) return
+    nameInputRef.current?.focus()
+    nameInputRef.current?.select()
+  }, [nameOpen])
+
+  // Status messages are short-lived; a toast should never become furniture.
+  useEffect(() => {
+    if (!toast) return
+    const timer = window.setTimeout(() => setToast(null), 3600)
+    return () => window.clearTimeout(timer)
+  }, [toast])
 
   const error = useEditor((s) => s.loadError)
   if (error) {
@@ -49,6 +107,89 @@ export function Editor() {
   }
   if (!doc) return <div className="center-msg">Loading document…</div>
 
+  const shareLink = `${window.location.origin}/print/${id}`
+  const paperSize = doc.settings.paperSize
+
+  /**
+   * "Download via email" should never hand the user a dead attachment. When
+   * the browser can share a real file we use the OS sheet; otherwise the PDF
+   * is saved and the mail client opens with a ready-to-send draft.
+   */
+  async function handleEmailDownload() {
+    setMenuOpen(false)
+    if (!id) return
+    setEmailBusy(true)
+    setToast('Preparing your PDF…')
+    try {
+      await saveNow()
+      const { blob, filename } = await api.exportPdfFile(id, {
+        paperSize,
+      })
+      const file = new File([blob], filename, { type: 'application/pdf' })
+      const nav = navigator as FileShareNavigator
+
+      if (nav.share && nav.canShare?.({ files: [file] })) {
+        await nav.share({
+          files: [file],
+          title: name || 'My resume',
+          text: `My resume${name ? ` — ${name}` : ''}`,
+        })
+        setToast('Share sheet opened')
+        return
+      }
+
+      // Fallback: save the PDF, then open a draft the file can be attached to.
+      const url = URL.createObjectURL(blob)
+      try {
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename
+        a.click()
+      } finally {
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+      }
+
+      const subject = encodeURIComponent(`My resume${name ? ` — ${name}` : ''}`)
+      const body = encodeURIComponent(
+        `Hi,\n\nPlease find my resume attached.\n\nBest,\n${name}\n`,
+      )
+      const mail = document.createElement('a')
+      mail.href = `mailto:?subject=${subject}&body=${body}`
+      mail.click()
+      setToast('PDF downloaded — attach it to the email')
+    } catch (e) {
+      // Closing the native share sheet is not an error worth shouting about.
+      if (!(e instanceof DOMException && e.name === 'AbortError')) {
+        setToast(e instanceof Error ? e.message : 'Could not prepare the PDF')
+      }
+    } finally {
+      setEmailBusy(false)
+    }
+  }
+
+  async function handleShareLink() {
+    setMenuOpen(false)
+    if (!id) return
+    try {
+      await navigator.clipboard.writeText(shareLink)
+      setToast('Shareable link copied to clipboard')
+    } catch {
+      // Older browsers and insecure contexts: a temporary field does the job.
+      const field = document.createElement('input')
+      field.value = shareLink
+      document.body.appendChild(field)
+      field.select()
+      try {
+        document.execCommand('copy')
+        setToast('Shareable link copied to clipboard')
+      } catch {
+        setToast(`Shareable link: ${shareLink}`)
+      } finally {
+        field.remove()
+      }
+    }
+  }
+
   return (
     <div className="shell">
       <header className="topbar">
@@ -57,33 +198,106 @@ export function Editor() {
           <span>agentcv</span>
         </Link>
         <span className="topbar-divider" aria-hidden="true" />
-        <input
-          className="name-input"
-          value={name}
-          aria-label="Resume name"
-          onChange={(e) => rename(e.target.value)}
-        />
+
+        <div className="name-menu" ref={nameRef}>
+          <button
+            type="button"
+            className="name-field"
+            aria-haspopup="dialog"
+            aria-expanded={nameOpen}
+            onClick={() => {
+              setMenuOpen(false)
+              setNameOpen((v) => !v)
+            }}
+          >
+            <span className="name-text">{name || 'Untitled Resume'}</span>
+            <ChevronDown />
+          </button>
+
+          {nameOpen && (
+            <div className="name-pop" role="dialog" aria-label="Resume details">
+              <label className="name-pop-field">
+                <span className="name-pop-label">Resume name</span>
+                <input
+                  ref={nameInputRef}
+                  value={name}
+                  aria-label="Resume name"
+                  onChange={(e) => rename(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault()
+                      setNameOpen(false)
+                    }
+                  }}
+                />
+              </label>
+              <div className="name-pop-foot">
+                <SaveState />
+                <Link to="/" onClick={() => setNameOpen(false)}>
+                  All resumes
+                </Link>
+              </div>
+            </div>
+          )}
+        </div>
+
         <span className="topbar-spacer" />
+
         <SaveState />
-        <button className="btn" onClick={() => void saveNow()}>
-          Save
+
+        <button className="btn btn-primary download-btn" onClick={() => setExportOpen(true)}>
+          <DownloadIcon />
+          Download
         </button>
-        <button className="btn btn-primary" onClick={() => setExportOpen(true)}>
-          Export
-        </button>
+
+        <div className="topbar-menu" ref={menuRef}>
+          <button
+            type="button"
+            className="btn btn-icon btn-outline kebab-btn"
+            aria-label="More actions"
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            onClick={() => {
+              setNameOpen(false)
+              setMenuOpen((v) => !v)
+            }}
+          >
+            <Kebab />
+          </button>
+
+          {menuOpen && (
+            <div className="topbar-dropdown" role="menu">
+              <button
+                type="button"
+                role="menuitem"
+                disabled={emailBusy}
+                onClick={() => void handleEmailDownload()}
+              >
+                <MailIcon />
+                {emailBusy ? 'Preparing PDF…' : 'Download via email'}
+              </button>
+              <button type="button" role="menuitem" onClick={() => void handleShareLink()}>
+                <LinkIcon />
+                Get shareable link
+              </button>
+            </div>
+          )}
+        </div>
       </header>
 
-      {exportOpen && (
-        <ExportDialog
-          onClose={() => setExportOpen(false)}
-        />
-      )}
+      {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
 
       <div className="panes">
         <LeftPane />
         <PagePreview doc={doc} />
         <RightPane />
       </div>
+
+      {toast && (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      )}
     </div>
   )
 }
