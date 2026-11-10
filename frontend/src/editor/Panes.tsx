@@ -2,6 +2,7 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 
 import { useEditor } from '../store'
 import { newId, applyTemplatePreset } from '../factories'
+import { api } from '../api'
 import {
   loadCustomTemplates,
   saveCustomTemplate,
@@ -10,13 +11,18 @@ import {
   type CustomTemplate,
 } from '../customTemplates'
 import {
-  COLOR_PRESETS,
+  BACKGROUND_GALLERY,
   FONT_CHOICES,
   FONT_GROUP_LABELS,
   FONT_GROUPS,
+  HEADER_PRESETS,
+  MULTI_PRESETS,
+  SINGLE_ACCENTS,
   TEMPLATES,
+  type HeaderPreset,
+  type MultiPreset,
 } from '../templates/registry'
-import { DocIcon, isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
+import { DocIcon, SECTION_ICONS, isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
 import { Check, Segmented, Slider, Text } from './fields'
 import { SectionCard, useDragSensors, DRAG_MODIFIERS } from './SectionCard'
 import { PhotoAdjustDialog } from './PhotoAdjustDialog'
@@ -35,8 +41,16 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
-import type { ColorsState, Link, Section, SectionType, TemplateId } from '../types'
-import { Grip, Plus } from './icons'
+import type {
+  ColorTarget,
+  ColorsState,
+  FullPageMode,
+  Link,
+  Section,
+  SectionType,
+  TemplateId,
+} from '../types'
+import { CheckIcon, Grip, Plus, Trash } from './icons'
 
 const ADDABLE: SectionType[] = [
   'summary',
@@ -65,10 +79,13 @@ type ColumnId = 'left' | 'right'
 function DragOverlayCard({ section }: { section: Section }) {
   return (
     <div className="section-card">
-      <div className="section-row" data-hidden={!section.visible}>
+      <div className="section-row">
         <span className="grip" aria-hidden="true"><Grip /></span>
+        <span className="section-icon" aria-hidden="true">
+          <DocIcon name={SECTION_ICONS[section.type] ?? 'file'} />
+        </span>
         <span className="section-row-title">{section.title}</span>
-        <span className="count">{section.items.length}</span>
+        <span className="section-count">{section.items.length}</span>
       </div>
     </div>
   )
@@ -1201,205 +1218,1019 @@ const APPLY_ALL: ColorsState['apply'] = {
   linkIcons: true,
 }
 
-/**
- * One surface-colour control of the trio: a rounded swatch that opens the
- * native colour picker, labelled beneath, with a reset back to the template's
- * own default once an explicit colour has been chosen.
- */
-function ColorTile({
+const COLOR_TARGETS: { id: ColorTarget; label: string }[] = [
+  { id: 'full', label: 'Full Page' },
+  { id: 'header', label: 'Header' },
+  { id: 'border', label: 'Border' },
+]
+
+const FULL_MODES: { id: FullPageMode; label: string }[] = [
+  { id: 'single', label: 'Single' },
+  { id: 'multi', label: 'Multi' },
+  { id: 'image', label: 'Image' },
+]
+
+/** Perceived luminance, so a tick stays visible on both light and dark inks. */
+function contrastInk(hex: string): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(hex)
+  if (!m) return '#ffffff'
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  const y = (r * 299 + g * 587 + b * 114) / 1000
+  return y > 150 ? '#111827' : '#ffffff'
+}
+
+function isPlainHex(value: string | undefined): value is string {
+  return !!value && /^#[0-9a-f]{6}$/i.test(value)
+}
+
+/** A labelled colour control: swatch opens the picker, hex reads back. */
+function ColorRow({
   label,
   value,
-  fallback,
   onChange,
-  onReset,
 }: {
   label: string
-  value: string | undefined
-  fallback: string
+  value: string
   onChange: (value: string) => void
-  onReset: () => void
 }) {
   return (
-    <div className="color-tile" data-set={!!value}>
-      <label className="color-swatch" style={{ background: value ?? fallback }}>
+    <label className="color-row">
+      <span className="color-row-label">{label}</span>
+      <span className="color-row-swatch" style={{ background: value }}>
         <input
           type="color"
-          value={value ?? fallback}
+          value={value}
           onChange={(e) => onChange(e.target.value)}
           aria-label={`${label} colour`}
         />
-        {!value && <span className="color-swatch-auto">A</span>}
-      </label>
-      <span className="color-tile-label">
-        {label}
-        {value && (
-          <button
-            type="button"
-            className="btn btn-ghost btn-icon color-reset"
-            aria-label={`Reset ${label} to template default`}
-            title="Reset to template default"
-            onClick={onReset}
-          >
-            ↺
-          </button>
-        )}
       </span>
-    </div>
+      <span className="color-row-hex">{value.toUpperCase()}</span>
+    </label>
   )
 }
 
-const BG_TYPES = [
-  { value: 'single', label: 'Single' },
-  { value: 'multi', label: 'Multi' },
-  { value: 'image', label: 'Image' },
-] as const
-
 /**
- * The Colors card: surface tints, backdrop treatment, preset palettes shown as
- * color-pair tiles, a custom escape hatch, and per-element accent switches --
- * one organized card, previews over words.
+ * The Colors card. Three targets -- Full Page, Header, Border -- and, for the
+ * Full Page, three treatments: one accent, a preset scheme, or a photograph.
+ * Full Page is wired end to end; the other two targets are placeholders until
+ * their references land.
  */
 function ColorsSection() {
   const { doc, updateSettings } = useEditor()
+  const [target, setTarget] = useState<ColorTarget>('full')
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+  const [query, setQuery] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
   if (!doc) return null
   const c = doc.settings.colors
+  const mode: FullPageMode = c?.bgType ?? 'single'
+  const headerMode: FullPageMode = c?.headerType ?? 'single'
 
-  /** Merge a patch into the colors state, creating it on first touch. */
+  /** The template's own accent -- what "Default" restores. */
+  const defaultAccent = applyTemplatePreset(doc.settings.template).accentColor ?? '#374151'
+
+  /** Complete state on every write, so a partial patch can never drop a key. */
+  const baseColors = (): ColorsState => ({
+    bgType: 'single',
+    singlePresetId: 'default',
+    multiPresetId: 'slate',
+    textColor: '#0f172a',
+    backgroundColor: '#f8fafc',
+    bgImageTint: 0.38,
+    headerType: 'single',
+    headerSingleId: 'none',
+    headerPresetId: 'slate',
+    headerBgImageTint: 0.38,
+    ...c,
+    apply: { ...APPLY_ALL, ...c?.apply },
+  })
+
   const setC = (patch: Partial<ColorsState>) =>
-    updateSettings({
-      colors: {
-        bgType: 'single',
-        presetId: 'none',
-        apply: { ...APPLY_ALL },
-        ...doc.settings.colors,
-        ...patch,
-      },
-    })
+    updateSettings({ colors: { ...baseColors(), ...patch } })
 
   const setApply = (key: ApplyKey, v: boolean) =>
     setC({ apply: { ...(c?.apply ?? APPLY_ALL), [key]: v } })
 
-  const pickColor = (field: 'page' | 'header' | 'border', value: string) =>
-    setC({ [field]: value, presetId: 'custom' } as Partial<ColorsState>)
+  // -- Single ------------------------------------------------------------
+  const accent = doc.settings.accentColor
+  // Value wins over stored id, with the template default checked first: two
+  // swatches can share a hex, and the default is the meaningful one then.
+  const singleActive =
+    accent.toLowerCase() === defaultAccent.toLowerCase()
+      ? 'default'
+      : SINGLE_ACCENTS.find((a) => a.value.toLowerCase() === accent.toLowerCase())?.id ?? 'custom'
 
-  const applyPreset = (id: string) => {
-    const p = COLOR_PRESETS.find((x) => x.id === id)
-    if (!p) return
-    // A preset is a package deal: its accent rides along with the surfaces.
+  const applyAccent = (value: string, id: string) =>
+    updateSettings({
+      accentColor: value,
+      colors: {
+        ...baseColors(),
+        bgType: 'single',
+        singlePresetId: id,
+        singleAccent: value,
+      },
+    })
+
+  const singleCaption =
+    singleActive === 'default'
+      ? `Template default · ${defaultAccent.toUpperCase()}`
+      : singleActive === 'custom'
+        ? `Custom · ${accent.toUpperCase()}`
+        : `${SINGLE_ACCENTS.find((a) => a.id === singleActive)?.label ?? 'Accent'} · ${accent.toUpperCase()}`
+
+  // -- Multi -------------------------------------------------------------
+  const activeMulti = MULTI_PRESETS.find((p) => p.id === (c?.multiPresetId ?? 'slate')) ?? MULTI_PRESETS[0]
+
+  const applyMulti = (p: MultiPreset) =>
     updateSettings({
       accentColor: p.accent,
       colors: {
-        bgType: c?.bgType ?? 'single',
-        presetId: id,
-        apply: { ...(c?.apply ?? APPLY_ALL) },
-        page: p.page,
-        header: p.header,
-        border: p.border,
+        ...baseColors(),
+        bgType: 'multi',
+        multiPresetId: p.id,
+        multiAccent: p.accent,
+        backgroundColor: p.background,
+        textColor: p.text,
+      },
+    })
+
+  const openMultiCustom = () => {
+    const background = c?.backgroundColor
+    const seed = isPlainHex(background) ? background : activeMulti.solid
+    setC({
+      bgType: 'multi',
+      multiPresetId: 'custom',
+      // Whatever accent the scheme is showing now becomes Custom's own, so a
+      // reload cannot silently swap it for another preset's colour.
+      multiAccent: c?.multiAccent ?? doc.settings.accentColor,
+      backgroundColor: seed,
+    })
+  }
+
+  const setMultiColor = (key: 'text' | 'background' | 'accent', value: string) => {
+    if (key === 'accent') {
+      updateSettings({
+        accentColor: value,
+        colors: {
+          ...baseColors(),
+          bgType: 'multi',
+          multiPresetId: 'custom',
+          multiAccent: value,
+        },
+      })
+      return
+    }
+    setC({
+      bgType: 'multi',
+      multiPresetId: 'custom',
+      ...(key === 'text' ? { textColor: value } : { backgroundColor: value }),
+    })
+  }
+
+  // -- Image -------------------------------------------------------------
+  const setMode = (next: FullPageMode) => {
+    if (next === 'single') {
+      // Restore the ink Single owns. Without this, coming back from a dark
+      // Multi scheme would leave a pale accent on white paper.
+      const owned = c?.singleAccent ?? defaultAccent
+      updateSettings({
+        accentColor: owned,
+        colors: { ...baseColors(), bgType: 'single', singleAccent: owned },
+      })
+      return
+    }
+    if (next === 'multi') {
+      const owned = c?.multiAccent ?? activeMulti.accent
+      updateSettings({
+        accentColor: owned,
+        colors: {
+          ...baseColors(),
+          bgType: 'multi',
+          multiPresetId: c?.multiPresetId === 'custom' ? 'custom' : activeMulti.id,
+          multiAccent: owned,
+          backgroundColor: c?.backgroundColor ?? activeMulti.background,
+          textColor: c?.textColor ?? activeMulti.text,
+        },
+      })
+      return
+    }
+    setC({ bgType: 'image', bgImage: c?.bgImage ?? BACKGROUND_GALLERY[0].src })
+  }
+
+  const acceptFile = async (file: File | undefined, slot: 'page' | 'header' = 'page') => {
+    if (!file) return
+    setUploadError(null)
+    if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
+      setUploadError('Use a PNG, JPEG or WebP image.')
+      return
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      setUploadError('Keep the image under 10 MB.')
+      return
+    }
+    setUploading(true)
+    try {
+      const url = await api.uploadBackground(file)
+      if (slot === 'header') {
+        setC({ headerType: 'image', headerBgImage: url })
+      } else {
+        setC({ bgType: 'image', bgImage: url })
+      }
+    } catch (e) {
+      setUploadError(e instanceof Error ? e.message : 'Upload failed.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  // -- Header ------------------------------------------------------------
+  const activeHeader =
+    HEADER_PRESETS.find((p) => p.id === (c?.headerPresetId ?? 'slate')) ?? HEADER_PRESETS[0]
+  const headerSingleId = c?.headerSingleId ?? 'none'
+  const headerFill = c?.headerBackgroundColor ?? defaultAccent
+  const headerSingleCaption =
+    headerSingleId === 'none'
+      ? 'No header fill'
+      : headerSingleId === 'default'
+        ? `Template default · ${defaultAccent.toUpperCase()}`
+        : headerSingleId === 'custom'
+          ? `Custom · ${headerFill.toUpperCase()}`
+          : `${SINGLE_ACCENTS.find((a) => a.id === headerSingleId)?.label ?? 'Accent'} · ${headerFill.toUpperCase()}`
+
+  const applyHeaderSingle = (value: string, id: string) => {
+    if (id === 'none') {
+      // Clear the band without touching the accent: the page keeps the ink it
+      // already has, and only the fill goes away.
+      setC({ headerType: 'single', headerSingleId: 'none', headerBackgroundColor: undefined })
+      return
+    }
+    updateSettings({
+      accentColor: value,
+      colors: {
+        ...baseColors(),
+        headerType: 'single',
+        headerSingleId: id,
+        headerSingleColor: value,
+        headerBackgroundColor: value,
+        headerTextColor: contrastInk(value),
+        headerAccentColor: value,
       },
     })
   }
 
-  const previewVars = {
-    '--pv-page': c?.page ?? '#ffffff',
-    '--pv-header': c?.header ?? '#eef1f5',
-  } as React.CSSProperties
+  const applyHeaderMulti = (p: HeaderPreset) =>
+    updateSettings({
+      accentColor: p.accent,
+      colors: {
+        ...baseColors(),
+        headerType: 'multi',
+        headerPresetId: p.id,
+        headerBackgroundColor: p.background,
+        headerTextColor: p.text,
+        headerAccentColor: p.accent,
+      },
+    })
+
+  const openHeaderCustom = () => {
+    const seed = isPlainHex(c?.headerBackgroundColor) ? c.headerBackgroundColor : activeHeader.background
+    setC({
+      headerType: 'multi',
+      headerPresetId: 'custom',
+      headerBackgroundColor: seed,
+      headerTextColor: c?.headerTextColor ?? activeHeader.text,
+      headerAccentColor: c?.headerAccentColor ?? doc.settings.accentColor,
+    })
+  }
+
+  const setHeaderColor = (
+    row: 'header' | 'page',
+    key: 'text' | 'background' | 'accent',
+    value: string,
+  ) => {
+    if (row === 'header' && key === 'accent') {
+      updateSettings({
+        accentColor: value,
+        colors: {
+          ...baseColors(),
+          headerType: 'multi',
+          headerPresetId: 'custom',
+          headerAccentColor: value,
+        },
+      })
+      return
+    }
+    if (row === 'header') {
+      setC({
+        headerType: 'multi',
+        headerPresetId: 'custom',
+        ...(key === 'text' ? { headerTextColor: value } : { headerBackgroundColor: value }),
+      })
+      return
+    }
+    setC({
+      headerType: 'multi',
+      headerPresetId: 'custom',
+      ...(key === 'text'
+        ? { headerPageTextColor: value }
+        : key === 'background'
+          ? { headerPageBackgroundColor: value }
+          : { headerPageAccentColor: value }),
+    })
+  }
+
+  const setHeaderMode = (next: FullPageMode) => {
+    if (next === 'single') {
+      // Restore the fill Single owns. The id plus its remembered colour means a
+      // detour into Multi cannot leave a scheme's band behind.
+      const id = c?.headerSingleId ?? 'none'
+      const fill =
+        id === 'none'
+          ? undefined
+          : id === 'default'
+            ? defaultAccent
+            : id === 'custom'
+              ? c?.headerSingleColor ?? headerFill
+              : SINGLE_ACCENTS.find((a) => a.id === id)?.value ?? c?.headerSingleColor
+      if (fill) {
+        updateSettings({
+          accentColor: fill,
+          colors: {
+            ...baseColors(),
+            headerType: 'single',
+            headerSingleId: id,
+            headerSingleColor: fill,
+            headerBackgroundColor: fill,
+            headerTextColor: contrastInk(fill),
+            headerAccentColor: fill,
+          },
+        })
+      } else {
+        setC({ headerType: 'single', headerSingleId: 'none', headerBackgroundColor: undefined })
+      }
+      return
+    }
+    if (next === 'multi') {
+      const owned = c?.headerAccentColor ?? activeHeader.accent
+      updateSettings({
+        accentColor: owned,
+        colors: {
+          ...baseColors(),
+          headerType: 'multi',
+          headerPresetId: c?.headerPresetId === 'custom' ? 'custom' : activeHeader.id,
+          headerBackgroundColor: c?.headerBackgroundColor ?? activeHeader.background,
+          headerTextColor: c?.headerTextColor ?? activeHeader.text,
+          headerAccentColor: owned,
+        },
+      })
+      return
+    }
+    setC({ headerType: 'image', headerBgImage: c?.headerBgImage ?? BACKGROUND_GALLERY[0].src })
+  }
+
+  const gallery = BACKGROUND_GALLERY.filter((b) =>
+    b.label.toLowerCase().includes(query.trim().toLowerCase()),
+  )
+  const selectedGallery = BACKGROUND_GALLERY.find((b) => b.src === c?.bgImage)
+  const tint = c?.bgImageTint ?? 0.38
+  const selectedHeaderGallery = BACKGROUND_GALLERY.find((b) => b.src === c?.headerBgImage)
+  const headerTint = c?.headerBgImageTint ?? 0.38
+  const storedBackground = c?.backgroundColor
+  const customBackground = isPlainHex(storedBackground) ? storedBackground : activeMulti.solid
+  const headerCustomBackground = isPlainHex(c?.headerBackgroundColor)
+    ? c.headerBackgroundColor
+    : activeHeader.background
+  const headerCustomText = c?.headerTextColor ?? activeHeader.text
+  const headerCustomAccent = c?.headerAccentColor ?? doc.settings.accentColor
+  const pageCustomText = c?.headerPageTextColor ?? c?.textColor ?? '#0f172a'
+  const pageCustomBackground = isPlainHex(c?.headerPageBackgroundColor)
+    ? c.headerPageBackgroundColor
+    : isPlainHex(c?.backgroundColor)
+      ? c.backgroundColor
+      : '#f8fafc'
+  const pageCustomAccent = c?.headerPageAccentColor ?? doc.settings.accentColor
 
   return (
     <section className="style-section">
       <p className="eyebrow style-section-title">Colors</p>
 
-      {/* -- Surface colours ------------------------------------------ */}
-      <div className="color-trio">
-        <ColorTile
-          label="Full Page"
-          value={c?.page}
-          fallback="#ffffff"
-          onChange={(v) => pickColor('page', v)}
-          onReset={() => setC({ page: undefined })}
-        />
-        <ColorTile
-          label="Header"
-          value={c?.header}
-          fallback="#eef1f5"
-          onChange={(v) => pickColor('header', v)}
-          onReset={() => setC({ header: undefined })}
-        />
-        <ColorTile
-          label="Border"
-          value={c?.border}
-          fallback="#d4dae2"
-          onChange={(v) => pickColor('border', v)}
-          onReset={() => setC({ border: undefined })}
-        />
-      </div>
-
-      {/* -- Backdrop treatment --------------------------------------- */}
-      <div className="bgtype-row" role="group" aria-label="Background type">
-        {BG_TYPES.map((t) => (
+      {/* -- Target selector: choose what the colours apply to ---------- */}
+      <div className="color-target-tabs" role="tablist" aria-label="Colour target">
+        {COLOR_TARGETS.map((t) => (
           <button
-            key={t.value}
+            key={t.id}
             type="button"
-            className="bgtype-tile"
-            data-active={(c?.bgType ?? 'single') === t.value}
-            onClick={() => setC({ bgType: t.value })}
+            role="tab"
+            aria-selected={target === t.id}
+            className="color-target-tab"
+            data-active={target === t.id}
+            onClick={() => setTarget(t.id)}
           >
-            <span className={`bgtype-preview bg-${t.value}`} style={previewVars} aria-hidden="true" />
-            <span className="color-tile-label">{t.label}</span>
+            {t.label}
           </button>
         ))}
       </div>
 
-      {/* -- Preset palettes ------------------------------------------- */}
-      <div className="preset-grid">
-        {COLOR_PRESETS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            className="preset-tile"
-            data-active={c?.presetId === p.id}
-            onClick={() => applyPreset(p.id)}
-            aria-label={`${p.id} palette`}
-            title={`${p.id} palette`}
-          >
-            <span className="preset-band" style={{ background: p.header }} aria-hidden="true" />
-            <span className="preset-body" style={{ background: p.page }} aria-hidden="true">
-              <span className="preset-t" style={{ color: p.accent }}>T</span>
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <button
-        type="button"
-        className="preset-custom"
-        data-active={c?.presetId === 'custom'}
-        onClick={() => setC({ presetId: 'custom' })}
-      >
-        <Plus />
-        Custom
-      </button>
-
-      {/* -- Where the accent reaches ---------------------------------- */}
-      <div className="apply-accent">
-        <p className="eyebrow apply-accent-title">Apply Accent Color</p>
-        <div className="apply-grid">
-          {[1, 2].map((col) => (
-            <div key={col}>
-              {APPLY_OPTIONS.filter((o) => o.column === col).map((o) => (
-                <Check
-                  key={o.key}
-                  label={o.label}
-                  checked={(c?.apply ?? APPLY_ALL)[o.key]}
-                  onChange={(v) => setApply(o.key, v)}
-                />
-              ))}
-            </div>
-          ))}
+      {target === 'border' && (
+        <div className="color-placeholder">
+          <span className="color-placeholder-mode">Single</span>
+          <p className="color-placeholder-title">Border treatments are next</p>
+          <p className="color-placeholder-text">
+            Share the Border reference and this tab will get its own Single · Multi · Image
+            controls.
+          </p>
         </div>
-      </div>
+      )}
+
+      {target === 'header' && (
+        <>
+          {/* -- Treatment selector -------------------------------------- */}
+          <div className="mode-tabs" role="tablist" aria-label="Header treatment">
+            {FULL_MODES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="tab"
+                aria-selected={headerMode === m.id}
+                className="mode-tab"
+                data-active={headerMode === m.id}
+                onClick={() => setHeaderMode(m.id)}
+              >
+                <span className={`mode-preview mode-${m.id}`} aria-hidden="true" />
+                <span className="mode-tab-label">{m.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* -- Single: one accent fills the identity band --------------- */}
+          {headerMode === 'single' && (
+            <div className="color-panel">
+              <div className="color-panel-head">
+                <p className="eyebrow">Accent color</p>
+                <span className="color-panel-caption">{headerSingleCaption}</span>
+              </div>
+              <div className="accent-grid" role="radiogroup" aria-label="Header accent colour">
+                <button
+                  type="button"
+                  className="accent-tile accent-none"
+                  data-active={headerSingleId === 'none'}
+                  aria-label="No header fill"
+                  title="No header fill"
+                  onClick={() => applyHeaderSingle('', 'none')}
+                >
+                  <span aria-hidden="true">—</span>
+                </button>
+                <button
+                  type="button"
+                  className="accent-tile accent-default"
+                  data-active={headerSingleId === 'default'}
+                  aria-label="Template default accent"
+                  title="Template default accent"
+                  onClick={() => applyHeaderSingle(defaultAccent, 'default')}
+                >
+                  <span style={{ color: defaultAccent }}>A</span>
+                </button>
+                {SINGLE_ACCENTS.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className="accent-tile"
+                    style={{ background: a.value, color: contrastInk(a.value) }}
+                    data-active={headerSingleId === a.id}
+                    aria-label={a.label}
+                    title={a.label}
+                    onClick={() => applyHeaderSingle(a.value, a.id)}
+                  >
+                    {headerSingleId === a.id && <CheckIcon />}
+                  </button>
+                ))}
+                <label
+                  className="accent-tile accent-custom"
+                  data-active={headerSingleId === 'custom'}
+                  style={{ background: headerFill, color: contrastInk(headerFill) }}
+                  title="Custom header colour"
+                >
+                  <input
+                    type="color"
+                    value={headerFill}
+                    onChange={(e) => applyHeaderSingle(e.target.value, 'custom')}
+                    aria-label="Custom header colour"
+                  />
+                  {headerSingleId === 'custom' ? <CheckIcon /> : <Plus />}
+                </label>
+              </div>
+
+              <div className="apply-accent">
+                <p className="eyebrow apply-accent-title">Apply Accent Color</p>
+                <div className="apply-grid">
+                  {[1, 2].map((col) => (
+                    <div key={col}>
+                      {APPLY_OPTIONS.filter((o) => o.column === col).map((o) => (
+                        <Check
+                          key={o.key}
+                          label={o.label}
+                          checked={(c?.apply ?? APPLY_ALL)[o.key]}
+                          onChange={(v) => setApply(o.key, v)}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* -- Multi: header scheme + optional page row ----------------- */}
+          {headerMode === 'multi' && (
+            <div className="color-panel">
+              <div className="color-panel-head">
+                <p className="eyebrow">Header schemes</p>
+                <span className="color-panel-caption">
+                  {c?.headerPresetId === 'custom' ? 'Custom' : activeHeader.label}
+                </span>
+              </div>
+              <div className="multi-grid">
+                {HEADER_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="multi-tile"
+                    data-active={c?.headerPresetId === p.id}
+                    onClick={() => applyHeaderMulti(p)}
+                    title={p.label}
+                  >
+                    <span className="multi-preview" style={{ background: p.background }}>
+                      <span className="multi-aa" style={{ color: p.text }}>T</span>
+                      <span className="multi-dot" style={{ background: p.accent }} />
+                    </span>
+                    <span className="multi-label">{p.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="preset-custom"
+                data-active={c?.headerPresetId === 'custom'}
+                onClick={openHeaderCustom}
+              >
+                <Plus />
+                Custom
+              </button>
+
+              {c?.headerPresetId === 'custom' && (
+                <div className="color-rows">
+                  <div className="color-row-group">
+                    <p className="eyebrow color-row-group-title">Header</p>
+                    <ColorRow
+                      label="Text"
+                      value={headerCustomText}
+                      onChange={(v) => setHeaderColor('header', 'text', v)}
+                    />
+                    <ColorRow
+                      label="Background"
+                      value={headerCustomBackground}
+                      onChange={(v) => setHeaderColor('header', 'background', v)}
+                    />
+                    <ColorRow
+                      label="Accent"
+                      value={headerCustomAccent}
+                      onChange={(v) => setHeaderColor('header', 'accent', v)}
+                    />
+                  </div>
+                  <div className="color-row-group">
+                    <p className="eyebrow color-row-group-title">Page</p>
+                    <ColorRow
+                      label="Text"
+                      value={pageCustomText}
+                      onChange={(v) => setHeaderColor('page', 'text', v)}
+                    />
+                    <ColorRow
+                      label="Background"
+                      value={pageCustomBackground}
+                      onChange={(v) => setHeaderColor('page', 'background', v)}
+                    />
+                    <ColorRow
+                      label="Accent"
+                      value={pageCustomAccent}
+                      onChange={(v) => setHeaderColor('page', 'accent', v)}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="apply-accent">
+                <p className="eyebrow apply-accent-title">Apply Accent Color</p>
+                <div className="apply-grid">
+                  {[1, 2].map((col) => (
+                    <div key={col}>
+                      {APPLY_OPTIONS.filter((o) => o.column === col).map((o) => (
+                        <Check
+                          key={o.key}
+                          label={o.label}
+                          checked={(c?.apply ?? APPLY_ALL)[o.key]}
+                          onChange={(v) => setApply(o.key, v)}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* -- Image: photo over the header band only ------------------- */}
+          {headerMode === 'image' && (
+            <div className="color-panel">
+              <div className="color-panel-head">
+                <p className="eyebrow">Header image</p>
+                <span className="color-panel-caption">Covers the header only</span>
+              </div>
+
+              {c?.headerBgImage && (
+                <div className="bg-selected">
+                  <span
+                    className="bg-selected-thumb"
+                    style={{ backgroundImage: `url(${JSON.stringify(c.headerBgImage)})` }}
+                    aria-hidden="true"
+                  />
+                  <span className="bg-selected-text">
+                    <span className="bg-selected-name">
+                      {selectedHeaderGallery?.label ?? 'Uploaded image'}
+                    </span>
+                    <span className="bg-selected-hint">Header band · body stays white</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-icon"
+                    aria-label="Remove header image"
+                    title="Remove header image"
+                    onClick={() =>
+                      setC({
+                        headerType: 'single',
+                        headerSingleId: 'none',
+                        headerBackgroundColor: undefined,
+                        headerBgImage: undefined,
+                      })
+                    }
+                  >
+                    <Trash />
+                  </button>
+                </div>
+              )}
+
+              <label
+                className="bg-upload"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  void acceptFile(e.dataTransfer.files[0], 'header')
+                }}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    void acceptFile(e.target.files?.[0], 'header')
+                    e.currentTarget.value = ''
+                  }}
+                />
+                <Plus />
+                <span className="bg-upload-title">{uploading ? 'Uploading…' : 'Upload image'}</span>
+                <span className="bg-upload-hint">PNG, JPEG or WebP · up to 10 MB · or drop it here</span>
+              </label>
+              {uploadError && <p className="bg-upload-error">{uploadError}</p>}
+
+              <input
+                type="search"
+                className="text-input bg-search"
+                placeholder="Search backgrounds"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search backgrounds"
+              />
+
+              <div className="bg-gallery">
+                {gallery.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    className="bg-tile"
+                    data-active={c?.headerBgImage === b.src}
+                    onClick={() => setC({ headerType: 'image', headerBgImage: b.src })}
+                    title={b.label}
+                    aria-label={b.label}
+                  >
+                    <img src={b.src} alt="" loading="lazy" />
+                    <span className="bg-tile-name">{b.label}</span>
+                    {c?.headerBgImage === b.src && (
+                      <span className="bg-tile-check" aria-hidden="true">
+                        <CheckIcon />
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {gallery.length === 0 && (
+                <p className="bg-empty">No backgrounds match “{query}”.</p>
+              )}
+
+              <div className="bg-tint">
+                <Slider
+                  label="Image tint"
+                  value={Math.round(headerTint * 100)}
+                  min={10}
+                  max={65}
+                  step={1}
+                  unit="%"
+                  onChange={(v) => setC({ headerBgImageTint: v / 100 })}
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {target === 'full' && (
+        <>
+          {/* -- Treatment selector -------------------------------------- */}
+          <div className="mode-tabs" role="tablist" aria-label="Full page treatment">
+            {FULL_MODES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="tab"
+                aria-selected={mode === m.id}
+                className="mode-tab"
+                data-active={mode === m.id}
+                onClick={() => setMode(m.id)}
+              >
+                <span className={`mode-preview mode-${m.id}`} aria-hidden="true" />
+                <span className="mode-tab-label">{m.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* -- Single: accent only, never the sheet --------------------- */}
+          {mode === 'single' && (
+            <div className="color-panel">
+              <div className="color-panel-head">
+                <p className="eyebrow">Accent color</p>
+                <span className="color-panel-caption">{singleCaption}</span>
+              </div>
+              <div className="accent-grid" role="radiogroup" aria-label="Accent colour">
+                <button
+                  type="button"
+                  className="accent-tile accent-default"
+                  data-active={singleActive === 'default'}
+                  aria-label="Template default accent"
+                  title="Template default accent"
+                  onClick={() => applyAccent(defaultAccent, 'default')}
+                >
+                  <span style={{ color: defaultAccent }}>A</span>
+                </button>
+                {SINGLE_ACCENTS.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className="accent-tile"
+                    style={{ background: a.value, color: contrastInk(a.value) }}
+                    data-active={singleActive === a.id}
+                    aria-label={a.label}
+                    title={a.label}
+                    onClick={() => applyAccent(a.value, a.id)}
+                  >
+                    {singleActive === a.id && <CheckIcon />}
+                  </button>
+                ))}
+                <label
+                  className="accent-tile accent-custom"
+                  data-active={singleActive === 'custom'}
+                  style={{ background: accent, color: contrastInk(accent) }}
+                  title="Custom accent colour"
+                >
+                  <input
+                    type="color"
+                    value={accent}
+                    onChange={(e) => applyAccent(e.target.value, 'custom')}
+                    aria-label="Custom accent colour"
+                  />
+                  {singleActive === 'custom' ? <CheckIcon /> : <Plus />}
+                </label>
+              </div>
+
+              <div className="apply-accent">
+                <p className="eyebrow apply-accent-title">Apply Accent Color</p>
+                <div className="apply-grid">
+                  {[1, 2].map((col) => (
+                    <div key={col}>
+                      {APPLY_OPTIONS.filter((o) => o.column === col).map((o) => (
+                        <Check
+                          key={o.key}
+                          label={o.label}
+                          checked={(c?.apply ?? APPLY_ALL)[o.key]}
+                          onChange={(v) => setApply(o.key, v)}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* -- Multi: preset schemes repaint the sheet ------------------ */}
+          {mode === 'multi' && (
+            <div className="color-panel">
+              <div className="color-panel-head">
+                <p className="eyebrow">Preset schemes</p>
+                <span className="color-panel-caption">
+                  {c?.multiPresetId === 'custom' ? 'Custom' : activeMulti.label}
+                </span>
+              </div>
+              <div className="multi-grid">
+                {MULTI_PRESETS.map((p) => (
+                  <button
+                    key={p.id}
+                    type="button"
+                    className="multi-tile"
+                    data-active={c?.multiPresetId === p.id}
+                    onClick={() => applyMulti(p)}
+                    title={p.label}
+                  >
+                    <span className="multi-preview" style={{ background: p.background }}>
+                      <span className="multi-aa" style={{ color: p.text }}>Aa</span>
+                      <span className="multi-dot" style={{ background: p.accent }} />
+                    </span>
+                    <span className="multi-label">{p.label}</span>
+                  </button>
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="preset-custom"
+                data-active={c?.multiPresetId === 'custom'}
+                onClick={openMultiCustom}
+              >
+                <Plus />
+                Custom
+              </button>
+
+              {c?.multiPresetId === 'custom' && (
+                <div className="color-rows">
+                  <ColorRow
+                    label="Text"
+                    value={c?.textColor ?? '#0f172a'}
+                    onChange={(v) => setMultiColor('text', v)}
+                  />
+                  <ColorRow
+                    label="Background"
+                    value={customBackground}
+                    onChange={(v) => setMultiColor('background', v)}
+                  />
+                  <ColorRow
+                    label="Accent"
+                    value={accent}
+                    onChange={(v) => setMultiColor('accent', v)}
+                  />
+                </div>
+              )}
+
+              <div className="apply-accent">
+                <p className="eyebrow apply-accent-title">Apply Accent Color</p>
+                <div className="apply-grid">
+                  {[1, 2].map((col) => (
+                    <div key={col}>
+                      {APPLY_OPTIONS.filter((o) => o.column === col).map((o) => (
+                        <Check
+                          key={o.key}
+                          label={o.label}
+                          checked={(c?.apply ?? APPLY_ALL)[o.key]}
+                          onChange={(v) => setApply(o.key, v)}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* -- Image: photo backdrop, white ink, soft dark tint --------- */}
+          {mode === 'image' && (
+            <div className="color-panel">
+              <div className="color-panel-head">
+                <p className="eyebrow">Background image</p>
+                <span className="color-panel-caption">Text turns white</span>
+              </div>
+
+              {c?.bgImage && (
+                <div className="bg-selected">
+                  <span
+                    className="bg-selected-thumb"
+                    style={{ backgroundImage: `url(${JSON.stringify(c.bgImage)})` }}
+                    aria-hidden="true"
+                  />
+                  <span className="bg-selected-text">
+                    <span className="bg-selected-name">
+                      {selectedGallery?.label ?? 'Uploaded image'}
+                    </span>
+                    <span className="bg-selected-hint">Covers the full sheet</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-icon"
+                    aria-label="Remove background image"
+                    title="Remove background image"
+                    onClick={() => setC({ bgType: 'single', bgImage: undefined })}
+                  >
+                    <Trash />
+                  </button>
+                </div>
+              )}
+
+              <label
+                className="bg-upload"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  void acceptFile(e.dataTransfer.files[0])
+                }}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    void acceptFile(e.target.files?.[0])
+                    e.currentTarget.value = ''
+                  }}
+                />
+                <Plus />
+                <span className="bg-upload-title">{uploading ? 'Uploading…' : 'Upload image'}</span>
+                <span className="bg-upload-hint">PNG, JPEG or WebP · up to 10 MB · or drop it here</span>
+              </label>
+              {uploadError && <p className="bg-upload-error">{uploadError}</p>}
+
+              <input
+                type="search"
+                className="text-input bg-search"
+                placeholder="Search backgrounds"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search backgrounds"
+              />
+
+              <div className="bg-gallery">
+                {gallery.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    className="bg-tile"
+                    data-active={c?.bgImage === b.src}
+                    onClick={() => setC({ bgType: 'image', bgImage: b.src })}
+                    title={b.label}
+                    aria-label={b.label}
+                  >
+                    <img src={b.src} alt="" loading="lazy" />
+                    <span className="bg-tile-name">{b.label}</span>
+                    {c?.bgImage === b.src && (
+                      <span className="bg-tile-check" aria-hidden="true">
+                        <CheckIcon />
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {gallery.length === 0 && (
+                <p className="bg-empty">No backgrounds match “{query}”.</p>
+              )}
+
+              <div className="bg-tint">
+                <Slider
+                  label="Image tint"
+                  value={Math.round(tint * 100)}
+                  min={10}
+                  max={65}
+                  step={1}
+                  unit="%"
+                  onChange={(v) => setC({ bgImageTint: v / 100 })}
+                />
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </section>
   )
 }
+
 
 /** Layout families, for the miniature: each design shows its own structure,
     not the same lines in a different colour. */const RAIL_LEFT: ReadonlySet<string> = new Set(['sidebar', 'portal-pro', 'modern-deep'])
