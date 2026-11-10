@@ -9,7 +9,7 @@ import type { CSSProperties } from 'react'
 
 import type { ResumeDocument, Section, SectionType, TemplateId } from '../types'
 import { Contact, DocSection, hasContact, ProfilePhoto } from './parts'
-import { FONT_STACKS, HEADER_PRESETS } from './registry'
+import { FONT_STACKS, BORDER_SIZES, HEADER_PRESETS } from './registry'
 
 /** Sections that live in the Sidebar template's left rail. */
 const SIDEBAR_RAIL: ReadonlySet<SectionType> = new Set([
@@ -150,10 +150,18 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   // Section heading style controls.
   const hs = settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
 
+  // Only the selected Colors tab is in effect. The other tabs keep their
+  // settings for when the user returns, but they must not paint the sheet --
+  // that was the bug where a Header band or Border frame survived a tab switch.
+  const activeTarget = colors?.activeTarget ?? 'full'
+  const fullActive = activeTarget === 'full'
+  const headerActive = activeTarget === 'header'
+  const borderActive = activeTarget === 'border'
+
   // Full Page treatment. Single changes ink only; Multi repaints the sheet and
   // supplies its own body ink; Image covers the sheet, tints it, and turns every
   // ink white so the text survives any photograph.
-  const imageMode = colors?.bgType === 'image' && !!colors.bgImage
+  const imageMode = fullActive && colors?.bgType === 'image' && !!colors.bgImage
 
   // Header treatment. Single and Multi paint only the identity band (or the
   // side column that holds it); Image covers that band alone and leaves the
@@ -167,7 +175,8 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     !!colors?.headerBackgroundColor
   const headerMultiActive = headerType === 'multi'
   const headerImageActive = headerType === 'image' && !!colors?.headerBgImage
-  const headerPaint = headerSingleActive || headerMultiActive || headerImageActive
+  const headerPaint =
+    headerActive && (headerSingleActive || headerMultiActive || headerImageActive)
   const headerBg =
     colors?.headerBackgroundColor ?? (headerMultiActive ? headerPreset.background : undefined)
   const headerText = headerImageActive
@@ -186,6 +195,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   // Only a real page fill or ink repaints the sheet. An accent on its own just
   // recolours headings and must not reset the template's body ink.
   const headerPagePaint =
+    headerActive &&
     headerMultiActive &&
     colors?.headerPresetId === 'custom' &&
     !!(colors?.headerPageBackgroundColor || colors?.headerPageTextColor)
@@ -194,9 +204,27 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       ? settings.headerPosition ?? 'top'
       : 'full'
 
+  // Border treatment. The frame is drawn with real CSS borders on the sheet, so
+  // paper size never changes and each template's own padding keeps the content
+  // clear of it. Single paints the frame in the document accent; Image lays a
+  // photograph into the same border box and leaves the page treatment visible.
+  const borderType = colors?.borderType ?? 'single'
+  const borderSides = colors?.borderSides ?? { top: true, right: true, bottom: true, left: true }
+  const borderMm = BORDER_SIZES.find((s) => s.id === (colors?.borderSize ?? 'M'))?.mm ?? 5
+  const anyBorderSide =
+    borderSides.top || borderSides.right || borderSides.bottom || borderSides.left
+  const borderSingleActive =
+    borderType === 'single' &&
+    (colors?.borderSingleId ?? 'none') !== 'none' &&
+    !!colors?.borderSingleColor
+  const borderImageActive = borderType === 'image' && !!colors?.borderBgImage
+  const borderPaint = borderActive && anyBorderSide && (borderSingleActive || borderImageActive)
+
   const docAccent = imageMode
     ? '#ffffff'
-    : headerPageAccent ?? headerAccent ?? settings.accentColor
+    : headerActive
+      ? headerPageAccent ?? headerAccent ?? settings.accentColor
+      : settings.accentColor
 
   // Style knobs travel as custom properties so a settings change costs a
   // recalculation rather than a React re-render of the whole document. Element
@@ -217,10 +245,11 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     ...(settings.headingSize != null && { '--doc-heading-size': `${settings.headingSize}pt` }),
     ...(settings.entrySize != null && { '--doc-entry-size': `${settings.entrySize}pt` }),
     ...(settings.contactSize != null && { '--doc-contact-size': `${settings.contactSize}pt` }),
-    ...(colors?.bgType === 'multi' && {
-      '--doc-page-bg': colors.backgroundColor ?? '#f8fafc',
-      '--doc-text-color': colors.textColor ?? '#0f172a',
-    }),
+    ...(fullActive &&
+      colors?.bgType === 'multi' && {
+        '--doc-page-bg': colors.backgroundColor ?? '#f8fafc',
+        '--doc-text-color': colors.textColor ?? '#0f172a',
+      }),
     ...(imageMode && colors && {
       '--doc-text-color': '#ffffff',
       '--doc-border-color': 'rgba(255, 255, 255, 0.5)',
@@ -239,6 +268,16 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     ...(headerPagePaint && colors && {
       '--doc-header-page-bg': colors.headerPageBackgroundColor ?? 'transparent',
       '--doc-header-page-text': colors.headerPageTextColor ?? '#0f172a',
+    }),
+    ...(borderPaint && {
+      '--doc-frame-color': settings.accentColor,
+      '--doc-frame-top': `${borderSides.top ? borderMm : 0}mm`,
+      '--doc-frame-right': `${borderSides.right ? borderMm : 0}mm`,
+      '--doc-frame-bottom': `${borderSides.bottom ? borderMm : 0}mm`,
+      '--doc-frame-left': `${borderSides.left ? borderMm : 0}mm`,
+    }),
+    ...(borderPaint && borderImageActive && colors && {
+      '--doc-frame-image': `url(${JSON.stringify(colors.borderBgImage)})`,
     }),
     ...(fitted && { '--doc-fit': fit }),
   } as CSSProperties
@@ -264,7 +303,9 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     ...(hs.showIcons && { 'data-heading-icon-style': hs.iconStyle }),
     ...(colors && {
       'data-colors': 'on',
-      'data-bg': colors.bgType,
+      // Only the Full Page tab owns the sheet treatment. On Header or Border,
+      // leaving the attribute off keeps the template's own paper underneath.
+      ...(fullActive && { 'data-bg': colors.bgType }),
       // Accent switches: "on" is the default reading, so the attribute simply
       // mirrors each flag and CSS keys off the pair.
       'data-accent-name': String(colors.apply.name),
@@ -282,6 +323,9 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       ...(headerMultiActive &&
         colors?.headerPresetId === 'custom' && { 'data-header-custom': 'true' }),
       ...(headerPagePaint && { 'data-page-paint': 'true' }),
+    }),
+    ...(borderPaint && {
+      'data-border-paint': borderImageActive ? 'image' : 'single',
     }),
   }
 

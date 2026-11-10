@@ -1,6 +1,6 @@
 /** Template registry: the design system, its metadata, and its fonts. */
 
-import type { TemplateId } from '../types'
+import type { BorderSize, TemplateId } from '../types'
 
 /** How a photo participates in the design. */
 export type PhotoSupport = 'none' | 'optional' | 'designed'
@@ -435,6 +435,16 @@ export const HEADER_PRESETS: HeaderPreset[] = [
   { id: 'rose', label: 'Rose', background: '#9f1239', text: '#fff1f2', accent: '#fda4af' },
   { id: 'sand', label: 'Sand', background: '#f3e7d3', text: '#3b2f21', accent: '#b45309' },
   { id: 'charcoal', label: 'Charcoal', background: '#1f2937', text: '#f1f5f9', accent: '#fbbf24' },
+]
+
+/**
+ * Frame thickness presets. Millimetres on the sheet, so the preview, the PDF
+ * and the exported HTML all draw the same physical frame.
+ */
+export const BORDER_SIZES: { id: BorderSize; label: string; mm: number }[] = [
+  { id: 'S', label: 'S', mm: 3 },
+  { id: 'M', label: 'M', mm: 5 },
+  { id: 'L', label: 'L', mm: 8 },
 ]
 
 
