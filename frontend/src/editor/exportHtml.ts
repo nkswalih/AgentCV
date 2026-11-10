@@ -34,6 +34,14 @@ export function downloadHtmlExport(resumeName: string): void {
     body.style.setProperty('--doc-header-image', `url(${JSON.stringify(liveHeaderImage[1])})`)
   }
 
+  // The Border · Image frame is a border-image, whose computed source the CSSOM
+  // already returns as an absolute URL. Resolve it or the exported frame is bare.
+  const liveBorderImage = getComputedStyle(page).borderImageSource
+  const borderImageMatch = /url\("?([^")]+)"?\)/.exec(liveBorderImage)
+  if (borderImageMatch) {
+    body.style.setProperty('--doc-frame-image', `url(${JSON.stringify(borderImageMatch[1])})`)
+  }
+
   const safeName = resumeName.trim() || 'Resume'
   const html = `<!doctype html>
 <html lang="en">

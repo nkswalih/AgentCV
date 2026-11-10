@@ -12,6 +12,7 @@ import {
 } from '../customTemplates'
 import {
   BACKGROUND_GALLERY,
+  BORDER_SIZES,
   FONT_CHOICES,
   FONT_GROUP_LABELS,
   FONT_GROUPS,
@@ -22,6 +23,7 @@ import {
   type HeaderPreset,
   type MultiPreset,
 } from '../templates/registry'
+import { extractPalette } from './imagePalette'
 import { DocIcon, SECTION_ICONS, isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
 import { Check, Segmented, Slider, Text } from './fields'
 import { SectionCard, useDragSensors, DRAG_MODIFIERS } from './SectionCard'
@@ -42,6 +44,8 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable'
 import type {
+  BorderMode,
+  BorderSize,
   ColorTarget,
   ColorsState,
   FullPageMode,
@@ -1230,6 +1234,12 @@ const FULL_MODES: { id: FullPageMode; label: string }[] = [
   { id: 'image', label: 'Image' },
 ]
 
+/** The Border card has two treatments: a painted frame or a photographic one. */
+const BORDER_MODES: { id: BorderMode; label: string }[] = [
+  { id: 'single', label: 'Single' },
+  { id: 'image', label: 'Image' },
+]
+
 /** Perceived luminance, so a tick stays visible on both light and dark inks. */
 function contrastInk(hex: string): string {
   const m = /^#([0-9a-f]{6})$/i.exec(hex)
@@ -1273,16 +1283,15 @@ function ColorRow({
 }
 
 /**
- * The Colors card. Three targets -- Full Page, Header, Border -- and, for the
- * Full Page, three treatments: one accent, a preset scheme, or a photograph.
- * Full Page is wired end to end; the other two targets are placeholders until
- * their references land.
+ * The Colors card. Three exclusive targets: Full Page, Header, Border. The
+ * selected target is document state -- only its treatment renders, so switching
+ * tabs can never leave the previous tab's ink, band or frame behind.
  */
 function ColorsSection() {
   const { doc, updateSettings } = useEditor()
-  const [target, setTarget] = useState<ColorTarget>('full')
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
+  const [paletteBusy, setPaletteBusy] = useState(false)
   const [query, setQuery] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -1290,12 +1299,16 @@ function ColorsSection() {
   const c = doc.settings.colors
   const mode: FullPageMode = c?.bgType ?? 'single'
   const headerMode: FullPageMode = c?.headerType ?? 'single'
+  // The selected tab is document state: the renderer applies only this
+  // treatment, so a Header band or Border frame cannot survive a tab switch.
+  const target: ColorTarget = c?.activeTarget ?? 'full'
 
   /** The template's own accent -- what "Default" restores. */
   const defaultAccent = applyTemplatePreset(doc.settings.template).accentColor ?? '#374151'
 
   /** Complete state on every write, so a partial patch can never drop a key. */
   const baseColors = (): ColorsState => ({
+    activeTarget: 'full',
     bgType: 'single',
     singlePresetId: 'default',
     multiPresetId: 'slate',
@@ -1306,12 +1319,37 @@ function ColorsSection() {
     headerSingleId: 'none',
     headerPresetId: 'slate',
     headerBgImageTint: 0.38,
+    borderType: 'single',
+    borderSingleId: 'none',
+    borderSize: 'M',
+    borderSides: { top: true, right: true, bottom: true, left: true },
     ...c,
     apply: { ...APPLY_ALL, ...c?.apply },
   })
 
   const setC = (patch: Partial<ColorsState>) =>
     updateSettings({ colors: { ...baseColors(), ...patch } })
+
+  /** Change the active Colors tab. The settings of the other tabs are kept, so
+      returning to one restores it -- they simply do not render meanwhile. Each
+      tab also owns its accent, so switching tabs never carries the previous
+      tab's ink into the new one. */
+  const chooseTarget = (id: ColorTarget) => {
+    const owned =
+      id === 'header'
+        ? c?.headerAccentColor ?? doc.settings.accentColor
+        : id === 'border'
+          ? c?.borderSingleColor ?? doc.settings.accentColor
+          : mode === 'multi'
+            ? c?.multiAccent ?? doc.settings.accentColor
+            : mode === 'single'
+              ? c?.singleAccent ?? doc.settings.accentColor
+              : doc.settings.accentColor
+    updateSettings({
+      accentColor: owned,
+      colors: { ...baseColors(), activeTarget: id },
+    })
+  }
 
   const setApply = (key: ApplyKey, v: boolean) =>
     setC({ apply: { ...(c?.apply ?? APPLY_ALL), [key]: v } })
@@ -1422,7 +1460,10 @@ function ColorsSection() {
     setC({ bgType: 'image', bgImage: c?.bgImage ?? BACKGROUND_GALLERY[0].src })
   }
 
-  const acceptFile = async (file: File | undefined, slot: 'page' | 'header' = 'page') => {
+  const acceptFile = async (
+    file: File | undefined,
+    slot: 'page' | 'header' | 'border' = 'page',
+  ) => {
     if (!file) return
     setUploadError(null)
     if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type)) {
@@ -1438,6 +1479,8 @@ function ColorsSection() {
       const url = await api.uploadBackground(file)
       if (slot === 'header') {
         setC({ headerType: 'image', headerBgImage: url })
+      } else if (slot === 'border') {
+        await applyBorderImage(url)
       } else {
         setC({ bgType: 'image', bgImage: url })
       }
@@ -1592,6 +1635,99 @@ function ColorsSection() {
     setC({ headerType: 'image', headerBgImage: c?.headerBgImage ?? BACKGROUND_GALLERY[0].src })
   }
 
+  // -- Border ------------------------------------------------------------
+  const borderMode: BorderMode = c?.borderType === 'image' ? 'image' : 'single'
+  const borderSize: BorderSize = c?.borderSize ?? 'M'
+  const borderSides = c?.borderSides ?? { top: true, right: true, bottom: true, left: true }
+  const borderFill = c?.borderSingleColor ?? doc.settings.accentColor
+  const borderId = c?.borderSingleId ?? 'none'
+  const borderPalette = c?.borderPalette ?? []
+  const selectedBorderGallery = BACKGROUND_GALLERY.find((b) => b.src === c?.borderBgImage)
+  const borderCaption =
+    borderMode === 'image'
+      ? selectedBorderGallery?.label ?? (c?.borderBgImage ? 'Uploaded image' : 'No image')
+      : borderId === 'none' || !c?.borderSingleColor
+        ? 'No border'
+        : borderId === 'custom'
+          ? `Custom · ${borderFill.toUpperCase()}`
+          : `${SINGLE_ACCENTS.find((a) => a.id === borderId)?.label ?? 'Accent'} · ${borderFill.toUpperCase()}`
+
+  /**
+   * Apply a border image and measure its palette. The frame is shown at once,
+   * then the suggestions fill in when sampling finishes; the late write reads
+   * the store again so it can never overwrite edits made in between.
+   */
+  const applyBorderImage = async (src: string) => {
+    setC({ borderType: 'image', borderBgImage: src, borderPalette: [] })
+    setPaletteBusy(true)
+    try {
+      const palette = await extractPalette(src, 9)
+      const latest = useEditor.getState().doc?.settings.colors
+      if (!latest || latest.borderBgImage !== src) return
+      updateSettings({
+        colors: {
+          ...latest,
+          borderType: 'image',
+          borderBgImage: src,
+          borderPalette: palette,
+        },
+      })
+    } finally {
+      setPaletteBusy(false)
+    }
+  }
+
+  const setBorderMode = (next: BorderMode) => {
+    if (next === 'single') {
+      // Return to the fill Single owns; an Image detour must not erase it.
+      setC({
+        borderType: 'single',
+        borderSingleId: c?.borderSingleId ?? 'none',
+        borderSingleColor: c?.borderSingleColor,
+      })
+      return
+    }
+    const src = c?.borderBgImage ?? BACKGROUND_GALLERY[0].src
+    if (src === c?.borderBgImage && (c?.borderPalette?.length ?? 0) > 0) {
+      setC({ borderType: 'image' })
+      return
+    }
+    void applyBorderImage(src)
+  }
+
+  const applyBorderSingle = (value: string, id: string) => {
+    if (id === 'none') {
+      // Clear the frame without touching the accent the page already uses.
+      setC({ borderType: 'single', borderSingleId: 'none', borderSingleColor: undefined })
+      return
+    }
+    updateSettings({
+      accentColor: value,
+      colors: {
+        ...baseColors(),
+        borderType: 'single',
+        borderSingleId: id,
+        borderSingleColor: value,
+      },
+    })
+  }
+
+  /** A suggestion colours the document and is remembered as Single's fill. */
+  const applyBorderSuggestion = (value: string) => {
+    updateSettings({
+      accentColor: value,
+      colors: {
+        ...baseColors(),
+        borderType: 'image',
+        borderSingleId: 'custom',
+        borderSingleColor: value,
+      },
+    })
+  }
+
+  const toggleBorderSide = (side: keyof typeof borderSides) =>
+    setC({ borderSides: { ...borderSides, [side]: !borderSides[side] } })
+
   const gallery = BACKGROUND_GALLERY.filter((b) =>
     b.label.toLowerCase().includes(query.trim().toLowerCase()),
   )
@@ -1628,7 +1764,7 @@ function ColorsSection() {
             aria-selected={target === t.id}
             className="color-target-tab"
             data-active={target === t.id}
-            onClick={() => setTarget(t.id)}
+            onClick={() => chooseTarget(t.id)}
           >
             {t.label}
           </button>
@@ -1636,14 +1772,299 @@ function ColorsSection() {
       </div>
 
       {target === 'border' && (
-        <div className="color-placeholder">
-          <span className="color-placeholder-mode">Single</span>
-          <p className="color-placeholder-title">Border treatments are next</p>
-          <p className="color-placeholder-text">
-            Share the Border reference and this tab will get its own Single · Multi · Image
-            controls.
-          </p>
-        </div>
+        <>
+          {/* -- Treatment selector: a painted frame or a photo frame ------ */}
+          <div className="mode-tabs mode-tabs-2" role="tablist" aria-label="Border treatment">
+            {BORDER_MODES.map((m) => (
+              <button
+                key={m.id}
+                type="button"
+                role="tab"
+                aria-selected={borderMode === m.id}
+                className="mode-tab"
+                data-active={borderMode === m.id}
+                onClick={() => setBorderMode(m.id)}
+              >
+                <span className={`mode-preview mode-border-${m.id}`} aria-hidden="true" />
+                <span className="mode-tab-label">{m.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {/* -- Single: one accent draws the frame ------------------------ */}
+          {borderMode === 'single' && (
+            <div className="color-panel">
+              <div className="color-panel-head">
+                <p className="eyebrow">Accent color</p>
+                <span className="color-panel-caption">{borderCaption}</span>
+              </div>
+              <div className="accent-grid" role="radiogroup" aria-label="Border accent colour">
+                <button
+                  type="button"
+                  className="accent-tile accent-none"
+                  data-active={borderId === 'none'}
+                  aria-label="No border"
+                  title="No border"
+                  onClick={() => applyBorderSingle('', 'none')}
+                >
+                  <span aria-hidden="true">—</span>
+                </button>
+                <button
+                  type="button"
+                  className="accent-tile accent-default"
+                  data-active={borderId === 'default'}
+                  aria-label="Template default accent"
+                  title="Template default accent"
+                  onClick={() => applyBorderSingle(defaultAccent, 'default')}
+                >
+                  <span style={{ color: defaultAccent }}>A</span>
+                </button>
+                {SINGLE_ACCENTS.map((a) => (
+                  <button
+                    key={a.id}
+                    type="button"
+                    className="accent-tile"
+                    style={{ background: a.value, color: contrastInk(a.value) }}
+                    data-active={borderId === a.id}
+                    aria-label={a.label}
+                    title={a.label}
+                    onClick={() => applyBorderSingle(a.value, a.id)}
+                  >
+                    {borderId === a.id && <CheckIcon />}
+                  </button>
+                ))}
+                <label
+                  className="accent-tile accent-custom"
+                  data-active={borderId === 'custom'}
+                  style={{ background: borderFill, color: contrastInk(borderFill) }}
+                  title="Custom border colour"
+                >
+                  <input
+                    type="color"
+                    value={borderFill}
+                    onChange={(e) => applyBorderSingle(e.target.value, 'custom')}
+                    aria-label="Custom border colour"
+                  />
+                  {borderId === 'custom' ? <CheckIcon /> : <Plus />}
+                </label>
+              </div>
+            </div>
+          )}
+
+          {/* -- Image: a photographed frame plus measured suggestions ----- */}
+          {borderMode === 'image' && (
+            <div className="color-panel">
+              <div className="color-panel-head">
+                <p className="eyebrow">Border image</p>
+                <span className="color-panel-caption">
+                  {selectedBorderGallery?.label ?? (c?.borderBgImage ? 'Uploaded image' : 'No image')}
+                </span>
+              </div>
+
+              {c?.borderBgImage && (
+                <div className="bg-selected">
+                  <span
+                    className="bg-selected-thumb"
+                    style={{ backgroundImage: `url(${JSON.stringify(c.borderBgImage)})` }}
+                    aria-hidden="true"
+                  />
+                  <span className="bg-selected-text">
+                    <span className="bg-selected-name">
+                      {selectedBorderGallery?.label ?? 'Uploaded image'}
+                    </span>
+                    <span className="bg-selected-hint">Frame only · page stays visible</span>
+                  </span>
+                  <button
+                    type="button"
+                    className="btn btn-ghost btn-icon"
+                    aria-label="Remove border image"
+                    title="Remove border image"
+                    onClick={() =>
+                      setC({ borderType: 'single', borderBgImage: undefined, borderPalette: [] })
+                    }
+                  >
+                    <Trash />
+                  </button>
+                </div>
+              )}
+
+              <label
+                className="bg-upload"
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => {
+                  e.preventDefault()
+                  void acceptFile(e.dataTransfer.files[0], 'border')
+                }}
+              >
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  onChange={(e) => {
+                    void acceptFile(e.target.files?.[0], 'border')
+                    e.currentTarget.value = ''
+                  }}
+                />
+                <Plus />
+                <span className="bg-upload-title">{uploading ? 'Uploading…' : 'Upload image'}</span>
+                <span className="bg-upload-hint">PNG, JPEG or WebP · up to 10 MB · or drop it here</span>
+              </label>
+              {uploadError && <p className="bg-upload-error">{uploadError}</p>}
+
+              <input
+                type="search"
+                className="text-input bg-search"
+                placeholder="Search border images"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                aria-label="Search border images"
+              />
+
+              <div className="bg-gallery">
+                {gallery.map((b) => (
+                  <button
+                    key={b.id}
+                    type="button"
+                    className="bg-tile"
+                    data-active={c?.borderBgImage === b.src}
+                    onClick={() => void applyBorderImage(b.src)}
+                    title={b.label}
+                    aria-label={b.label}
+                  >
+                    <img src={b.src} alt="" loading="lazy" />
+                    <span className="bg-tile-name">{b.label}</span>
+                    {c?.borderBgImage === b.src && (
+                      <span className="bg-tile-check" aria-hidden="true">
+                        <CheckIcon />
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+              {gallery.length === 0 && (
+                <p className="bg-empty">No backgrounds match “{query}”.</p>
+              )}
+
+              <div className="border-palette">
+                <div className="color-panel-head">
+                  <p className="eyebrow">Colors suggested based on your image</p>
+                  <span className="color-panel-caption">
+                    {paletteBusy
+                      ? 'Sampling…'
+                      : borderPalette.length > 0
+                        ? `${borderPalette.length} colours`
+                        : 'No suggestions'}
+                  </span>
+                </div>
+                {borderPalette.length > 0 ? (
+                  <div
+                    className="accent-grid border-palette-grid"
+                    role="radiogroup"
+                    aria-label="Suggested accent colours"
+                  >
+                    {borderPalette.map((hex) => {
+                      const active =
+                        borderId === 'custom' &&
+                        (c?.borderSingleColor ?? '').toLowerCase() === hex.toLowerCase()
+                      return (
+                        <button
+                          key={hex}
+                          type="button"
+                          className="accent-tile"
+                          style={{ background: hex, color: contrastInk(hex) }}
+                          data-active={active}
+                          aria-label={`Use ${hex}`}
+                          title={hex}
+                          onClick={() => applyBorderSuggestion(hex)}
+                        >
+                          {active && <CheckIcon />}
+                        </button>
+                      )
+                    })}
+                  </div>
+                ) : (
+                  <p className="bg-empty">
+                    {paletteBusy
+                      ? 'Reading colours from your image…'
+                      : c?.borderBgImage
+                        ? 'This image has no readable colours.'
+                        : 'Choose an image to see suggested colours.'}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* -- Frame geometry: shared by both treatments ---------------- */}
+          <div className="color-panel border-frame-panel">
+            <div className="color-panel-head">
+              <p className="eyebrow">Border size</p>
+              <span className="color-panel-caption">
+                {BORDER_SIZES.find((s) => s.id === borderSize)?.mm ?? 5} mm
+              </span>
+            </div>
+            <div className="border-size-grid" role="radiogroup" aria-label="Border size">
+              {BORDER_SIZES.map((s) => (
+                <button
+                  key={s.id}
+                  type="button"
+                  className="border-size-tile"
+                  data-active={borderSize === s.id}
+                  aria-label={`Border size ${s.label}`}
+                  onClick={() => setC({ borderSize: s.id })}
+                >
+                  <span className="border-size-letter">{s.label}</span>
+                  <span className="border-size-mm">{s.mm} mm</span>
+                </button>
+              ))}
+            </div>
+
+            <div className="apply-accent">
+              <p className="eyebrow apply-accent-title">Show Border</p>
+              <div className="sides-grid">
+                {[1, 2].map((col) => (
+                  <div key={col}>
+                    {(
+                      [
+                        { column: 1, side: 'top', label: 'Top' },
+                        { column: 1, side: 'bottom', label: 'Bottom' },
+                        { column: 2, side: 'right', label: 'Right' },
+                        { column: 2, side: 'left', label: 'Left' },
+                      ] as const
+                    )
+                      .filter((o) => o.column === col)
+                      .map((o) => (
+                        <Check
+                          key={o.side}
+                          label={o.label}
+                          checked={borderSides[o.side]}
+                          onChange={() => toggleBorderSide(o.side)}
+                        />
+                      ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="apply-accent">
+              <p className="eyebrow apply-accent-title">Apply Accent Color</p>
+              <div className="apply-grid">
+                {[1, 2].map((col) => (
+                  <div key={col}>
+                    {APPLY_OPTIONS.filter((o) => o.column === col).map((o) => (
+                      <Check
+                        key={o.key}
+                        label={o.label}
+                        checked={(c?.apply ?? APPLY_ALL)[o.key]}
+                        onChange={(v) => setApply(o.key, v)}
+                      />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {target === 'header' && (
@@ -1843,12 +2264,17 @@ function ColorsSection() {
             </div>
           )}
 
-          {/* -- Image: photo over the header band only ------------------- */}
+          {/* -- Image: photo over the header band (or the side column) ---- */}
           {headerMode === 'image' && (
             <div className="color-panel">
               <div className="color-panel-head">
                 <p className="eyebrow">Header image</p>
-                <span className="color-panel-caption">Covers the header only</span>
+                <span className="color-panel-caption">
+                  {doc.settings.columnLayout === 'two' &&
+                  (doc.settings.headerPosition ?? 'top') !== 'top'
+                    ? 'Covers the side column'
+                    : 'Covers the header only'}
+                </span>
               </div>
 
               {c?.headerBgImage && (
