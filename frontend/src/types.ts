@@ -279,17 +279,73 @@ export interface Settings {
   colors?: ColorsState
 }
 
+/** Which surface the Colors card is editing. */
+export type ColorTarget = 'full' | 'header' | 'border'
+
+/** Full Page treatment: a single accent, a preset scheme, or a photo. */
+export type FullPageMode = 'single' | 'multi' | 'image'
+
 export interface ColorsState {
-  /** Full page background tint. */
+  /** Full page treatment. Defaults to 'single'. */
+  bgType: FullPageMode
+
+  // -- Full Page · Single ------------------------------------------------
+  /** Accent swatch id, or 'default' to follow the template's own accent. */
+  singlePresetId?: string
+  /** The accent Single owns, kept separate from a Multi scheme's accent so
+      switching treatments back and forth never leaves the wrong ink behind. */
+  singleAccent?: string
+
+  // -- Full Page · Multi -------------------------------------------------
+  /** Multi scheme id, or 'custom' once a colour is hand-picked. */
+  multiPresetId?: string
+  /** The accent Multi owns, restored when returning from another treatment. */
+  multiAccent?: string
+  /** Body ink for the multi scheme. */
+  textColor?: string
+  /** Page background for the multi scheme (solid or gradient). */
+  backgroundColor?: string
+  /** Optional header/rail fill for the multi scheme. */
+  headerColor?: string
+
+  // -- Full Page · Image -------------------------------------------------
+  /** Uploaded or curated background image URL. */
+  bgImage?: string
+  /** Dark overlay strength, 0–1. */
+  bgImageTint?: number
+
+  // -- Header ------------------------------------------------------------
+  /** Header treatment. Defaults to 'single'. */
+  headerType?: FullPageMode
+  /** Header Single accent id, 'default' for the template accent, or 'none'. */
+  headerSingleId?: string
+  /** Header Multi scheme id, or 'custom' once a colour is hand-picked. */
+  headerPresetId?: string
+  /** The header band's fill. */
+  headerBackgroundColor?: string
+  /** Ink used on the header band. */
+  headerTextColor?: string
+  /** Accent the header scheme owns (shared with the document accent). */
+  headerAccentColor?: string
+  /** Header Multi · Custom: body ink for the page below the header. */
+  headerPageTextColor?: string
+  /** Header Multi · Custom: page background below the header. */
+  headerPageBackgroundColor?: string
+  /** Header Multi · Custom: page accent below the header. */
+  headerPageAccentColor?: string
+  /** Header Image background image URL. */
+  headerBgImage?: string
+  /** Header image overlay strength, 0–1. */
+  headerBgImageTint?: number
+
+  // -- Legacy keys -------------------------------------------------------
+  /** Retained so old documents load; not applied while bgType is 'single'. */
   page?: string
-  /** Header / rail / band background. */
   header?: string
-  /** Rule and border colour (section title lines, boxed borders, spines). */
   border?: string
-  /** Page backdrop treatment. */
-  bgType: 'single' | 'multi' | 'image'
-  /** Which preset tile is active; 'custom' when hand-picked. */
-  presetId: string
+  /** Retained for backwards compatibility; superseded by singlePresetId. */
+  presetId?: string
+
   /** Where the accent colour is allowed to reach. All default to on, so an
       untouched document looks exactly as each template designed it. */
   apply: {

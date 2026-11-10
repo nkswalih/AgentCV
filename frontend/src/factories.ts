@@ -62,8 +62,16 @@ const HEADING_STYLE_DEFAULTS = {
 } as const
 
 const COLORS_DEFAULTS = {
-  bgType: 'single',
-  presetId: 'none',
+  bgType: 'single' as const,
+  singlePresetId: 'default',
+  multiPresetId: 'slate',
+  textColor: '#0f172a',
+  backgroundColor: '#f8fafc',
+  bgImageTint: 0.38,
+  headerType: 'single' as const,
+  headerSingleId: 'none',
+  headerPresetId: 'slate',
+  headerBgImageTint: 0.38,
   apply: {
     name: true,
     dots: true,
@@ -75,6 +83,12 @@ const COLORS_DEFAULTS = {
     linkIcons: true,
   },
 } as const
+
+/** Overlay strength: enough for white text to read, never a blackout. */
+function clampTint(value: number | undefined): number {
+  if (typeof value !== 'number' || Number.isNaN(value)) return COLORS_DEFAULTS.bgImageTint
+  return Math.max(0.08, Math.min(0.72, value))
+}
 
 /**
  * Complete every missing settings field with its documented default so the
@@ -117,13 +131,47 @@ export function normalizeSettings(settings: Settings): Settings {
     headingStyle: { ...HEADING_STYLE_DEFAULTS, ...settings.headingStyle },
     // Colors stays optional: an absent card state means every template look is
     // untouched. When present, only the shape's required parts are filled.
-    colors:
-      colors && {
+    colors: colors && (() => {
+      const bgType = colors.bgType ?? COLORS_DEFAULTS.bgType
+      // Image mode without a real background is the old buggy shape, where the
+      // profile photo was used as a backdrop. Fall back to the untouched sheet.
+      const resolvedType = bgType === 'image' && !colors.bgImage ? 'single' : bgType
+      // The Header tab mirrors Full Page, but its image is its own field: a
+      // header photo must never be mistaken for a missing full-page backdrop.
+      const headerType = colors.headerType ?? COLORS_DEFAULTS.headerType
+      const resolvedHeaderType =
+        headerType === 'image' && !colors.headerBgImage ? 'single' : headerType
+      return {
         ...colors,
-        bgType: colors.bgType ?? COLORS_DEFAULTS.bgType,
-        presetId: colors.presetId ?? COLORS_DEFAULTS.presetId,
+        bgType: resolvedType,
+        singlePresetId: colors.singlePresetId ?? COLORS_DEFAULTS.singlePresetId,
+        // Only a document saved in Single mode has an accent that is genuinely
+        // Single's ink. For Multi/Image, leaving it unset lets the card restore
+        // the template accent instead of adopting a scheme's colour.
+        singleAccent:
+          colors.singleAccent ?? (resolvedType === 'single' ? settings.accentColor : undefined),
+        multiAccent:
+          colors.multiAccent ?? (resolvedType === 'multi' ? settings.accentColor : undefined),
+        multiPresetId: colors.multiPresetId ?? COLORS_DEFAULTS.multiPresetId,
+        textColor: colors.textColor ?? COLORS_DEFAULTS.textColor,
+        backgroundColor: colors.backgroundColor ?? COLORS_DEFAULTS.backgroundColor,
+        bgImageTint: clampTint(colors.bgImageTint),
+        headerType: resolvedHeaderType,
+        headerSingleId: colors.headerSingleId ?? COLORS_DEFAULTS.headerSingleId,
+        headerPresetId: colors.headerPresetId ?? COLORS_DEFAULTS.headerPresetId,
+        // A Single header saved without its fill (an older shape) takes the ink
+        // it was pointing at rather than silently rendering no band at all.
+        headerBackgroundColor:
+          colors.headerBackgroundColor ??
+          (resolvedHeaderType === 'single' &&
+          colors.headerSingleId &&
+          colors.headerSingleId !== 'none'
+            ? colors.headerAccentColor ?? settings.accentColor
+            : undefined),
+        headerBgImageTint: clampTint(colors.headerBgImageTint),
         apply: { ...COLORS_DEFAULTS.apply, ...colors.apply },
-      },
+      }
+    })(),
   }
 }
 
