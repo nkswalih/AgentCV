@@ -303,27 +303,160 @@ export const ACCENT_PRESETS = [
   '#1e293b',
 ]
 
-export interface ColorPreset {
+/**
+ * Single is the default Full Page treatment: one ink that reaches the name,
+ * headings and the other elements switched on in "Apply Accent Color". It never
+ * paints the sheet itself -- the template keeps its own paper.
+ */
+export const SINGLE_ACCENTS: { id: string; label: string; value: string }[] = [
+  { id: 'ink', label: 'Ink', value: '#191e24' },
+  { id: 'graphite', label: 'Graphite', value: '#374151' },
+  { id: 'royal', label: 'Royal', value: '#1d4ed8' },
+  { id: 'blue', label: 'Blue', value: '#2563eb' },
+  { id: 'cyan', label: 'Cyan', value: '#0891b2' },
+  { id: 'teal', label: 'Teal', value: '#0f766e' },
+  { id: 'green', label: 'Green', value: '#15803d' },
+  { id: 'olive', label: 'Olive', value: '#4d7c0f' },
+  { id: 'amber', label: 'Amber', value: '#b45309' },
+  { id: 'rust', label: 'Rust', value: '#c2410c' },
+  { id: 'crimson', label: 'Crimson', value: '#b91c1c' },
+  { id: 'rose', label: 'Rose', value: '#be123c' },
+  { id: 'violet', label: 'Violet', value: '#7c3aed' },
+  { id: 'purple', label: 'Purple', value: '#9333ea' },
+]
+
+/**
+ * Multi presets repaint the whole sheet. Each scheme carries its own ink and
+ * accent so the result stays readable instead of tinting a template blindly.
+ */
+export interface MultiPreset {
   id: string
-  /** Page background, header/rail fill, rule colour, accent ink. */
-  page: string
-  header: string
-  border: string
+  label: string
+  /** CSS background — solid colour or layered gradient. */
+  background: string
+  /** First stop, used to seed the custom colour picker. */
+  solid: string
+  /** Body ink. */
+  text: string
+  /** Accent for the name, headings and other switched-on elements. */
   accent: string
 }
 
+export const MULTI_PRESETS: MultiPreset[] = [
+  {
+    id: 'slate',
+    label: 'Slate',
+    background: 'linear-gradient(150deg, #f8fafc 0%, #e2e8f0 100%)',
+    solid: '#eef2f7',
+    text: '#0f172a',
+    accent: '#1d4ed8',
+  },
+  {
+    id: 'ink',
+    label: 'Ink',
+    background: 'linear-gradient(150deg, #1e293b 0%, #0b1220 100%)',
+    solid: '#131c2b',
+    text: '#f8fafc',
+    accent: '#93c5fd',
+  },
+  {
+    id: 'forest',
+    label: 'Forest',
+    background: 'linear-gradient(150deg, #f1f8f3 0%, #d7e9dc 100%)',
+    solid: '#e4f0e8',
+    text: '#14281c',
+    accent: '#15803d',
+  },
+  {
+    id: 'sand',
+    label: 'Sand',
+    background: 'linear-gradient(150deg, #fdf8f1 0%, #f0e2cd 100%)',
+    solid: '#f6ecdb',
+    text: '#3b2f21',
+    accent: '#b45309',
+  },
+  {
+    id: 'ocean',
+    label: 'Ocean',
+    background: 'linear-gradient(150deg, #eef7fc 0%, #d0e7f4 100%)',
+    solid: '#e1f0f9',
+    text: '#0b2b3c',
+    accent: '#0369a1',
+  },
+  {
+    id: 'plum',
+    label: 'Plum',
+    background: 'linear-gradient(150deg, #1f1230 0%, #3b1d57 100%)',
+    solid: '#2a1640',
+    text: '#f5eefc',
+    accent: '#d8b4fe',
+  },
+  {
+    id: 'rose',
+    label: 'Rose',
+    background: 'linear-gradient(150deg, #fdf5f6 0%, #f4dde2 100%)',
+    solid: '#f8e6ea',
+    text: '#3d1520',
+    accent: '#be123c',
+  },
+  {
+    id: 'charcoal',
+    label: 'Charcoal',
+    background: 'linear-gradient(150deg, #2b3138 0%, #14181d 100%)',
+    solid: '#1d2329',
+    text: '#f1f5f9',
+    accent: '#fbbf24',
+  },
+]
+
 /**
- * Preset color combinations for the Colors card. Each tile previews its pair:
- * header fill on the left, page tint on the right, an accent "T" over both --
- * the combination reads at a glance before anything is applied.
+ * Header presets are band schemes, not page schemes: each one owns the header's
+ * fill, its ink and the accent the rest of the page inherits. The body stays on
+ * the template's own paper, which is what separates Header · Multi from the
+ * Full Page treatment.
  */
-export const COLOR_PRESETS: ColorPreset[] = [
-  { id: 'paper',   page: '#ffffff', header: '#eef1f5', border: '#d4dae2', accent: '#374151' },
-  { id: 'azure',   page: '#f5f8ff', header: '#dbe7ff', border: '#b6cdf5', accent: '#2563eb' },
-  { id: 'teal',    page: '#f2faf8', header: '#d2ece6', border: '#a9d8cd', accent: '#0f766e' },
-  { id: 'violet',  page: '#f8f5ff', header: '#e6dcfb', border: '#cbbaf2', accent: '#7c3aed' },
-  { id: 'crimson', page: '#fff5f5', header: '#fbdedb', border: '#f0bcc0', accent: '#b91c1c' },
-  { id: 'ember',   page: '#fff8f2', header: '#fbe4d1', border: '#f0ccb2', accent: '#c2410c' },
-  { id: 'ink',     page: '#f6f7f8', header: '#232a33', border: '#3d4650', accent: '#e2e8f0' },
-  { id: 'forest',  page: '#f4f8f2', header: '#dde9d8', border: '#bcd2b4', accent: '#3f6212' },
+export interface HeaderPreset {
+  id: string
+  label: string
+  /** Header band fill. */
+  background: string
+  /** Header ink. */
+  text: string
+  /** Accent for headings and the other switched-on elements. */
+  accent: string
+}
+
+export const HEADER_PRESETS: HeaderPreset[] = [
+  { id: 'slate', label: 'Slate', background: '#1e293b', text: '#f8fafc', accent: '#93c5fd' },
+  { id: 'ink', label: 'Ink', background: '#0b1220', text: '#f8fafc', accent: '#cbd5e1' },
+  { id: 'forest', label: 'Forest', background: '#14532d', text: '#f0fdf4', accent: '#86efac' },
+  { id: 'ocean', label: 'Ocean', background: '#0c4a6e', text: '#ecfeff', accent: '#7dd3fc' },
+  { id: 'plum', label: 'Plum', background: '#3b1d57', text: '#f5eefc', accent: '#d8b4fe' },
+  { id: 'rose', label: 'Rose', background: '#9f1239', text: '#fff1f2', accent: '#fda4af' },
+  { id: 'sand', label: 'Sand', background: '#f3e7d3', text: '#3b2f21', accent: '#b45309' },
+  { id: 'charcoal', label: 'Charcoal', background: '#1f2937', text: '#f1f5f9', accent: '#fbbf24' },
+]
+
+
+/**
+ * Curated backdrops ship with the app, so Image mode works offline and a PDF
+ * never waits on a third-party host. Uploads are stored beside them.
+ */
+export interface BackgroundImage {
+  id: string
+  label: string
+  src: string
+  /** A little darker than a thumbnail, for white text legibility. */
+  tone: 'dark' | 'light'
+}
+
+export const BACKGROUND_GALLERY: BackgroundImage[] = [
+  { id: 'midnight', label: 'Midnight', src: '/backgrounds/midnight.svg', tone: 'dark' },
+  { id: 'forest', label: 'Forest', src: '/backgrounds/forest.svg', tone: 'dark' },
+  { id: 'plum', label: 'Plum', src: '/backgrounds/plum.svg', tone: 'dark' },
+  { id: 'terracotta', label: 'Terracotta', src: '/backgrounds/terracotta.svg', tone: 'dark' },
+  { id: 'slate', label: 'Slate', src: '/backgrounds/slate.svg', tone: 'dark' },
+  { id: 'teal', label: 'Teal', src: '/backgrounds/teal.svg', tone: 'dark' },
+  { id: 'charcoal', label: 'Charcoal', src: '/backgrounds/charcoal.svg', tone: 'dark' },
+  { id: 'burgundy', label: 'Burgundy', src: '/backgrounds/burgundy.svg', tone: 'dark' },
 ]

@@ -9,7 +9,7 @@ import type { CSSProperties } from 'react'
 
 import type { ResumeDocument, Section, SectionType, TemplateId } from '../types'
 import { Contact, DocSection, hasContact, ProfilePhoto } from './parts'
-import { FONT_STACKS } from './registry'
+import { FONT_STACKS, HEADER_PRESETS } from './registry'
 
 /** Sections that live in the Sidebar template's left rail. */
 const SIDEBAR_RAIL: ReadonlySet<SectionType> = new Set([
@@ -105,6 +105,17 @@ function orderFor(template: TemplateId): SectionType[] | null {
   return null
 }
 
+/** White on a dark header band, near-black on a pale one. */
+function readableInk(background: string | undefined): string {
+  const m = /^#([0-9a-f]{6})$/i.exec(background ?? '')
+  if (!m) return '#ffffff'
+  const n = parseInt(m[1], 16)
+  const r = (n >> 16) & 255
+  const g = (n >> 8) & 255
+  const b = n & 255
+  return (r * 299 + g * 587 + b * 114) / 1000 > 150 ? '#111827' : '#ffffff'
+}
+
 interface Props {
   doc: ResumeDocument
   /** Set on the print route: hides editor-only placeholder text. */
@@ -139,6 +150,55 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   // Section heading style controls.
   const hs = settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
 
+  // Full Page treatment. Single changes ink only; Multi repaints the sheet and
+  // supplies its own body ink; Image covers the sheet, tints it, and turns every
+  // ink white so the text survives any photograph.
+  const imageMode = colors?.bgType === 'image' && !!colors.bgImage
+
+  // Header treatment. Single and Multi paint only the identity band (or the
+  // side column that holds it); Image covers that band alone and leaves the
+  // body on the template's own paper.
+  const headerType = colors?.headerType ?? 'single'
+  const headerPreset =
+    HEADER_PRESETS.find((p) => p.id === (colors?.headerPresetId ?? 'slate')) ?? HEADER_PRESETS[0]
+  const headerSingleActive =
+    headerType === 'single' &&
+    (colors?.headerSingleId ?? 'none') !== 'none' &&
+    !!colors?.headerBackgroundColor
+  const headerMultiActive = headerType === 'multi'
+  const headerImageActive = headerType === 'image' && !!colors?.headerBgImage
+  const headerPaint = headerSingleActive || headerMultiActive || headerImageActive
+  const headerBg =
+    colors?.headerBackgroundColor ?? (headerMultiActive ? headerPreset.background : undefined)
+  const headerText =
+    colors?.headerTextColor ??
+    (headerMultiActive ? headerPreset.text : headerImageActive ? '#ffffff' : readableInk(headerBg))
+  const headerAccent =
+    headerType === 'image'
+      ? undefined
+      : colors?.headerAccentColor ?? (headerMultiActive ? headerPreset.accent : undefined)
+  const headerPageAccent =
+    headerMultiActive && colors?.headerPresetId === 'custom'
+      ? colors?.headerPageAccentColor
+      : undefined
+  const headerTint = colors?.headerBgImageTint ?? 0.38
+  const headerPagePaint =
+    headerMultiActive &&
+    colors?.headerPresetId === 'custom' &&
+    !!(
+      colors?.headerPageBackgroundColor ||
+      colors?.headerPageTextColor ||
+      colors?.headerPageAccentColor
+    )
+  const headerSide =
+    settings.columnLayout === 'two' && (settings.headerPosition ?? 'top') !== 'top'
+      ? settings.headerPosition ?? 'top'
+      : 'full'
+
+  const docAccent = imageMode
+    ? '#ffffff'
+    : headerPageAccent ?? headerAccent ?? settings.accentColor
+
   // Style knobs travel as custom properties so a settings change costs a
   // recalculation rather than a React re-render of the whole document. Element
   // size overrides are omitted when null, letting each template's own default
@@ -150,7 +210,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     '--doc-gap': settings.sectionSpacing,
     '--doc-margin-x': `${settings.marginX}mm`,
     '--doc-margin-y': `${settings.marginY}mm`,
-    '--doc-accent': settings.accentColor,
+    '--doc-accent': docAccent,
     '--doc-col-width': `${settings.columnWidth ?? 40}%`,
     '--doc-photo-size': `${pl.size}mm`,
     ...(settings.nameSize != null && { '--doc-name-size': `${settings.nameSize}pt` }),
@@ -158,10 +218,29 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     ...(settings.headingSize != null && { '--doc-heading-size': `${settings.headingSize}pt` }),
     ...(settings.entrySize != null && { '--doc-entry-size': `${settings.entrySize}pt` }),
     ...(settings.contactSize != null && { '--doc-contact-size': `${settings.contactSize}pt` }),
-    ...(colors?.page && { '--doc-page-bg': colors.page }),
-    ...(colors?.header && { '--doc-header-bg': colors.header }),
-    ...(colors?.border && { '--doc-border-color': colors.border }),
-    ...(colors?.bgType === 'image' && basics.photoUrl && { '--doc-bg-image': `url(${JSON.stringify(basics.photoUrl)})` }),
+    ...(colors?.bgType === 'multi' && {
+      '--doc-page-bg': colors.backgroundColor ?? '#f8fafc',
+      '--doc-text-color': colors.textColor ?? '#0f172a',
+    }),
+    ...(imageMode && colors && {
+      '--doc-text-color': '#ffffff',
+      '--doc-border-color': 'rgba(255, 255, 255, 0.5)',
+      '--doc-bg-image': `url(${JSON.stringify(colors.bgImage)})`,
+      '--doc-img-tint': String(colors.bgImageTint ?? 0.38),
+    }),
+    ...(headerPaint && {
+      '--doc-header-bg': headerBg,
+      '--doc-header-text': headerText,
+      ...(headerAccent && { '--doc-header-accent': headerAccent }),
+    }),
+    ...(headerImageActive && colors && {
+      '--doc-header-image': `url(${JSON.stringify(colors.headerBgImage)})`,
+      '--doc-header-tint': String(headerTint),
+    }),
+    ...(headerPagePaint && colors && {
+      '--doc-header-page-bg': colors.headerPageBackgroundColor ?? 'transparent',
+      '--doc-header-page-text': colors.headerPageTextColor ?? '#0f172a',
+    }),
     ...(fitted && { '--doc-fit': fit }),
   } as CSSProperties
 
@@ -198,11 +277,21 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       'data-accent-hicons': String(colors.apply.headerIcons),
       'data-accent-linkicons': String(colors.apply.linkIcons),
     }),
+    ...(headerPaint && {
+      'data-header-paint': headerType,
+      'data-header-side': headerSide,
+      ...(headerMultiActive &&
+        colors?.headerPresetId === 'custom' && { 'data-header-custom': 'true' }),
+      ...(headerPagePaint && { 'data-page-paint': 'true' }),
+    }),
   }
 
   // Nothing is invented for the page: an empty field simply does not render.
   const name = basics.fullName.trim()
   const headline = basics.headline.trim()
+
+  /** Marks the identity surface so the Header styles can find and paint it. */
+  const headerMark = { 'data-doc-header': 'true' } as const
 
   // Template-specific reading order is only applied in two-column mode, where
   // the layout requires sections in a particular sequence.  In one-column mode
@@ -239,7 +328,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
 
     const railContent = (
       <>
-        <div className="doc-profile-stack">
+        <div className="doc-profile-stack" {...headerMark}>
           <div className="doc-header-text">
             {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
@@ -262,7 +351,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       // One-column: full-width dark header band with identity, sections below
       return (
         <div {...rootProps}>
-          <aside className="doc-rail doc-rail-top doc-photo-layout">
+          <aside className="doc-rail doc-rail-top doc-photo-layout" {...headerMark}>
             {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
             <div className="doc-rail-top-text">
               {name && <h1 className="doc-name">{name}</h1>}
@@ -300,7 +389,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     // headerPos === 'top': full-width dark header, two-column content below
     return (
       <div {...rootProps}>
-        <aside className="doc-rail doc-rail-top doc-photo-layout">
+        <aside className="doc-rail doc-rail-top doc-photo-layout" {...headerMark}>
           {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
           <div className="doc-rail-top-text">
             {name && <h1 className="doc-name">{name}</h1>}
@@ -344,7 +433,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     )
 
     const mainHeader = (
-      <div className="doc-header">
+      <div className="doc-header" {...headerMark}>
         <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
@@ -365,7 +454,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       // One-column: full-width dark header band with identity, sections below
       return (
         <div {...rootProps}>
-          <aside className="doc-rail doc-rail-top doc-photo-layout">
+          <aside className="doc-rail doc-rail-top doc-photo-layout" {...headerMark}>
             {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
             <div className="doc-rail-top-text">
               {name && <h1 className="doc-name">{name}</h1>}
@@ -403,7 +492,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     // headerPos === 'top': full-width dark header, two-column content below
     return (
       <div {...rootProps}>
-        <aside className="doc-rail doc-rail-top doc-photo-layout">
+        <aside className="doc-rail doc-rail-top doc-photo-layout" {...headerMark}>
           {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
           <div className="doc-rail-top-text">
             {name && <h1 className="doc-name">{name}</h1>}
@@ -435,7 +524,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     const main = rightSections.length > 0 ? rightSections : sections.filter((s) => !SIDEBAR_RAIL.has(s.type))
 
     const sidebarHeader = (
-      <header className="doc-header doc-profile-stack">
+      <header className="doc-header doc-profile-stack" {...headerMark}>
         <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
@@ -448,7 +537,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       // One-column: full-width dark header band with identity, sections below
       return (
         <div {...rootProps}>
-          <aside className="doc-rail doc-rail-top doc-photo-layout">
+          <aside className="doc-rail doc-rail-top doc-photo-layout" {...headerMark}>
             {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
             <div className="doc-rail-top-text">
               {name && <h1 className="doc-name">{name}</h1>}
@@ -516,7 +605,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     // headerPos === 'top': full-width dark header, two-column content below
     return (
       <div {...rootProps}>
-        <aside className="doc-rail doc-rail-top doc-photo-layout">
+        <aside className="doc-rail doc-rail-top doc-photo-layout" {...headerMark}>
           {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
           <div className="doc-rail-top-text">
             {name && <h1 className="doc-name">{name}</h1>}
@@ -548,7 +637,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     const main = leftSections.length > 0 ? leftSections : sections.filter((s) => !TWOCOL_RAIL.has(s.type))
 
     const twoColHeader = (
-      <header className="doc-header doc-photo-layout">
+      <header className="doc-header doc-photo-layout" {...headerMark}>
         <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
@@ -561,7 +650,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       // One-column: full-width header with border, sections below
       return (
         <div {...rootProps}>
-          <header className="doc-header doc-header-top doc-photo-layout">
+          <header className="doc-header doc-header-top doc-photo-layout" {...headerMark}>
             {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
             <div className="doc-rail-top-text">
               {name && <h1 className="doc-name">{name}</h1>}
@@ -629,7 +718,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     // headerPos === 'top': full-width header with border, two-column content below
     return (
       <div {...rootProps}>
-        <header className="doc-header doc-header-top doc-photo-layout">
+        <header className="doc-header doc-header-top doc-photo-layout" {...headerMark}>
           {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
           <div className="doc-rail-top-text">
             {name && <h1 className="doc-name">{name}</h1>}
@@ -658,7 +747,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   /* -- Creative: identity lives in a deep band; body stays disciplined --- */
   if (template === 'creative') {
     const bandHeader = (
-      <header className="doc-band doc-photo-layout">
+      <header className="doc-band doc-photo-layout" {...headerMark}>
         {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
         <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
@@ -732,7 +821,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   /* -- Photo Pro: portrait set INTO the masthead ------------------------- */
   if (template === 'photo-pro') {
     const photoHeader = (
-      <header className={`doc-photohead doc-photo-layout${showPhoto ? '' : ' no-photo'}`}>
+      <header className={`doc-photohead doc-photo-layout${showPhoto ? '' : ' no-photo'}`} {...headerMark}>
         {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
         <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
@@ -806,7 +895,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   /* -- Editorial: split masthead -- identity left, reach right ----------- */
   if (template === 'editorial' && hasContact(basics)) {
     const edHeader = (
-      <header className="doc-masthead doc-photo-layout">
+      <header className="doc-masthead doc-photo-layout" {...headerMark}>
         {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
         <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
@@ -887,7 +976,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   // ATS-safe family and remaining designs: one column, heading then sections.
 
   const headerEl = (
-    <header className={`doc-header doc-photo-layout${splitHeader ? ' doc-header-split' : ''}`}>
+    <header className={`doc-header doc-photo-layout${splitHeader ? ' doc-header-split' : ''}`} {...headerMark}>
       {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
       <div className="doc-header-text">
         {name && <h1 className="doc-name">{name}</h1>}
