@@ -30,6 +30,7 @@ export function Print() {
   const [timedOut, setTimedOut] = useState(false)
   const [bgReady, setBgReady] = useState(false)
   const [headerReady, setHeaderReady] = useState(false)
+  const [borderReady, setBorderReady] = useState(false)
   const pageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -111,6 +112,28 @@ export function Print() {
     }
   }, [headerImage])
 
+  // And for the Border · Image frame: border-image is painted by CSS, so the
+  // backend must not screenshot before the photograph has decoded.
+  const borderImage = doc?.settings.colors?.borderBgImage
+  useEffect(() => {
+    if (!borderImage) {
+      setBorderReady(true)
+      return
+    }
+    setBorderReady(false)
+    let live = true
+    const img = new Image()
+    const settle = () => {
+      if (live) setBorderReady(true)
+    }
+    img.onload = settle
+    img.onerror = settle
+    img.src = borderImage
+    return () => {
+      live = false
+    }
+  }, [borderImage])
+
   useEffect(() => {
     const timer = setTimeout(() => setTimedOut(true), SETTLE_TIMEOUT_MS)
     return () => clearTimeout(timer)
@@ -129,7 +152,7 @@ export function Print() {
   }
   if (!doc) return null
 
-  const ready = fontsReady && bgReady && headerReady && (settled || timedOut)
+  const ready = fontsReady && bgReady && headerReady && borderReady && (settled || timedOut)
 
   return (
     <div data-print-ready={ready ? 'true' : 'false'}>

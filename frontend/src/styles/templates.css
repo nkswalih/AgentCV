@@ -2261,36 +2261,39 @@
    stops at the identity surface: the body keeps the template's own paper.
    ====================================================================== */
 
-/* -- Single and Multi: a painted band ----------------------------------- */
+/* -- Single and Multi: a painted band -----------------------------------
+   The paint is a user treatment, so it outranks the template's own header
+   chrome (e.g. two-col's .doc-header-top fill) no matter how specific that
+   template rule is. */
 .page[data-header-paint='single'] [data-doc-header],
 .page[data-header-paint='multi'] [data-doc-header] {
-  background: var(--doc-header-bg, transparent);
+  background: var(--doc-header-bg, transparent) !important;
   color: var(--doc-header-text, currentColor);
 }
 
 /* -- Image: photograph and tint over the header only -------------------- */
 .page[data-header-paint='image'] [data-doc-header] {
-  background-color: #0b1220;
+  background-color: #0b1220 !important;
   background-image:
     linear-gradient(
       rgba(4, 8, 16, var(--doc-header-tint, 0.38)),
       rgba(4, 8, 16, var(--doc-header-tint, 0.38))
     ),
-    var(--doc-header-image, none);
-  background-size: cover, cover;
-  background-position: center, center;
-  background-repeat: no-repeat, no-repeat;
+    var(--doc-header-image, none) !important;
+  background-size: cover, cover !important;
+  background-position: center, center !important;
+  background-repeat: no-repeat, no-repeat !important;
   color: var(--doc-header-text, #ffffff);
 }
 
-/* A side header's image fills that column's width and starts at the sheet
-   edge, so the photograph reads as a band rather than a floating rectangle. */
-.page[data-header-paint='image'] .doc-main > [data-doc-header] {
+/* A top header's image fills the band's width and starts at the sheet edge,
+   so the photograph reads as a band rather than a floating rectangle. */
+.page[data-header-paint='image'][data-header-side='full'] .doc-main > [data-doc-header] {
   margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -1) 0;
   padding: calc(var(--doc-margin-y, 14mm) * 0.62) var(--doc-margin-x, 15mm)
     calc(var(--doc-margin-y, 14mm) * 0.42);
 }
-.page[data-header-paint='image'] .doc-rail > [data-doc-header] {
+.page[data-header-paint='image'][data-header-side='full'] .doc-rail > [data-doc-header] {
   margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -0.58) 0;
   padding: calc(var(--doc-margin-y, 14mm) * 0.62) calc(var(--doc-margin-x, 15mm) * 0.58)
     calc(var(--doc-margin-y, 14mm) * 0.42);
@@ -2299,10 +2302,45 @@
 /* The padded single-column designs put the page margin on the root, so the
    band reaches the sheet edges by cancelling that margin and paying it back as
    padding. Grid designs own their own padding and are left alone. */
-.page[data-header-paint]:not(:is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)) > [data-doc-header] {
+.page[data-header-paint='image'][data-header-side='full']:not(:is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)) > [data-doc-header] {
   margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -1) 0;
   padding: calc(var(--doc-margin-y, 14mm) * 0.62) var(--doc-margin-x, 15mm)
     calc(var(--doc-margin-y, 14mm) * 0.42);
+}
+
+/* -- Image · side header: the photograph fills the whole column ----------
+   A side header is a panel, not a wide masthead. Single and Multi already
+   paint the column that owns the header; Image has to do the same, or the
+   photo only covers the header's own box and leaves the rest of the rail on
+   the template's paper. */
+.page[data-header-paint='image']:is([data-header-side='left'], [data-header-side='right'])
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) {
+  --doc-accent: var(--doc-header-text, currentColor);
+  background-color: #0b1220 !important;
+  background-image:
+    linear-gradient(
+      rgba(4, 8, 16, var(--doc-header-tint, 0.38)),
+      rgba(4, 8, 16, var(--doc-header-tint, 0.38))
+    ),
+    var(--doc-header-image, none) !important;
+  background-size: cover, cover !important;
+  background-position: center, center !important;
+  background-repeat: no-repeat, no-repeat !important;
+  color: var(--doc-header-text, #ffffff);
+}
+/* The column owns the photograph now, so the header inside it must not paint
+   a second, smaller copy of the same image. */
+.page[data-header-paint='image']:is([data-header-side='left'], [data-header-side='right'])
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
+  > [data-doc-header] {
+  background: transparent !important;
+}
+/* Keep the panel's own ink legible over the photograph, matching the
+   Single/Multi panels. */
+.page[data-header-paint='image']:is([data-header-side='left'], [data-header-side='right'])
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) * {
+  color: inherit !important;
+  border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 38%, transparent) !important;
 }
 
 /* -- Two-column layouts: the header's side becomes the surface ----------
@@ -2368,6 +2406,36 @@
 .page[data-header-paint][data-page-paint='true'] [data-doc-header],
 .page[data-header-paint][data-page-paint='true'] [data-doc-header] * {
   color: var(--doc-header-text, currentColor) !important;
+}
+
+/* ======================================================================
+   Border card rendering
+   The frame is a real border on the sheet. Border-box sizing keeps the
+   paper exactly A4/Letter while each template's own padding insets the
+   content automatically. A partial frame simply sets the missing edge to
+   0mm, and the Image treatment lays its photograph into the same box.
+   ====================================================================== */
+
+.page[data-border-paint] {
+  border-style: solid;
+  border-width: var(--doc-frame-top, 5mm) var(--doc-frame-right, 5mm)
+    var(--doc-frame-bottom, 5mm) var(--doc-frame-left, 5mm);
+}
+
+/* -- Single: one accent paints the frame -------------------------------- */
+.page[data-border-paint='single'] {
+  border-color: var(--doc-frame-color, var(--doc-accent, currentColor));
+}
+
+/* -- Image: the photograph becomes the frame ----------------------------
+   border-image draws only inside the border widths, so an unchecked side
+   stays absent and the full-page treatment remains visible beneath. */
+.page[data-border-paint='image'] {
+  border-color: transparent;
+  border-image-source: var(--doc-frame-image);
+  border-image-slice: 33.333%;
+  border-image-width: 1;
+  border-image-repeat: stretch;
 }
 
 /* ======================================================================
