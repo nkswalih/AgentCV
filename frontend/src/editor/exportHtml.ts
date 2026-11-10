@@ -25,6 +25,15 @@ export function downloadHtmlExport(resumeName: string): void {
   const liveImage = [...getComputedStyle(page).backgroundImage.matchAll(/url\("?([^")]+)"?\)/g)].pop()
   if (liveImage) body.style.setProperty('--doc-bg-image', `url(${JSON.stringify(liveImage[1])})`)
 
+  // The Header · Image band is its own background layer; resolve it too.
+  const header = page.querySelector('[data-doc-header]')
+  const liveHeaderImage = header
+    ? [...getComputedStyle(header).backgroundImage.matchAll(/url\("?([^")]+)"?\)/g)].pop()
+    : null
+  if (liveHeaderImage) {
+    body.style.setProperty('--doc-header-image', `url(${JSON.stringify(liveHeaderImage[1])})`)
+  }
+
   const safeName = resumeName.trim() || 'Resume'
   const html = `<!doctype html>
 <html lang="en">
