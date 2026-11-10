@@ -22,7 +22,10 @@ import {
   TEMPLATES,
   type HeaderPreset,
   type MultiPreset,
+  type TemplateTag,
 } from '../templates/registry'
+import { ResumeThumb } from '../components/ResumeThumb'
+import { demoDocument } from '../templates/demo'
 import { extractPalette } from './imagePalette'
 import { DocIcon, SECTION_ICONS, isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
 import { Check, Segmented, Slider, Text } from './fields'
@@ -865,6 +868,7 @@ export function RightPane() {
   const { doc, updateBasics, updateSettings } = useEditor()
   const [customTpls, setCustomTpls] = useState<CustomTemplate[]>(() => loadCustomTemplates())
   const [saveOpen, setSaveOpen] = useState(false)
+  const [browseOpen, setBrowseOpen] = useState(false)
   const [saveName, setSaveName] = useState('')
   const nameInputRef = useRef<HTMLInputElement>(null)
 
@@ -876,6 +880,24 @@ export function RightPane() {
   }, [saveOpen])
 
   if (!doc) return null
+
+  /** One entry point for picking a design, shared by the sidebar and the
+      gallery so both paths auto-distribute a two-column layout the same way. */
+  function applyTemplate(templateId: TemplateId) {
+    if (!doc) return
+    const preset = applyTemplatePreset(templateId)
+    // Auto-distribute sections when switching to a two-column layout.
+    if (preset.columnLayout === 'two') {
+      const all = doc.sections.map((s) => s.id)
+      const mid = Math.ceil(all.length / 2)
+      preset.leftColumn = all.slice(0, mid)
+      preset.rightColumn = all.slice(mid)
+    } else {
+      preset.leftColumn = []
+      preset.rightColumn = []
+    }
+    updateSettings(preset)
+  }
 
   function handleSaveTemplate() {
     if (!saveName.trim() || !doc) return
@@ -930,40 +952,12 @@ export function RightPane() {
 
         <section className="style-section">
           <p className="eyebrow style-section-title">Template</p>
-          <div className="template-grid">
-            {TEMPLATES.map((template) => (
-              <button
-                className="template-card"
-                key={template.id}
-                data-active={doc.settings.template === template.id}
-                onClick={() => {
-                  const preset = applyTemplatePreset(template.id)
-                  // Auto-distribute sections when switching to a two-column layout.
-                  if (preset.columnLayout === 'two') {
-                    const all = doc.sections.map((s) => s.id)
-                    const mid = Math.ceil(all.length / 2)
-                    preset.leftColumn = all.slice(0, mid)
-                    preset.rightColumn = all.slice(mid)
-                  } else {
-                    preset.leftColumn = []
-                    preset.rightColumn = []
-                  }
-                  updateSettings(preset)
-                }}
-              >
-                <TemplateThumb
-                  id={template.id}
-                  accent={MINI_ACCENTS[template.id] ?? doc.settings.accentColor}
-                />
-                <span className="template-meta">
-                  <span className="template-name">{template.name}</span>
-                  <span className="tag" data-ats={template.atsSafe ? 'true' : 'false'}>
-                    {template.atsSafe ? 'ATS-safe' : 'Design-led'}
-                  </span>
-                </span>
-              </button>
-            ))}
-          </div>
+          <TemplateShortlist
+            current={doc.settings.template}
+            accent={doc.settings.accentColor}
+            onPick={applyTemplate}
+            onBrowse={() => setBrowseOpen(true)}
+          />
           <p className="hint" style={{ marginTop: 8 }}>
             ATS-safe templates use a single column and real text headings. Design-led layouts can be reordered by some parsers.
           </p>
@@ -1060,6 +1054,18 @@ export function RightPane() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Full design gallery, opened from the shortlist */}
+        {browseOpen && (
+          <TemplateBrowser
+            current={doc.settings.template}
+            onPick={(id) => {
+              applyTemplate(id)
+              setBrowseOpen(false)
+            }}
+            onClose={() => setBrowseOpen(false)}
+          />
         )}
 
         <section className="style-section">
@@ -2682,5 +2688,177 @@ function TemplateThumb({ id, accent }: { id: string; accent: string }) {
       <span className={`mini-lines${SPINE.has(id) ? ' spine' : ''}`} />
       {!SPINE.has(id) && <span className="mini-lines short" />}
     </span>
+  )
+}
+
+/* -------------------------------------------------------------------------
+   Template browsing
+   The sidebar can't list nineteen designs without becoming a scroll tunnel,
+   so it shows the current pick plus the two next in the catalogue and hands
+   the full set to a gallery dialog.
+   ---------------------------------------------------------------------- */
+
+const BROWSE_FILTERS: (TemplateTag | 'all')[] = ['all', 'popular', 'simple', 'modern', 'creative']
+
+const BROWSE_LABELS: Record<TemplateTag | 'all', string> = {
+  all: 'All Templates',
+  popular: 'Popular',
+  simple: 'Simple',
+  modern: 'Modern',
+  professional: 'Professional',
+  creative: 'Creative',
+  photo: 'Photo',
+  twocol: 'Two Column',
+  executive: 'Executive',
+  technical: 'Technical',
+  academic: 'Academic',
+}
+
+/** The pane always shows the same three starting points -- one classic, one
+    design-led, one original ATS -- so the row doesn't reshuffle itself just
+    because a design was applied. Everything else lives behind Browse all. */
+const SHORTLIST_IDS: TemplateId[] = ['classic-pro', 'portal-pro', 'ats-classic']
+
+function TemplateShortlist({
+  current,
+  accent,
+  onPick,
+  onBrowse,
+}: {
+  current: TemplateId
+  accent: string
+  onPick: (id: TemplateId) => void
+  onBrowse: () => void
+}) {
+  const picks = SHORTLIST_IDS.flatMap((id) => TEMPLATES.filter((t) => t.id === id))
+
+  return (
+    <div className="template-grid">
+      {picks.map((template) => (
+        <button
+          className="template-card"
+          key={template.id}
+          data-active={current === template.id}
+          onClick={() => onPick(template.id)}
+        >
+          <TemplateThumb id={template.id} accent={MINI_ACCENTS[template.id] ?? accent} />
+          <span className="template-meta">
+            <span className="template-name">{template.name}</span>
+            <span className="tag" data-ats={template.atsSafe ? 'true' : 'false'}>
+              {template.atsSafe ? 'ATS-safe' : 'Design-led'}
+            </span>
+          </span>
+        </button>
+      ))}
+
+      {/* Fourth cell: the way out of the shortlist. */}
+      <button type="button" className="template-card template-browse-tile" onClick={onBrowse}>
+        <span className="template-browse-art" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+        <span className="template-meta">
+          <span className="template-name">Browse all</span>
+          <span className="tag">{TEMPLATES.length} designs</span>
+        </span>
+      </button>
+    </div>
+  )
+}
+
+/** The full catalogue, rendered as real miniatures so a design is judged by
+    the page it produces rather than by a schematic. */
+function TemplateBrowser({
+  current,
+  onPick,
+  onClose,
+}: {
+  current: TemplateId
+  onPick: (id: TemplateId) => void
+  onClose: () => void
+}) {
+  const [filter, setFilter] = useState<TemplateTag | 'all'>('all')
+
+  // Escape closes the dialog, like every other overlay in the editor.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
+
+  const visible = TEMPLATES.filter((t) => filter === 'all' || t.tags.includes(filter))
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div
+        className="modal modal-wide"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Design templates"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="modal-head">
+          <div>
+            <h2 className="modal-title">Design Templates</h2>
+            <p className="hint">Update your entire resume design with one click.</p>
+          </div>
+          <button className="btn btn-ghost" onClick={onClose} aria-label="Close">
+            ✕
+          </button>
+        </div>
+
+        <div className="tp-filters" role="tablist" aria-label="Template categories">
+          {BROWSE_FILTERS.map((f) => (
+            <button
+              key={f}
+              type="button"
+              className="chip"
+              data-active={filter === f}
+              onClick={() => setFilter(f)}
+            >
+              {BROWSE_LABELS[f]}
+            </button>
+          ))}
+        </div>
+
+        <div className="modal-body tp-grid">
+          {visible.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              className="tp-card"
+              data-current={current === t.id}
+              onClick={() => onPick(t.id)}
+              aria-label={`Use ${t.name}`}
+            >
+              <div className="tp-card-thumb">
+                <ResumeThumb doc={demoDocument(t.id)} />
+              </div>
+              <span className="tp-meta">
+                <span className="tp-name">{t.name}</span>
+                {current === t.id ? (
+                  <span className="tp-current">Current</span>
+                ) : (
+                  <span className="tag tag-sm" data-ats={t.atsSafe ? 'true' : 'false'}>
+                    {t.atsSafe ? 'ATS-safe' : 'Design-led'}
+                  </span>
+                )}
+              </span>
+            </button>
+          ))}
+          {visible.length === 0 && <p className="hint">Nothing in this category yet.</p>}
+        </div>
+
+        <div className="modal-foot tp-foot">
+          <span className="hint">Click a design to apply it.</span>
+          <button type="button" className="btn btn-ghost" onClick={onClose}>
+            Done
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }
