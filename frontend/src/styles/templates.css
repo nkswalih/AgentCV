@@ -2147,42 +2147,70 @@
    Colors card rendering
    Everything here is opt-in: the rules only bite when the document root
    carries data-colors="on", i.e. the author touched the Colors card.
+
+   Full Page has three treatments:
+     single -> ink only; the template keeps its own paper.
+     multi  -> the scheme owns background, body ink and accent.
+     image  -> a photograph covers the sheet; every ink turns white.
    ====================================================================== */
 
-/* -- Surfaces ------------------------------------------------------------ */
-.page[data-colors='on'] {
-  background: var(--doc-page-bg, #ffffff);
-}
-.page[data-colors='on'][data-bg='multi'] {
-  background: linear-gradient(
-    155deg,
-    var(--doc-page-bg, #ffffff) 58%,
-    var(--doc-header-bg, var(--doc-page-bg, #ffffff))
-  );
-}
-.page[data-colors='on'][data-bg='image'] {
-  position: relative;
-  isolation: isolate;
-  background: var(--doc-page-bg, #ffffff);
-}
-.page[data-colors='on'][data-bg='image']::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background-image: var(--doc-bg-image);
-  background-size: cover;
-  background-position: center;
-  opacity: 0.08;
+/* -- Full Page: Single ---------------------------------------------------
+   Deliberately empty. Choosing an accent must never repaint the sheet. */
+.page[data-colors='on'][data-bg='single'] {
+  background: var(--paper);
 }
 
-/* -- Header / rail fills --------------------------------------------------
-   Additive: containers that read as the page's header zone pick up the
-   header colour; designs without such a zone are unaffected. */
-.page[data-colors='on'] .doc-rail,
-.page[data-colors='on'] .doc-rail-top,
-.page[data-colors='on'] .doc-header-top {
-  background: var(--doc-header-bg, transparent);
+/* -- Full Page: Multi ----------------------------------------------------
+   One scheme paints the whole page. Template surface fills are neutralised so
+   bands and rails do not fight the chosen background. */
+.page[data-colors='on'][data-bg='multi'] {
+  background: var(--doc-page-bg, #f8fafc);
+  color: var(--doc-text-color, #0f172a);
+}
+.page[data-bg='multi'] .doc-rail,
+.page[data-bg='multi'] .doc-rail-top,
+.page[data-bg='multi'] .doc-header-top,
+.page[data-bg='multi'] .doc-header,
+.page[data-bg='multi'] .doc-band,
+.page[data-bg='multi'] .doc-masthead {
+  background: transparent;
+}
+
+/* -- Full Page: Image ----------------------------------------------------
+   The tint is a second background layer, not an overlay element, so template
+   stacking (rails, bands, photos) is untouched. */
+.page[data-colors='on'][data-bg='image'] {
+  background-color: #0b1220;
+  background-image:
+    linear-gradient(
+      rgba(4, 8, 16, var(--doc-img-tint, 0.38)),
+      rgba(4, 8, 16, var(--doc-img-tint, 0.38))
+    ),
+    var(--doc-bg-image, none);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  color: #ffffff;
+}
+.page[data-bg='image'] .doc-rail,
+.page[data-bg='image'] .doc-rail-top,
+.page[data-bg='image'] .doc-header-top,
+.page[data-bg='image'] .doc-band {
+  background: rgba(3, 7, 18, 0.18);
+}
+.page[data-bg='image'] .doc-masthead::before,
+.page[data-bg='image'] .doc-masthead::after {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+/* -- Text ink for Multi and Image ----------------------------------------
+   Template skins hardcode their inks in dozens of places, often with selectors
+   as specific as the accent rules. A !important reset is the only way to make
+   one chosen ink win across every template; the accent rules below are equally
+   forceful, so switched-on elements still take the accent. */
+.page[data-bg='multi'] *,
+.page[data-bg='image'] * {
+  color: inherit !important;
 }
 
 /* -- Rules and borders ----------------------------------------------------
@@ -2199,32 +2227,124 @@
 
 /* -- Where the accent may reach ------------------------------------------ */
 .page[data-colors='on'][data-accent-name='true'] .doc-name {
-  color: var(--doc-accent);
+  color: var(--doc-accent) !important;
 }
 .page[data-colors='on'][data-accent-jobtitle='true'] .doc-item-title {
-  color: var(--doc-accent);
+  color: var(--doc-accent) !important;
 }
 .page[data-colors='on'][data-accent-dates='true'] .doc-item-date,
 .page[data-colors='on'][data-accent-dates='true'] .tl-when {
-  color: var(--doc-accent);
+  color: var(--doc-accent) !important;
 }
 .page[data-colors='on'][data-accent-headings='true'] .doc-section-title {
-  color: var(--doc-accent);
+  color: var(--doc-accent) !important;
 }
 .page[data-colors='on'][data-accent-subtitle='true'] .doc-item-sub {
-  color: var(--doc-accent);
+  color: var(--doc-accent) !important;
 }
 .page[data-colors='on'][data-accent-dots='true'] .doc-bullets li::marker,
 .page[data-colors='on'][data-accent-dots='true'] .doc-skill-bullets li::marker,
 .page[data-colors='on'][data-accent-dots='true'] .doc-skilllines li {
-  color: var(--doc-accent);
+  color: var(--doc-accent) !important;
 }
 .page[data-colors='on'][data-accent-hicons='true'] .doc-contact-item .doc-icon,
 .page[data-colors='on'][data-accent-hicons='true'] .doc-contact-row .doc-icon {
-  color: var(--doc-accent);
+  color: var(--doc-accent) !important;
 }
 .page[data-colors='on'][data-accent-linkicons='true'] a.doc-link .doc-icon {
-  color: var(--doc-accent);
+  color: var(--doc-accent) !important;
+}
+
+/* ======================================================================
+   Header card rendering
+   The Header tab mirrors Full Page's three treatments, but every rule here
+   stops at the identity surface: the body keeps the template's own paper.
+   ====================================================================== */
+
+/* -- Single and Multi: a painted band ----------------------------------- */
+.page[data-header-paint='single'] [data-doc-header],
+.page[data-header-paint='multi'] [data-doc-header] {
+  background: var(--doc-header-bg, transparent);
+  color: var(--doc-header-text, currentColor);
+}
+
+/* -- Image: photograph and tint over the header only -------------------- */
+.page[data-header-paint='image'] [data-doc-header] {
+  background-color: #0b1220;
+  background-image:
+    linear-gradient(
+      rgba(4, 8, 16, var(--doc-header-tint, 0.38)),
+      rgba(4, 8, 16, var(--doc-header-tint, 0.38))
+    ),
+    var(--doc-header-image, none);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  color: var(--doc-header-text, #ffffff);
+}
+
+/* The padded single-column designs put the page margin on the root, so the
+   band reaches the sheet edges by cancelling that margin and paying it back as
+   padding. Grid designs own their own padding and are left alone. */
+.page[data-header-paint]:not(:is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)) > [data-doc-header] {
+  margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -1) 0;
+  padding: calc(var(--doc-margin-y, 14mm) * 0.62) var(--doc-margin-x, 15mm)
+    calc(var(--doc-margin-y, 14mm) * 0.42);
+}
+
+/* -- Two-column layouts: the header's side becomes the surface ----------
+   A side header is a panel, not a wide masthead: the column that holds it is
+   painted edge to edge, while the facing column keeps its own paper. */
+.page[data-header-paint='single']
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]),
+.page[data-header-paint='multi']
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) {
+  background: var(--doc-header-bg, transparent);
+  color: var(--doc-header-text, currentColor);
+}
+/* Template inks are hardcoded per slot; on a painted panel they all yield to
+   the header's own ink so every line stays legible. */
+.page[data-header-paint='single']
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) *,
+.page[data-header-paint='multi']
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) * {
+  color: inherit !important;
+  border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 38%, transparent) !important;
+}
+/* Section headings are the one exception: they keep the accent the header
+   scheme supplied, which is what ties the band to the page below it. */
+.page[data-header-paint][data-accent-headings='true']
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
+  .doc-section-title {
+  color: var(--doc-accent, var(--doc-header-accent, currentColor)) !important;
+  border-color: var(--doc-accent, var(--doc-header-accent, currentColor)) !important;
+}
+
+/* -- Header ink wins over the accent switches and the Multi/Image reset -- */
+.page[data-header-paint] [data-doc-header],
+.page[data-header-paint] [data-doc-header] * {
+  color: var(--doc-header-text, currentColor) !important;
+}
+/* Keep a header rule legible against the fill. */
+.page[data-header-paint] [data-doc-header] {
+  border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 35%, transparent);
+}
+.page[data-header-paint] [data-doc-header] .doc-contact-sep {
+  color: color-mix(in srgb, var(--doc-header-text, currentColor) 55%, transparent) !important;
+}
+
+/* -- Header · Multi · Custom: the optional page row --------------------- */
+.page[data-header-paint][data-page-paint='true'] {
+  background: var(--doc-header-page-bg, transparent);
+  color: var(--doc-header-page-text, #0f172a);
+}
+.page[data-header-paint][data-page-paint='true'] * {
+  color: inherit !important;
+}
+/* The header band still owns its own ink above. */
+.page[data-header-paint][data-page-paint='true'] [data-doc-header],
+.page[data-header-paint][data-page-paint='true'] [data-doc-header] * {
+  color: var(--doc-header-text, currentColor) !important;
 }
 
 /* ======================================================================
