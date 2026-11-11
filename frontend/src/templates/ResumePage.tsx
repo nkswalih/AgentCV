@@ -150,6 +150,14 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   // Section heading style controls.
   const hs = settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
 
+  // Header card controls. Each field is optional; absent means the template's
+  // own treatment, so an untouched document renders exactly as before.
+  const hdr = settings.headerStyle ?? {}
+  // Details arrangement owns the icons: choosing "Icon" draws them even when
+  // the older Show contact icons switch is off, and choosing Bullet or Bar
+  // suppresses them. Until a choice is made, the switch decides.
+  const headerIcons = hdr.details == null ? settings.showIcons : hdr.details === 'icon'
+
   // Only the selected Colors tab is in effect. The other tabs keep their
   // settings for when the user returns, but they must not paint the sheet --
   // that was the bug where a Header band or Border frame survived a tab switch.
@@ -301,6 +309,15 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     'data-heading-cap': hs.capitalization,
     ...(hs.showIcons && { 'data-heading-icons': 'true' }),
     ...(hs.showIcons && { 'data-heading-icon-style': hs.iconStyle }),
+    // Header card. Alignment is a split-layout control only: in one column the
+    // header position already aligns the block, and two settings must never
+    // fight over the same axis.
+    ...(settings.columnLayout === 'two' && hdr.align && { 'data-header-align': hdr.align }),
+    ...(hdr.details && { 'data-header-details': hdr.details }),
+    ...(hdr.details === 'icon' && hdr.iconStyle && { 'data-header-icon': hdr.iconStyle }),
+    ...(hdr.nameStyle && { 'data-name-style': hdr.nameStyle }),
+    ...(hdr.titleStyle && { 'data-title-style': hdr.titleStyle }),
+    ...(hdr.titlePosition && { 'data-title-position': hdr.titlePosition }),
     ...(colors && {
       'data-colors': 'on',
       // Only the Full Page tab owns the sheet treatment. On Header or Border,
@@ -379,7 +396,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
           {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
         </div>
         {hasContact(basics) && (
-          <Contact basics={basics} stacked icons={settings.showIcons} />
+          <Contact basics={basics} stacked icons={headerIcons} />
         )}
         {rail.map((s) => (
           <DocSection key={s.id} section={s} tags />
@@ -400,7 +417,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
               {name && <h1 className="doc-name">{name}</h1>}
               {headline && <p className="doc-headline">{headline}</p>}
               {hasContact(basics) && (
-                <Contact basics={basics} icons={settings.showIcons} />
+                <Contact basics={basics} icons={headerIcons} />
               )}
             </div>
           </aside>
@@ -438,7 +455,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
             {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
             {hasContact(basics) && (
-              <Contact basics={basics} icons={settings.showIcons} />
+              <Contact basics={basics} icons={headerIcons} />
             )}
           </div>
         </aside>
@@ -467,7 +484,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       <>
         {showPhoto && <ProfilePhoto src={basics.photoUrl!} layout={pl} />}
         {hasContact(basics) && (
-          <Contact basics={basics} stacked icons={settings.showIcons} />
+          <Contact basics={basics} stacked icons={headerIcons} />
         )}
         {rail.map((s) => (
           <DocSection key={s.id} section={s} tags />
@@ -503,7 +520,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
               {name && <h1 className="doc-name">{name}</h1>}
               {headline && <p className="doc-headline">{headline}</p>}
               {hasContact(basics) && (
-                <Contact basics={basics} icons={settings.showIcons} />
+                <Contact basics={basics} icons={headerIcons} />
               )}
             </div>
           </aside>
@@ -541,7 +558,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
             {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
             {hasContact(basics) && (
-              <Contact basics={basics} icons={settings.showIcons} />
+              <Contact basics={basics} icons={headerIcons} />
             )}
           </div>
         </aside>
@@ -586,7 +603,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
               {name && <h1 className="doc-name">{name}</h1>}
               {headline && <p className="doc-headline">{headline}</p>}
               {hasContact(basics) && (
-                <Contact basics={basics} icons={settings.showIcons} />
+                <Contact basics={basics} icons={headerIcons} />
               )}
             </div>
           </aside>
@@ -654,7 +671,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
             {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
             {hasContact(basics) && (
-              <Contact basics={basics} icons={settings.showIcons} />
+              <Contact basics={basics} icons={headerIcons} />
             )}
           </div>
         </aside>
@@ -699,7 +716,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
               {name && <h1 className="doc-name">{name}</h1>}
               {headline && <p className="doc-headline">{headline}</p>}
               {hasContact(basics) && (
-                <Contact basics={basics} icons={settings.showIcons} />
+                <Contact basics={basics} icons={headerIcons} />
               )}
             </div>
           </header>
@@ -767,7 +784,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
             {name && <h1 className="doc-name">{name}</h1>}
             {headline && <p className="doc-headline">{headline}</p>}
             {hasContact(basics) && (
-              <Contact basics={basics} icons={settings.showIcons} />
+              <Contact basics={basics} icons={headerIcons} />
             )}
           </div>
         </header>
@@ -795,7 +812,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
         <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
-          <Contact basics={basics} icons={settings.showIcons} />
+          <Contact basics={basics} icons={headerIcons} />
         </div>
       </header>
     )
@@ -869,7 +886,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
         <div className="doc-header-text">
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
-          <Contact basics={basics} icons={settings.showIcons} />
+          <Contact basics={basics} icons={headerIcons} />
         </div>
       </header>
     )
@@ -944,7 +961,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
           {name && <h1 className="doc-name">{name}</h1>}
           {headline && <p className="doc-headline">{headline}</p>}
         </div>
-        <Contact basics={basics} stacked icons={settings.showIcons} />
+        <Contact basics={basics} stacked icons={headerIcons} />
       </header>
     )
 
@@ -1027,10 +1044,10 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       </div>
       {splitHeader ? (
         <div className="doc-header-side">
-          <Contact basics={basics} stacked={template === 'devtech'} icons={settings.showIcons} />
+          <Contact basics={basics} stacked={template === 'devtech'} icons={headerIcons} />
         </div>
       ) : (
-        <Contact basics={basics} icons={settings.showIcons} />
+        <Contact basics={basics} icons={headerIcons} />
       )}
     </header>
   )

@@ -190,6 +190,42 @@ export type Section =
 
 export type SectionItem = Section['items'][number]
 
+/** Container drawn around each contact icon in the header. Seven treatments,
+ *  split three ways: no frame, a solid frame, or an outlined frame, each in
+ *  three shapes. */
+export type HeaderIconStyle =
+  | 'plain'
+  | 'circle-fill'
+  | 'rounded-fill'
+  | 'square-fill'
+  | 'circle-line'
+  | 'rounded-line'
+  | 'square-line'
+
+/**
+ * Header card controls. Every field is optional, and "absent" is a real state:
+ * it means the template's own designed treatment. A document that never opened
+ * the card therefore renders exactly as it did before these controls existed,
+ * which is what keeps nineteen designs intact.
+ */
+export interface HeaderStyle {
+  /** Horizontal alignment of the identity block. Applied in split layouts,
+   *  where the header sits in a side panel; one-column alignment is still the
+   *  header position control. */
+  align?: 'left' | 'center' | 'right'
+  /** How contact details are arranged: an icon per entry, a bullet between
+   *  entries, or a rule between entries. */
+  details?: 'icon' | 'bullet' | 'bar'
+  /** Frame drawn around each contact icon (only visible with details 'icon'). */
+  iconStyle?: HeaderIconStyle
+  /** Italic or upright name. */
+  nameStyle?: 'normal' | 'italic'
+  /** Italic or upright professional title. */
+  titleStyle?: 'normal' | 'italic'
+  /** Title beside the name on one line, or beneath it. */
+  titlePosition?: 'below' | 'same-line'
+}
+
 export interface Settings {
   template: TemplateId
   accentColor: string
@@ -271,6 +307,9 @@ export interface Settings {
     /** Icon visual style. */
     iconStyle: 'filled' | 'outlined'
   }
+
+  /** Header card controls. Absent means each template's own treatment. */
+  headerStyle?: HeaderStyle
 
   /**
    * Colors card state. Undefined fields mean "template default" — the resume

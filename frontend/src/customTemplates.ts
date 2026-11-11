@@ -26,6 +26,7 @@ export interface CustomTemplate {
     | 'contactSize'
     | 'photoLayout'
     | 'headingStyle'
+    | 'headerStyle'
     | 'colors'
   >
   createdAt: number
@@ -74,6 +75,7 @@ export function saveCustomTemplate(
       contactSize: settings.contactSize,
       photoLayout: { ...settings.photoLayout },
       headingStyle: { ...settings.headingStyle },
+      headerStyle: settings.headerStyle ? { ...settings.headerStyle } : undefined,
       colors: settings.colors ? { ...settings.colors } : undefined,
     },
     createdAt: Date.now(),

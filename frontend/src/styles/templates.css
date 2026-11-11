@@ -2781,3 +2781,168 @@
 [data-columns="one"][data-header="right"] .doc-header.doc-photo-layout {
   align-items: flex-end;
 }
+
+/* =========================================================================
+ * 5. Header card
+ *
+ * Everything here is an optional override. A document that never opened the
+ * card carries none of these attributes, so all nineteen designs keep the
+ * exact treatment they were drawn with. Every rule stops at the identity
+ * surface: choosing a header look never reflows the body.
+ * ====================================================================== */
+
+/* -- Text alignment -------------------------------------------------------
+   Emitted for split layouts only. In one column the header position already
+   owns this axis, and two controls must never fight over it. The header is
+   the whole painted panel, so aligning it is aligning the panel's ink.
+   The identity children are addressed too: several skins pin their contact
+   line's alignment themselves, and a control that works in eighteen designs
+   but not the nineteenth is a bug, not a design. */
+.page[data-header-align='left'] [data-doc-header] {
+  text-align: left;
+}
+.page[data-header-align='center'] [data-doc-header] {
+  text-align: center;
+}
+.page[data-header-align='right'] [data-doc-header] {
+  text-align: right;
+}
+.page[data-header-align='left']
+  [data-doc-header]
+  :is(.doc-name, .doc-headline, .doc-contact, .doc-contact-row) {
+  text-align: left;
+}
+.page[data-header-align='center']
+  [data-doc-header]
+  :is(.doc-name, .doc-headline, .doc-contact, .doc-contact-row) {
+  text-align: center;
+}
+.page[data-header-align='right']
+  [data-doc-header]
+  :is(.doc-name, .doc-headline, .doc-contact, .doc-contact-row) {
+  text-align: right;
+}
+/* A contact line that is a flex row (Executive) aligns its entries with
+   justify-content, which text-align cannot move. */
+.page[data-header-align='left'] [data-doc-header] .doc-contact {
+  justify-content: flex-start;
+}
+.page[data-header-align='center'] [data-doc-header] .doc-contact {
+  justify-content: center;
+}
+.page[data-header-align='right'] [data-doc-header] .doc-contact {
+  justify-content: flex-end;
+}
+/* With the photo on top the header is a flex column, and a column places its
+   children on the cross axis at flex-start -- the text block shrinks to its
+   longest line, leaving text-align nothing to act on. Stretching the block is
+   what makes the alignment control mean anything in that arrangement. */
+.page[data-header-align][data-photo-position='top']
+  [data-doc-header]
+  :is(.doc-header-text, .doc-rail-top-text, .doc-contact) {
+  align-self: stretch;
+}
+
+/* -- Details arrangement --------------------------------------------------
+   Icon per entry, a bullet between entries, or a printed rule between them.
+   The interpunct is the designed default; Bullet chooses nothing new, which
+   is exactly why it is the resting state of a document that never asked. */
+.page[data-header-details='bar'] [data-doc-header] .doc-contact-sep {
+  font-size: 0;
+  margin: 0 6.5pt;
+}
+.page[data-header-details='bar'] [data-doc-header] .doc-contact-sep::after {
+  content: '|';
+  font-size: var(--doc-contact-size, 9pt);
+  font-weight: 300;
+}
+/* Bullet is the interpunct the contact line already draws -- restated only to
+   strip a skin's own separator glyph (Jake prints a pipe by default). */
+.page[data-header-details='bullet'] [data-doc-header] .doc-contact-sep {
+  font-size: 0;
+  margin: 0 3.5pt;
+}
+.page[data-header-details='bullet'] [data-doc-header] .doc-contact-sep::after {
+  content: '\00b7';
+  font-size: var(--doc-contact-size, 9pt);
+  font-weight: 400;
+}
+
+/* -- Icon style -----------------------------------------------------------
+   Seven frames around the same contact icon: none, three solid, three
+   outlined. The frame is a real box on the glyph, so the text beside it keeps
+   its own size and the entry stays on one baseline. */
+.page[data-header-icon]:not([data-header-icon='plain'])
+  [data-doc-header]
+  .doc-contact-item
+  .doc-icon {
+  width: 1.6em;
+  height: 1.6em;
+  padding: 0.37em;
+  border: 0.6pt solid transparent;
+  border-radius: 28%;
+  background: #8f98a3;
+  color: #ffffff;
+}
+.page[data-header-icon]:not([data-header-icon='plain'])
+  [data-doc-header]
+  .doc-contact-item {
+  gap: 4pt;
+}
+.page[data-header-icon$='-line'][data-header-icon]
+  [data-doc-header]
+  .doc-contact-item
+  .doc-icon {
+  background: transparent;
+  border-color: color-mix(in srgb, currentColor 42%, transparent);
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}
+.page[data-header-icon][data-header-icon^='circle']
+  [data-doc-header]
+  .doc-contact-item
+  .doc-icon {
+  border-radius: 50%;
+}
+.page[data-header-icon][data-header-icon^='square']
+  [data-doc-header]
+  .doc-contact-item
+  .doc-icon {
+  border-radius: 1.5pt;
+}
+/* A solid frame is the border, so it must not gain the faint recoloured
+   outline that painted panels put on every child. */
+.page[data-header-icon$='-fill'] [data-doc-header] .doc-contact-item .doc-icon {
+  border-color: transparent !important;
+}
+/* Plain: the glyph alone, on its native 1em box. */
+.page[data-header-icon='plain'] [data-doc-header] .doc-contact-item {
+  gap: 3pt;
+}
+
+/* -- Name and title treatment ---------------------------------------------
+   Both directions are spelled out, not just the change, so a template that
+   italicises by design can still be brought back to upright. */
+.page[data-name-style='normal'] [data-doc-header] .doc-name {
+  font-style: normal;
+}
+.page[data-name-style='italic'] [data-doc-header] .doc-name {
+  font-style: italic;
+}
+.page[data-title-style='normal'] [data-doc-header] .doc-headline {
+  font-style: normal;
+}
+.page[data-title-style='italic'] [data-doc-header] .doc-headline {
+  font-style: italic;
+}
+
+/* -- Title position -------------------------------------------------------
+   "Same line" sets the title running after the name on one baseline. Both
+   stay inline boxes so the contact line below still starts its own row. */
+.page[data-title-position='same-line'] [data-doc-header] .doc-name,
+.page[data-title-position='same-line'] [data-doc-header] .doc-headline {
+  display: inline;
+}
+.page[data-title-position='same-line'] [data-doc-header] .doc-headline {
+  margin: 0 0 0 0.55em;
+  font-weight: 400;
+}

@@ -52,6 +52,8 @@ import type {
   ColorTarget,
   ColorsState,
   FullPageMode,
+  HeaderIconStyle,
+  HeaderStyle,
   Link,
   Section,
   SectionType,
@@ -195,11 +197,64 @@ function HeaderAlignGlyph({ align }: { align: 'center' | 'left' | 'right' }) {
   )
 }
 
+/** Miniature of the contact line: an icon per entry, or words with a bullet
+ *  or a rule between them. */
+function DetailsGlyph({ mode }: { mode: 'icon' | 'bullet' | 'bar' }) {
+  if (mode === 'icon') {
+    return (
+      <span className="lt-details" data-mode={mode} aria-hidden="true">
+        <span className="lt-detail-icon" />
+        <span className="lt-detail-word" />
+        <span className="lt-detail-icon" />
+        <span className="lt-detail-word" />
+      </span>
+    )
+  }
+  return (
+    <span className="lt-details" data-mode={mode} aria-hidden="true">
+      <span className="lt-detail-word" />
+      <span className="lt-detail-sep">{mode === 'bullet' ? '•' : '|'}</span>
+      <span className="lt-detail-word" />
+      <span className="lt-detail-sep">{mode === 'bullet' ? '•' : '|'}</span>
+      <span className="lt-detail-word" />
+    </span>
+  )
+}
+
+/** The seven icon frames, in the order the row presents them: none, solid,
+ *  then outlined -- each family in circle, rounded-square, square order. */
+const HEADER_ICON_STYLES: {
+  value: HeaderIconStyle
+  label: string
+  shape: 'none' | 'circle' | 'rounded' | 'square'
+  fill: boolean
+}[] = [
+  { value: 'plain', label: 'No frame', shape: 'none', fill: false },
+  { value: 'circle-fill', label: 'Solid circle', shape: 'circle', fill: true },
+  { value: 'rounded-fill', label: 'Solid rounded square', shape: 'rounded', fill: true },
+  { value: 'square-fill', label: 'Solid square', shape: 'square', fill: true },
+  { value: 'circle-line', label: 'Outlined circle', shape: 'circle', fill: false },
+  { value: 'rounded-line', label: 'Outlined rounded square', shape: 'rounded', fill: false },
+  { value: 'square-line', label: 'Outlined square', shape: 'square', fill: false },
+]
+
+/** Designs whose professional title is already italic, so the Header card's
+ *  resting tile matches the page instead of arguing with it. */
+const ITALIC_TITLE_TEMPLATES = new Set<TemplateId>([
+  'executive',
+  'editorial',
+  'academic',
+  'portal-pro',
+  'modern-deep',
+])
+
+
 export function LeftPane() {
   const { doc, addSection, moveSection, moveSectionToColumn, updateSettings } = useEditor()
   const sensors = useDragSensors()
   const [activeId, setActiveId] = useState<string | null>(null)
   const [photoAdjustOpen, setPhotoAdjustOpen] = useState(false)
+  const [headerAdvancedOpen, setHeaderAdvancedOpen] = useState(true)
   if (!doc) return null
 
   const currentDoc = doc
@@ -340,6 +395,27 @@ export function LeftPane() {
   const pl = currentDoc.settings.photoLayout
   const hs = currentDoc.settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
 
+  // -- Header card state ---------------------------------------------------
+  // Absent fields are "as designed", so every tile reads the effective value
+  // the page is showing -- a control never appears to disagree with the sheet.
+  const header = currentDoc.settings.headerStyle ?? {}
+  const headerDetails = header.details ?? (currentDoc.settings.showIcons ? 'icon' : 'bullet')
+  const headerAlign =
+    columnLayout === 'two'
+      ? (header.align ?? 'center')
+      : headerPosition === 'top'
+        ? 'center'
+        : headerPosition
+  const headerIconStyle: HeaderIconStyle = header.iconStyle ?? 'plain'
+  const headerNameStyle = header.nameStyle ?? 'normal'
+  const headerTitleStyle =
+    header.titleStyle ??
+    (ITALIC_TITLE_TEMPLATES.has(currentDoc.settings.template) ? 'italic' : 'normal')
+  const headerTitlePosition = header.titlePosition ?? 'below'
+  const setHeader = (patch: HeaderStyle) =>
+    updateSettings({ headerStyle: { ...header, ...patch } })
+
+
   return (
     <aside className="pane pane-left">
       <div className="pane-head">
@@ -428,6 +504,198 @@ export function LeftPane() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ============================================================ */}
+        {/*  HEADER                                                      */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Header</p>
+
+          <ChoiceTiles
+            label="Text Alignment"
+            value={headerAlign}
+            options={[
+              { value: 'left', label: 'Left', visual: <HeaderAlignGlyph align="left" /> },
+              { value: 'center', label: 'Center', visual: <HeaderAlignGlyph align="center" /> },
+              { value: 'right', label: 'Right', visual: <HeaderAlignGlyph align="right" /> },
+            ]}
+            onChange={(align) =>
+              // One column has no side panel: there the header position IS the
+              // alignment, so both controls move together instead of fighting.
+              columnLayout === 'two'
+                ? setHeader({ align })
+                : updateSettings({ headerPosition: align })
+            }
+          />
+
+          <ChoiceTiles
+            label="Details Arrangement"
+            value={headerDetails}
+            options={[
+              { value: 'icon', label: 'Icon', visual: <DetailsGlyph mode="icon" /> },
+              { value: 'bullet', label: 'Bullet', visual: <DetailsGlyph mode="bullet" /> },
+              { value: 'bar', label: 'Bar', visual: <DetailsGlyph mode="bar" /> },
+            ]}
+            onChange={(details) => setHeader({ details })}
+          />
+
+          <div className="field">
+            <span className="field-label">Icon Style</span>
+            <div className="hdr-icon-row" role="radiogroup" aria-label="Icon style">
+              {HEADER_ICON_STYLES.map((opt, i) => {
+                const active = headerIconStyle === opt.value
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className="hdr-icon-opt"
+                    data-active={active}
+                    role="radio"
+                    aria-checked={active}
+                    aria-label={opt.label}
+                    title={opt.label}
+                    tabIndex={active ? 0 : -1}
+                    // Picking a frame means wanting to see it: the details
+                    // arrangement switches to Icon so the page answers at once.
+                    onClick={() => setHeader({ details: 'icon', iconStyle: opt.value })}
+                    onKeyDown={(e) => {
+                      const n = HEADER_ICON_STYLES.length
+                      let next = i
+                      if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (i - 1 + n) % n
+                      else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (i + 1) % n
+                      else if (e.key === 'Home') next = 0
+                      else if (e.key === 'End') next = n - 1
+                      else return
+                      e.preventDefault()
+                      setHeader({ details: 'icon', iconStyle: HEADER_ICON_STYLES[next].value })
+                      const el = e.currentTarget.parentElement?.children[next] as
+                        | HTMLElement
+                        | undefined
+                      el?.focus()
+                    }}
+                  >
+                    <span className="hdr-icon-chip" data-shape={opt.shape} data-fill={opt.fill}>
+                      <DocIcon name="link" variant="outline" className="hdr-icon-glyph" />
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="adv-settings" data-open={headerAdvancedOpen}>
+            <button
+              type="button"
+              className="adv-toggle"
+              aria-expanded={headerAdvancedOpen}
+              onClick={() => setHeaderAdvancedOpen((v) => !v)}
+            >
+              Advanced Settings
+              <svg
+                className="adv-chev"
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+
+            {headerAdvancedOpen && (
+              <div className="adv-body">
+                <div className="field">
+                  <span className="field-label">Name Style</span>
+                  <div className="style-pair" role="radiogroup" aria-label="Name style">
+                    <button
+                      type="button"
+                      className="style-opt"
+                      role="radio"
+                      aria-checked={headerNameStyle === 'normal'}
+                      aria-label="Upright name"
+                      data-active={headerNameStyle === 'normal'}
+                      onClick={() => setHeader({ nameStyle: 'normal' })}
+                    >
+                      Aa
+                    </button>
+                    <button
+                      type="button"
+                      className="style-opt"
+                      role="radio"
+                      aria-checked={headerNameStyle === 'italic'}
+                      aria-label="Italic name"
+                      data-style="italic"
+                      data-active={headerNameStyle === 'italic'}
+                      onClick={() => setHeader({ nameStyle: 'italic' })}
+                    >
+                      Aa
+                    </button>
+                  </div>
+                </div>
+
+                <div className="field">
+                  <span className="field-label">Professional Title Style</span>
+                  <div className="style-pair" role="radiogroup" aria-label="Professional title style">
+                    <button
+                      type="button"
+                      className="style-opt"
+                      role="radio"
+                      aria-checked={headerTitleStyle === 'normal'}
+                      aria-label="Upright professional title"
+                      data-active={headerTitleStyle === 'normal'}
+                      onClick={() => setHeader({ titleStyle: 'normal' })}
+                    >
+                      Aa
+                    </button>
+                    <button
+                      type="button"
+                      className="style-opt"
+                      role="radio"
+                      aria-checked={headerTitleStyle === 'italic'}
+                      aria-label="Italic professional title"
+                      data-style="italic"
+                      data-active={headerTitleStyle === 'italic'}
+                      onClick={() => setHeader({ titleStyle: 'italic' })}
+                    >
+                      Aa
+                    </button>
+                  </div>
+                </div>
+
+                <div className="field">
+                  <span className="field-label">Professional Title Position</span>
+                  <div className="pill-choice" role="radiogroup" aria-label="Professional title position">
+                    <button
+                      type="button"
+                      className="pill-opt"
+                      role="radio"
+                      aria-checked={headerTitlePosition === 'same-line'}
+                      data-active={headerTitlePosition === 'same-line'}
+                      onClick={() => setHeader({ titlePosition: 'same-line' })}
+                    >
+                      Try Same Line
+                    </button>
+                    <button
+                      type="button"
+                      className="pill-opt"
+                      role="radio"
+                      aria-checked={headerTitlePosition === 'below'}
+                      data-active={headerTitlePosition === 'below'}
+                      onClick={() => setHeader({ titlePosition: 'below' })}
+                    >
+                      Below
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* ============================================================ */}

@@ -332,6 +332,12 @@ class Settings(Base):
         alias="headingStyle",
     )
 
+    # Header card controls: alignment, details arrangement, icon frame, name and
+    # title style, title position. Free-form dict because every field is
+    # optional and absent means "as the template designed it"; the frontend owns
+    # the shape, so the schema never invents a default look.
+    header_style: dict | None = Field(None, alias="headerStyle")
+
     # Colors card: page/header/border tints, backdrop type, preset choice and
     # where the accent may reach. Free-form dict so the UI can evolve without
     # schema churn; the frontend owns the shape and its defaults.

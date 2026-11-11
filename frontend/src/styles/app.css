@@ -4018,3 +4018,219 @@ input[type='range']::-moz-range-thumb {
 .custom-tpl-delete:hover {
   background: rgba(220, 50, 50, 0.85);
 }
+
+/* ======================================================================
+   Header card
+   The controls live in the left pane beside the Layout card. Each mini
+   preview draws the result it produces, and the selected option takes the
+   accent while the rest stay pencil-grey -- the same contract as the layout
+   tiles above them.
+   ====================================================================== */
+
+/* -- Details arrangement: a contact line, drawn three ways --------------- */
+.lt-details {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: 100%;
+  height: 100%;
+  padding: 0 10px;
+}
+.lt-detail-word {
+  width: 22px;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ink-400);
+  transition: background-color 120ms var(--ease);
+}
+.lt-detail-icon {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--ink-400);
+  transition: background-color 120ms var(--ease);
+}
+.lt-detail-sep {
+  font-size: 10px;
+  line-height: 1;
+  color: var(--ink-300);
+  transition: color 120ms var(--ease);
+}
+.choice-tile[data-active='true'] .lt-detail-word,
+.choice-tile[data-active='true'] .lt-detail-icon {
+  background: var(--accent);
+}
+.choice-tile[data-active='true'] .lt-detail-sep {
+  color: var(--accent);
+}
+
+/* -- Icon style: seven framed glyphs in one row -------------------------- */
+.hdr-icon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.hdr-icon-opt {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  background: var(--ink-850);
+  color: var(--text-mid);
+  cursor: pointer;
+  transition:
+    border-color 120ms var(--ease),
+    background-color 120ms var(--ease),
+    color 120ms var(--ease),
+    box-shadow 120ms var(--ease);
+}
+.hdr-icon-opt:hover {
+  border-color: var(--ink-500);
+}
+.hdr-icon-opt[data-active='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.hdr-icon-chip {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border: 1px solid transparent;
+  border-radius: 28%;
+  transition:
+    background-color 120ms var(--ease),
+    border-color 120ms var(--ease),
+    color 120ms var(--ease);
+}
+.hdr-icon-chip[data-shape='circle'] {
+  border-radius: 50%;
+}
+.hdr-icon-chip[data-shape='square'] {
+  border-radius: 1.5px;
+}
+.hdr-icon-chip[data-fill='true'] {
+  /* The same grey the sheet paints, so the chip previews the document
+     rather than the shell's warmer token palette. */
+  background: #8f98a3;
+  color: #ffffff;
+}
+.hdr-icon-chip[data-fill='false']:not([data-shape='none']) {
+  border-color: var(--ink-400);
+}
+.hdr-icon-opt[data-active='true'] .hdr-icon-chip[data-fill='true'] {
+  background: var(--accent);
+}
+.hdr-icon-opt[data-active='true'] .hdr-icon-chip[data-fill='false'] {
+  border-color: var(--accent);
+}
+.hdr-icon-glyph {
+  width: 11px;
+  height: 11px;
+}
+
+/* -- Advanced settings: a real disclosure, not a hidden drawer ----------- */
+.adv-settings {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--ink-700);
+}
+.adv-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-mid);
+  font-size: var(--t-sm);
+  font-weight: 600;
+  cursor: pointer;
+}
+.adv-toggle:hover {
+  color: var(--text-hi);
+}
+.adv-chev {
+  transition: transform 160ms var(--ease);
+}
+.adv-settings[data-open='true'] .adv-chev {
+  transform: rotate(180deg);
+}
+.adv-body {
+  display: grid;
+  gap: 10px;
+  padding-top: 12px;
+}
+
+/* -- Letter pairs and pill choices --------------------------------------- */
+.style-pair {
+  display: flex;
+  gap: 6px;
+}
+.style-opt {
+  min-width: 42px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  background: var(--ink-850);
+  color: var(--text-mid);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    border-color 120ms var(--ease),
+    background-color 120ms var(--ease),
+    color 120ms var(--ease),
+    box-shadow 120ms var(--ease);
+}
+.style-opt[data-style='italic'] {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+}
+.style-opt:hover {
+  border-color: var(--ink-500);
+}
+.style-opt[data-active='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.pill-choice {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.pill-opt {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  background: var(--ink-850);
+  color: var(--text-mid);
+  font-size: var(--t-sm);
+  cursor: pointer;
+  transition:
+    border-color 120ms var(--ease),
+    background-color 120ms var(--ease),
+    color 120ms var(--ease),
+    box-shadow 120ms var(--ease);
+}
+.pill-opt:hover {
+  border-color: var(--ink-500);
+}
+.pill-opt[data-active='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 600;
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
