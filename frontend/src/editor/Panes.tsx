@@ -28,7 +28,7 @@ import { ResumeThumb } from '../components/ResumeThumb'
 import { demoDocument } from '../templates/demo'
 import { extractPalette } from './imagePalette'
 import { DocIcon, SECTION_ICONS, isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
-import { Check, Segmented, Slider, Text } from './fields'
+import { Check, ChoiceTiles, Segmented, Slider, Text } from './fields'
 import { SectionCard, useDragSensors, DRAG_MODIFIERS } from './SectionCard'
 import { PhotoAdjustDialog } from './PhotoAdjustDialog'
 import {
@@ -141,6 +141,57 @@ function DroppableColumn({
         )}
       </SortableContext>
     </div>
+  )
+}
+
+/** Miniature body for the Columns control: one stack of text lines, or two. */
+function ColumnsGlyph({ columns }: { columns: 1 | 2 }) {
+  const stack = (key: string) => (
+    <span className="lt-stack" key={key}>
+      <span className="lt-line" />
+      <span className="lt-line" />
+      <span className="lt-line" />
+      <span className="lt-line lt-line--short" />
+    </span>
+  )
+  return (
+    <span className="lt-lines" data-cols={columns} aria-hidden="true">
+      {columns === 2 ? (
+        <>
+          {stack('a')}
+          {stack('b')}
+        </>
+      ) : (
+        stack('a')
+      )}
+    </span>
+  )
+}
+
+/** Miniature of where the header band sits in a two-column page. */
+function HeaderBandGlyph({ mode }: { mode: 'top' | 'left' | 'right' }) {
+  return (
+    <span className="lt-band" data-mode={mode} aria-hidden="true">
+      <span className="lt-band-fill" />
+      <span className="lt-band-body">
+        <span className="lt-band-line" />
+        <span className="lt-band-line" />
+        <span className="lt-band-line lt-band-line--short" />
+      </span>
+    </span>
+  )
+}
+
+/** Miniature of a one-column header's text alignment. */
+function HeaderAlignGlyph({ align }: { align: 'center' | 'left' | 'right' }) {
+  return (
+    <span className="lt-align" data-align={align} aria-hidden="true">
+      <span className="lt-align-name" />
+      <span className="lt-align-contact" />
+      <span className="lt-align-rule" />
+      <span className="lt-align-rule" />
+      <span className="lt-align-rule lt-align-rule--short" />
+    </span>
   )
 }
 
@@ -301,35 +352,35 @@ export function LeftPane() {
         {/* ============================================================ */}
         <div className="pane-section">
           <p className="pane-section-title">Layout</p>
-          <Segmented
+          <ChoiceTiles
             label="Columns"
             value={columnLayout}
             options={[
-              { value: 'one', label: 'One' },
-              { value: 'two', label: 'Two' },
+              { value: 'one', label: 'One', visual: <ColumnsGlyph columns={1} /> },
+              { value: 'two', label: 'Two', visual: <ColumnsGlyph columns={2} /> },
             ]}
             onChange={(v) => (v === 'two' ? switchToTwo() : switchToOne())}
           />
           {columnLayout === 'two' && (
-            <Segmented
+            <ChoiceTiles
               label="Header Position"
               value={headerPosition}
               options={[
-                { value: 'top', label: 'Top' },
-                { value: 'left', label: 'Left' },
-                { value: 'right', label: 'Right' },
+                { value: 'top', label: 'Top', visual: <HeaderBandGlyph mode="top" /> },
+                { value: 'left', label: 'Left', visual: <HeaderBandGlyph mode="left" /> },
+                { value: 'right', label: 'Right', visual: <HeaderBandGlyph mode="right" /> },
               ]}
               onChange={(v) => updateSettings({ headerPosition: v })}
             />
           )}
           {columnLayout === 'one' && (
-            <Segmented
+            <ChoiceTiles
               label="Header Position"
               value={headerPosition === 'top' ? 'center' : headerPosition}
               options={[
-                { value: 'center', label: 'Center' },
-                { value: 'left', label: 'Left' },
-                { value: 'right', label: 'Right' },
+                { value: 'center', label: 'Center', visual: <HeaderAlignGlyph align="center" /> },
+                { value: 'left', label: 'Left', visual: <HeaderAlignGlyph align="left" /> },
+                { value: 'right', label: 'Right', visual: <HeaderAlignGlyph align="right" /> },
               ]}
               onChange={(v) => updateSettings({ headerPosition: v })}
             />

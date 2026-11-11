@@ -1,6 +1,6 @@
 /** Small controlled inputs shared by the section forms. */
 
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react'
 
 import { looksLikeList, parseSkillList, type ParsedSkills } from '../skills'
 
@@ -97,6 +97,70 @@ export function Segmented<T extends string | number>({
             {option.label}
           </button>
         ))}
+      </div>
+    </div>
+  )
+}
+
+/**
+ * A one-of-N choice shown as miniature previews rather than words. Spatial
+ * settings (columns, header position) are easier to pick by seeing the page
+ * than by reading a label, so each option draws the result it produces.
+ */
+export function ChoiceTiles<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string
+  value: T
+  options: { value: T; label: string; visual: ReactNode }[]
+  onChange: (value: T) => void
+}) {
+  /** Radio-group keyboard model: arrows move and select, Home/End jump. */
+  function onKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
+    const n = options.length
+    const index = Math.max(
+      0,
+      options.findIndex((o) => o.value === value),
+    )
+    let next = index
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') next = (index - 1 + n) % n
+    else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') next = (index + 1) % n
+    else if (e.key === 'Home') next = 0
+    else if (e.key === 'End') next = n - 1
+    else return
+    e.preventDefault()
+    onChange(options[next].value)
+    const target = e.currentTarget.parentElement?.children[next] as HTMLElement | undefined
+    target?.focus()
+  }
+
+  return (
+    <div className="field">
+      <span className="field-label">{label}</span>
+      <div className="choice-tiles" data-count={options.length} role="radiogroup" aria-label={label}>
+        {options.map((option) => {
+          const active = option.value === value
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className="choice-tile"
+              data-active={active}
+              role="radio"
+              aria-checked={active}
+              aria-label={option.label}
+              tabIndex={active ? 0 : -1}
+              onClick={() => onChange(option.value)}
+              onKeyDown={onKeyDown}
+            >
+              <span className="choice-tile-visual">{option.visual}</span>
+              <span className="choice-tile-label">{option.label}</span>
+            </button>
+          )
+        })}
       </div>
     </div>
   )

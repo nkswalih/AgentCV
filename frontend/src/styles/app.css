@@ -1057,6 +1057,210 @@
   color: #ffffff;
 }
 
+/* -- Visual one-of-N choices --------------------------------------------
+   Spatial settings read faster as a picture of the page they produce than
+   as a word. Each tile is a miniature; the label sits underneath, and the
+   selected tile takes the ink accent while the others stay pencil-grey. */
+.choice-tiles {
+  display: grid;
+  gap: 8px;
+}
+.choice-tiles[data-count='2'] {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.choice-tiles[data-count='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.choice-tiles[data-count='4'] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.choice-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  text-align: center;
+}
+
+.choice-tile-visual {
+  display: block;
+  height: 56px;
+  overflow: hidden;
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-sm);
+  background: var(--ink-850);
+  transition:
+    border-color 120ms var(--ease),
+    background-color 120ms var(--ease),
+    box-shadow 120ms var(--ease);
+}
+.choice-tile:hover .choice-tile-visual {
+  border-color: var(--ink-400);
+}
+/* Focus rings the whole tile (picture + label) so it stays legible even when
+   the focused tile is also the selected one. */
+.choice-tile:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+.choice-tile[data-active='true'] .choice-tile-visual {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.choice-tile-label {
+  font-size: var(--t-xs);
+  color: var(--text-mid);
+  transition: color 120ms var(--ease);
+}
+.choice-tile:hover .choice-tile-label {
+  color: var(--text-hi);
+}
+.choice-tile[data-active='true'] .choice-tile-label {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Columns: stacks of text lines. */
+.lt-lines {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  height: 100%;
+  padding: 0 13px;
+}
+.lt-lines[data-cols='1'] {
+  padding: 0 20px;
+}
+.lt-stack {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+}
+.lt-line {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ink-400);
+  transition: background-color 120ms var(--ease);
+}
+.lt-line--short {
+  width: 62%;
+}
+.choice-tile[data-active='true'] .lt-line {
+  background: var(--accent);
+}
+
+/* Header band: top strip, or a side rail, with the body still visible. */
+.lt-band {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+.lt-band[data-mode='top'] {
+  flex-direction: column;
+}
+.lt-band[data-mode='left'],
+.lt-band[data-mode='right'] {
+  flex-direction: row;
+}
+.lt-band-fill {
+  flex: 0 0 34%;
+  background: var(--ink-400);
+  transition: background-color 120ms var(--ease);
+}
+.lt-band[data-mode='left'] .lt-band-fill,
+.lt-band[data-mode='right'] .lt-band-fill {
+  flex-basis: 36%;
+}
+.lt-band[data-mode='right'] .lt-band-fill {
+  order: 2;
+}
+.lt-band-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 8px;
+  background: var(--ink-850);
+  transition: background-color 120ms var(--ease);
+}
+.lt-band[data-mode='left'] .lt-band-body,
+.lt-band[data-mode='right'] .lt-band-body {
+  padding: 9px 7px;
+}
+.lt-band-line {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ink-500);
+  transition: background-color 120ms var(--ease);
+}
+.lt-band-line--short {
+  width: 62%;
+}
+.choice-tile[data-active='true'] .lt-band-fill {
+  background: var(--accent);
+}
+.choice-tile[data-active='true'] .lt-band-body {
+  background: var(--accent-soft);
+}
+.choice-tile[data-active='true'] .lt-band-line {
+  background: var(--ink-400);
+}
+
+/* One-column header alignment: name, contact line, rule, then body rules. */
+.lt-align {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 100%;
+  height: 100%;
+  padding: 8px 10px;
+}
+.lt-align-name {
+  width: 52%;
+  height: 5px;
+  border-radius: 3px;
+  background: var(--ink-400);
+  transition: background-color 120ms var(--ease);
+}
+.lt-align-rule {
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ink-500);
+}
+.lt-align-contact {
+  width: 38%;
+  height: 2px;
+  border-radius: 2px;
+  background: var(--ink-500);
+  opacity: 0.75;
+}
+.lt-align-rule--short {
+  width: 66%;
+}
+.lt-align[data-align='center'] .lt-align-name,
+.lt-align[data-align='center'] .lt-align-contact {
+  align-self: center;
+}
+.lt-align[data-align='right'] .lt-align-name,
+.lt-align[data-align='right'] .lt-align-contact {
+  align-self: flex-end;
+}
+.choice-tile[data-active='true'] .lt-align-name {
+  background: var(--accent);
+}
+
 input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
