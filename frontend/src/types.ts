@@ -226,10 +226,28 @@ export interface HeaderStyle {
   titlePosition?: 'below' | 'same-line'
 }
 
+/**
+ * Link card controls. Both fields are optional; absent means the design's own
+ * treatment, so a document that never opened the card keeps its look.
+ */
+export interface LinkStyle {
+  /** How clickable contact entries are marked: none, a rule, or a dotted rule. */
+  decoration?: 'plain' | 'underline' | 'dotted'
+  /** Link ink: the surrounding text colour, or the document accent. */
+  color?: 'ink' | 'accent'
+}
+
 export interface Settings {
   template: TemplateId
   accentColor: string
   fontFamily: string
+  /**
+   * Optional faces for the name and professional title. Absent means "same as
+   * the body", which is how every design already behaves -- choosing a face is
+   * the only thing that emits an override.
+   */
+  nameFont?: string
+  titleFont?: string
   fontSize: number
   lineHeight: number
   sectionSpacing: number
@@ -310,6 +328,13 @@ export interface Settings {
 
   /** Header card controls. Absent means each template's own treatment. */
   headerStyle?: HeaderStyle
+
+  /**
+   * Link styling for the contact line's clickable entries. Absent means the
+   * design's own treatment -- most templates print links as plain ink, Jake
+   * underlines them -- so untouched documents keep their look.
+   */
+  linkStyle?: LinkStyle
 
   /**
    * Colors card state. Undefined fields mean "template default" — the resume

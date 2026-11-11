@@ -295,6 +295,13 @@ class Settings(Base):
     title_size: float | None = Field(None, alias="titleSize", ge=8, le=24)
     heading_size: float | None = Field(None, alias="headingSize", ge=7, le=20)
     entry_size: float | None = Field(None, alias="entrySize", ge=7, le=20)
+    contact_size: float | None = Field(None, alias="contactSize", ge=7, le=20)
+
+    # Typography card: optional faces for the name and professional title. Empty
+    # means "same as the body font", which is the designed state -- only a
+    # chosen face is stored.
+    name_font: str | None = Field(None, alias="nameFont")
+    title_font: str | None = Field(None, alias="titleFont")
 
     # Layout controls
     column_layout: str = Field("one", alias="columnLayout")
@@ -337,6 +344,10 @@ class Settings(Base):
     # optional and absent means "as the template designed it"; the frontend owns
     # the shape, so the schema never invents a default look.
     header_style: dict | None = Field(None, alias="headerStyle")
+
+    # Link card: decoration and colour for the contact line's clickable
+    # entries. Free-form dict, absent means the design's own treatment.
+    link_style: dict | None = Field(None, alias="linkStyle")
 
     # Colors card: page/header/border tints, backdrop type, preset choice and
     # where the accent may reach. Free-form dict so the UI can evolve without

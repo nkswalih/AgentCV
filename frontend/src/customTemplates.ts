@@ -8,6 +8,8 @@ export interface CustomTemplate {
   settings: Pick<
     Settings,
     | 'fontFamily'
+    | 'nameFont'
+    | 'titleFont'
     | 'accentColor'
     | 'fontSize'
     | 'lineHeight'
@@ -27,6 +29,7 @@ export interface CustomTemplate {
     | 'photoLayout'
     | 'headingStyle'
     | 'headerStyle'
+    | 'linkStyle'
     | 'colors'
   >
   createdAt: number
@@ -57,6 +60,8 @@ export function saveCustomTemplate(
     baseTemplate: settings.template,
     settings: {
       fontFamily: settings.fontFamily,
+      nameFont: settings.nameFont,
+      titleFont: settings.titleFont,
       accentColor: settings.accentColor,
       fontSize: settings.fontSize,
       lineHeight: settings.lineHeight,
@@ -76,6 +81,7 @@ export function saveCustomTemplate(
       photoLayout: { ...settings.photoLayout },
       headingStyle: { ...settings.headingStyle },
       headerStyle: settings.headerStyle ? { ...settings.headerStyle } : undefined,
+      linkStyle: settings.linkStyle ? { ...settings.linkStyle } : undefined,
       colors: settings.colors ? { ...settings.colors } : undefined,
     },
     createdAt: Date.now(),

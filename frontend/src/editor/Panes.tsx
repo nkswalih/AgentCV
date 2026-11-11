@@ -55,6 +55,7 @@ import type {
   HeaderIconStyle,
   HeaderStyle,
   Link,
+  LinkStyle,
   Section,
   SectionType,
   TemplateId,
@@ -248,6 +249,42 @@ const ITALIC_TITLE_TEMPLATES = new Set<TemplateId>([
   'modern-deep',
 ])
 
+/** Designs whose links are underlined by default, so the Link card's resting
+ *  tile agrees with the sheet. */
+const LINK_UNDERLINED_TEMPLATES = new Set<TemplateId>(['jake'])
+
+/** A font picker over the ATS-safe catalogue. With `sameAsBody`, the empty
+ *  option means "inherit the body face" -- the resting state of every design. */
+function FontSelect({
+  label,
+  value,
+  onChange,
+  sameAsBody,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  sameAsBody?: boolean
+}) {
+  return (
+    <label className="field">
+      <span className="field-label">{label}</span>
+      <select className="select" value={value} onChange={(e) => onChange(e.target.value)}>
+        {sameAsBody && <option value="">Same as body font</option>}
+        {FONT_GROUPS.map((group) => (
+          <optgroup key={group} label={FONT_GROUP_LABELS[group]}>
+            {FONT_CHOICES.filter((font) => font.group === group).map((font) => (
+              <option key={font.label} value={font.label}>
+                {font.label} · {font.kind}
+              </option>
+            ))}
+          </optgroup>
+        ))}
+      </select>
+    </label>
+  )
+}
+
 
 export function LeftPane() {
   const { doc, addSection, moveSection, moveSectionToColumn, updateSettings } = useEditor()
@@ -415,6 +452,18 @@ export function LeftPane() {
   const setHeader = (patch: HeaderStyle) =>
     updateSettings({ headerStyle: { ...header, ...patch } })
 
+  // -- Link card state -----------------------------------------------------
+  // Same rule as the header: the resting value is whatever the sheet already
+  // shows, so Jake's underlined links light up the Underline tile and every
+  // other design rests on Plain.
+  const link = currentDoc.settings.linkStyle ?? {}
+  const linkDecoration =
+    link.decoration ??
+    (LINK_UNDERLINED_TEMPLATES.has(currentDoc.settings.template) ? 'underline' : 'plain')
+  const linkColor = link.color ?? 'ink'
+  const setLink = (patch: LinkStyle) =>
+    updateSettings({ linkStyle: { ...link, ...patch } })
+
 
   return (
     <aside className="pane pane-left">
@@ -505,6 +554,175 @@ export function LeftPane() {
             </div>
           )}
         </div>
+
+        {/* ============================================================ */}
+        {/*  CONTENT                                                     */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Content</p>
+          {columnLayout === 'one' ? (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              modifiers={DRAG_MODIFIERS}
+              onDragEnd={onSingleDragEnd}
+            >
+              <SortableContext
+                items={currentDoc.sections.map((s) => s.id)}
+                strategy={verticalListSortingStrategy}
+              >
+                {currentDoc.sections.map((section) => (
+                  <SectionCard key={section.id} section={section} />
+                ))}
+              </SortableContext>
+            </DndContext>
+          ) : (
+            <DndContext
+              sensors={sensors}
+              collisionDetection={dualCollisionDetection}
+              onDragStart={onDualDragStart}
+              onDragOver={onDualDragOver}
+              onDragEnd={onDualDragEnd}
+              onDragCancel={onDualDragCancel}
+            >
+              {/* -- Profile header card ---------------------------------- */}
+              <div className="profile-header-card">
+                <p className="eyebrow" style={{ marginBottom: 6 }}>Profile</p>
+                <div className="profile-header-row">
+                  {currentDoc.basics.photoUrl && (
+                    <img
+                      className="profile-header-thumb"
+                      src={currentDoc.basics.photoUrl}
+                      alt=""
+                    />
+                  )}
+                  <div className="profile-header-info">
+                    <span className="profile-header-name">
+                      {currentDoc.basics.fullName || 'Your Name'}
+                    </span>
+                    {currentDoc.basics.headline && (
+                      <span className="profile-header-headline">
+                        {currentDoc.basics.headline}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="dual-columns">
+                <div className="dual-column">
+                  <p className="eyebrow">Left Column</p>
+                  <DroppableColumn
+                    id="left-column"
+                    column="left"
+                    items={leftIds}
+                    sections={leftSections}
+                    emptyLabel="Drop sections here"
+                    insertAt={dropTarget?.column === 'left' ? dropTarget.index : null}
+                  />
+                </div>
+                <div className="dual-column">
+                  <p className="eyebrow">Right Column</p>
+                  <DroppableColumn
+                    id="right-column"
+                    column="right"
+                    items={rightIds}
+                    sections={rightSections}
+                    emptyLabel="Drop sections here"
+                    insertAt={dropTarget?.column === 'right' ? dropTarget.index : null}
+                  />
+                </div>
+              </div>
+
+              <DragOverlay dropAnimation={null}>
+                {activeId ? (
+                  <div className="drag-overlay-card">
+                    <DragOverlayCard
+                      section={currentDoc.sections.find((s) => s.id === activeId)!}
+                    />
+                  </div>
+                ) : null}
+              </DragOverlay>
+            </DndContext>
+          )}
+        </div>
+
+        {/* ============================================================ */}
+        {/*  ADD SECTION                                                 */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Add Section</p>
+          <div className="add-section-pills">
+            {ADDABLE.map((type) => (
+              <button key={type} className="btn btn-sm" onClick={() => addSection(type)}>
+                <Plus />
+                {type === 'custom' ? 'Custom' : type[0].toUpperCase() + type.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ============================================================ */}
+        {/*  PHOTO                                                       */}
+        {/* ============================================================ */}
+        {currentDoc.settings.showPhoto && (
+        <div className="pane-section">
+          <p className="pane-section-title">Photo</p>
+          <Check
+            label="Grayscale"
+            checked={pl.grayscale}
+            onChange={(grayscale) => updateSettings({ photoLayout: { ...pl, grayscale } })}
+          />
+          <Segmented
+            label="Position"
+            value={pl.position}
+            options={[
+              { value: 'left', label: 'Left' },
+              { value: 'top', label: 'Top' },
+              { value: 'right', label: 'Right' },
+            ]}
+            onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
+          />
+          <Slider label="Size" value={pl.size} min={14} max={44} step={1} unit="mm" onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })} />
+          <Segmented
+            label="Shape"
+            value={pl.shape}
+            options={[
+              { value: 'circle', label: 'Circle' },
+              { value: 'rounded', label: 'Rounded' },
+              { value: 'square', label: 'Square' },
+            ]}
+            onChange={(shape) => updateSettings({ photoLayout: { ...pl, shape } })}
+          />
+          <Check
+            label="Border"
+            checked={pl.border}
+            onChange={(border) => updateSettings({ photoLayout: { ...pl, border } })}
+          />
+          {pl.border && (
+            <>
+              <Slider label="Border Width" value={pl.borderWidth} min={0.5} max={10} step={0.5} unit="pt" onChange={(borderWidth) => updateSettings({ photoLayout: { ...pl, borderWidth } })} />
+              <label className="field">
+                <span className="field-label">Border Color</span>
+                <div className="color-input-row">
+                  <input
+                    type="color"
+                    className="color-input"
+                    value={pl.borderColor}
+                    onChange={(e) => updateSettings({ photoLayout: { ...pl, borderColor: e.target.value } })}
+                  />
+                  <span className="color-input-value">{pl.borderColor}</span>
+                </div>
+              </label>
+            </>
+          )}
+          {currentDoc.basics.photoUrl && (
+            <button className="btn btn-sm photo-adjust-trigger" type="button" onClick={() => setPhotoAdjustOpen(true)}>
+              Adjust / crop photo
+            </button>
+          )}
+        </div>
+        )}
 
         {/* ============================================================ */}
         {/*  HEADER                                                      */}
@@ -699,175 +917,6 @@ export function LeftPane() {
         </div>
 
         {/* ============================================================ */}
-        {/*  CONTENT                                                     */}
-        {/* ============================================================ */}
-        <div className="pane-section">
-          <p className="pane-section-title">Content</p>
-          {columnLayout === 'one' ? (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              modifiers={DRAG_MODIFIERS}
-              onDragEnd={onSingleDragEnd}
-            >
-              <SortableContext
-                items={currentDoc.sections.map((s) => s.id)}
-                strategy={verticalListSortingStrategy}
-              >
-                {currentDoc.sections.map((section) => (
-                  <SectionCard key={section.id} section={section} />
-                ))}
-              </SortableContext>
-            </DndContext>
-          ) : (
-            <DndContext
-              sensors={sensors}
-              collisionDetection={dualCollisionDetection}
-              onDragStart={onDualDragStart}
-              onDragOver={onDualDragOver}
-              onDragEnd={onDualDragEnd}
-              onDragCancel={onDualDragCancel}
-            >
-              {/* -- Profile header card ---------------------------------- */}
-              <div className="profile-header-card">
-                <p className="eyebrow" style={{ marginBottom: 6 }}>Profile</p>
-                <div className="profile-header-row">
-                  {currentDoc.basics.photoUrl && (
-                    <img
-                      className="profile-header-thumb"
-                      src={currentDoc.basics.photoUrl}
-                      alt=""
-                    />
-                  )}
-                  <div className="profile-header-info">
-                    <span className="profile-header-name">
-                      {currentDoc.basics.fullName || 'Your Name'}
-                    </span>
-                    {currentDoc.basics.headline && (
-                      <span className="profile-header-headline">
-                        {currentDoc.basics.headline}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              <div className="dual-columns">
-                <div className="dual-column">
-                  <p className="eyebrow">Left Column</p>
-                  <DroppableColumn
-                    id="left-column"
-                    column="left"
-                    items={leftIds}
-                    sections={leftSections}
-                    emptyLabel="Drop sections here"
-                    insertAt={dropTarget?.column === 'left' ? dropTarget.index : null}
-                  />
-                </div>
-                <div className="dual-column">
-                  <p className="eyebrow">Right Column</p>
-                  <DroppableColumn
-                    id="right-column"
-                    column="right"
-                    items={rightIds}
-                    sections={rightSections}
-                    emptyLabel="Drop sections here"
-                    insertAt={dropTarget?.column === 'right' ? dropTarget.index : null}
-                  />
-                </div>
-              </div>
-
-              <DragOverlay dropAnimation={null}>
-                {activeId ? (
-                  <div className="drag-overlay-card">
-                    <DragOverlayCard
-                      section={currentDoc.sections.find((s) => s.id === activeId)!}
-                    />
-                  </div>
-                ) : null}
-              </DragOverlay>
-            </DndContext>
-          )}
-        </div>
-
-        {/* ============================================================ */}
-        {/*  ADD SECTION                                                 */}
-        {/* ============================================================ */}
-        <div className="pane-section">
-          <p className="pane-section-title">Add Section</p>
-          <div className="add-section-pills">
-            {ADDABLE.map((type) => (
-              <button key={type} className="btn btn-sm" onClick={() => addSection(type)}>
-                <Plus />
-                {type === 'custom' ? 'Custom' : type[0].toUpperCase() + type.slice(1)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* ============================================================ */}
-        {/*  PHOTO                                                       */}
-        {/* ============================================================ */}
-        {currentDoc.settings.showPhoto && (
-        <div className="pane-section">
-          <p className="pane-section-title">Photo</p>
-          <Check
-            label="Grayscale"
-            checked={pl.grayscale}
-            onChange={(grayscale) => updateSettings({ photoLayout: { ...pl, grayscale } })}
-          />
-          <Segmented
-            label="Position"
-            value={pl.position}
-            options={[
-              { value: 'left', label: 'Left' },
-              { value: 'top', label: 'Top' },
-              { value: 'right', label: 'Right' },
-            ]}
-            onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
-          />
-          <Slider label="Size" value={pl.size} min={14} max={44} step={1} unit="mm" onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })} />
-          <Segmented
-            label="Shape"
-            value={pl.shape}
-            options={[
-              { value: 'circle', label: 'Circle' },
-              { value: 'rounded', label: 'Rounded' },
-              { value: 'square', label: 'Square' },
-            ]}
-            onChange={(shape) => updateSettings({ photoLayout: { ...pl, shape } })}
-          />
-          <Check
-            label="Border"
-            checked={pl.border}
-            onChange={(border) => updateSettings({ photoLayout: { ...pl, border } })}
-          />
-          {pl.border && (
-            <>
-              <Slider label="Border Width" value={pl.borderWidth} min={0.5} max={10} step={0.5} unit="pt" onChange={(borderWidth) => updateSettings({ photoLayout: { ...pl, borderWidth } })} />
-              <label className="field">
-                <span className="field-label">Border Color</span>
-                <div className="color-input-row">
-                  <input
-                    type="color"
-                    className="color-input"
-                    value={pl.borderColor}
-                    onChange={(e) => updateSettings({ photoLayout: { ...pl, borderColor: e.target.value } })}
-                  />
-                  <span className="color-input-value">{pl.borderColor}</span>
-                </div>
-              </label>
-            </>
-          )}
-          {currentDoc.basics.photoUrl && (
-            <button className="btn btn-sm photo-adjust-trigger" type="button" onClick={() => setPhotoAdjustOpen(true)}>
-              Adjust / crop photo
-            </button>
-          )}
-        </div>
-        )}
-
-        {/* ============================================================ */}
         {/*  SECTION HEADINGS                                            */}
         {/* ============================================================ */}
         <div className="pane-section">
@@ -937,6 +986,36 @@ export function LeftPane() {
               </div>
             </div>
           )}
+        </div>
+
+        {/* ============================================================ */}
+        {/*  LINK STYLING                                                */}
+        {/* ============================================================ */}
+        <div className="pane-section">
+          <p className="pane-section-title">Link Styling</p>
+          <Segmented
+            label="Link style"
+            value={linkDecoration}
+            options={[
+              { value: 'plain', label: 'Plain' },
+              { value: 'underline', label: 'Underline' },
+              { value: 'dotted', label: 'Dotted' },
+            ]}
+            onChange={(decoration) => setLink({ decoration })}
+          />
+          <Segmented
+            label="Link colour"
+            value={linkColor}
+            options={[
+              { value: 'ink', label: 'Body ink' },
+              { value: 'accent', label: 'Accent' },
+            ]}
+            onChange={(color) => setLink({ color })}
+          />
+          <p className="hint" style={{ marginTop: -6 }}>
+            Applies to every clickable contact entry -- email, phone, site and
+            your extra links. The sheet shows the same treatment in the PDF.
+          </p>
         </div>
 
       </div>
@@ -1389,27 +1468,28 @@ export function RightPane() {
 
         <section className="style-section">
           <p className="eyebrow style-section-title">Typography</p>
-          <label className="field">
-            <span className="field-label">Font</span>
-            <select
-              className="select"
-              value={doc.settings.fontFamily}
-              onChange={(e) => updateSettings({ fontFamily: e.target.value })}
-            >
-              {FONT_GROUPS.map((group) => (
-                <optgroup key={group} label={FONT_GROUP_LABELS[group]}>
-                  {FONT_CHOICES.filter((font) => font.group === group).map((font) => (
-                    <option key={font.label} value={font.label}>
-                      {font.label} · {font.kind}
-                    </option>
-                  ))}
-                </optgroup>
-              ))}
-            </select>
-          </label>
+          <FontSelect
+            label="Body Font"
+            value={doc.settings.fontFamily}
+            onChange={(fontFamily) => updateSettings({ fontFamily })}
+          />
+          <FontSelect
+            label="Name Font"
+            value={doc.settings.nameFont ?? ''}
+            sameAsBody
+            onChange={(nameFont) => updateSettings({ nameFont: nameFont || undefined })}
+          />
+          <FontSelect
+            label="Title Font"
+            value={doc.settings.titleFont ?? ''}
+            sameAsBody
+            onChange={(titleFont) => updateSettings({ titleFont: titleFont || undefined })}
+          />
           <p className="hint" style={{ marginTop: -6 }}>
-            Every choice is ATS-safe. Display fonts (Montserrat, Poppins…) are left out on
-            purpose -- older parsers misread their fi/fl ligatures.
+            The name and title follow the body font until you pick a face for
+            them. Every choice is ATS-safe. Display fonts (Montserrat, Poppins…)
+            are left out on purpose -- older parsers misread their fi/fl
+            ligatures.
           </p>
           <Slider
             label="Base font size"

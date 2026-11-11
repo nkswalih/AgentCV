@@ -1592,7 +1592,9 @@
 }
 /* Underlined links like LaTeX \underline{} */
 .tpl-jake .doc-link,
-.tpl-jake .doc-contact a {
+.tpl-jake .doc-contact a,
+.tpl-jake a.doc-link .doc-contact-text,
+.tpl-jake .doc-contact a .doc-contact-text {
   color: #000;
   text-decoration: underline;
   text-underline-offset: 1pt;
@@ -2945,4 +2947,46 @@
 .page[data-title-position='same-line'] [data-doc-header] .doc-headline {
   margin: 0 0 0 0.55em;
   font-weight: 400;
+}
+
+/* =========================================================================
+ * 6. Typography and link cards
+ *
+ * Both cards are opt-in in exactly the same way: a document that never chose
+ * a face or a link treatment carries none of these attributes, so every design
+ * keeps the treatment it was drawn with. A chosen face or link look wins over
+ * the template rule that owns the slot by being more specific, not by force.
+ * ====================================================================== */
+
+/* -- Name and title faces -------------------------------------------------
+   "Same as body" is the absence of these attributes, which is why the default
+   needs no rule: the slot already inherits --doc-font through the template. */
+.page[data-name-font] [data-doc-header] .doc-name {
+  font-family: var(--doc-name-font);
+}
+.page[data-title-font] [data-doc-header] .doc-headline {
+  font-family: var(--doc-title-font);
+}
+
+/* -- Link styling --------------------------------------------------------
+   Links are the clickable contact entries (email, phone, site, extra links).
+   Underline draws a rule the width of the text; dotted keeps it lighter for
+   designs where a solid rule reads as a typo. The text span is listed because
+   the contact item is a flex box and decoration stops at that boundary. */
+.page[data-link-style='plain'] :is(a.doc-link, .doc-contact a, a.doc-link .doc-contact-text, .doc-contact a .doc-contact-text) {
+  text-decoration: none;
+}
+.page[data-link-style='underline'] :is(a.doc-link, .doc-contact a, a.doc-link .doc-contact-text, .doc-contact a .doc-contact-text) {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+.page[data-link-style='dotted'] :is(a.doc-link, .doc-contact a, a.doc-link .doc-contact-text, .doc-contact a .doc-contact-text) {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+.page[data-link-color='ink'] :is(a.doc-link, .doc-contact a) {
+  color: inherit;
+}
+.page[data-link-color='accent'] :is(a.doc-link, .doc-contact a) {
+  color: var(--doc-accent);
 }

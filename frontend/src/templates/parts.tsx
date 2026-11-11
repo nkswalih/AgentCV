@@ -214,7 +214,10 @@ export function Contact({
     const content = icons ? (
       <span className="doc-contact-item">
         <DocIcon name={entry.icon} />
-        {entry.text}
+        {/* The item is a flex box, and text decoration does not reach into an
+            atomic inline child -- so the link's rule is drawn on the text
+            itself rather than on the anchor around it. */}
+        <span className="doc-contact-text">{entry.text}</span>
       </span>
     ) : (
       entry.text

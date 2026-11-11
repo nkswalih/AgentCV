@@ -253,6 +253,14 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     ...(settings.headingSize != null && { '--doc-heading-size': `${settings.headingSize}pt` }),
     ...(settings.entrySize != null && { '--doc-entry-size': `${settings.entrySize}pt` }),
     ...(settings.contactSize != null && { '--doc-contact-size': `${settings.contactSize}pt` }),
+    // Optional faces for the identity. Only a chosen face emits anything; the
+    // absent case keeps whatever face the design already uses for that slot.
+    ...(settings.nameFont && {
+      '--doc-name-font': FONT_STACKS[settings.nameFont] ?? FONT_STACKS.Inter,
+    }),
+    ...(settings.titleFont && {
+      '--doc-title-font': FONT_STACKS[settings.titleFont] ?? FONT_STACKS.Inter,
+    }),
     ...(fullActive &&
       colors?.bgType === 'multi' && {
         '--doc-page-bg': colors.backgroundColor ?? '#f8fafc',
@@ -318,6 +326,12 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     ...(hdr.nameStyle && { 'data-name-style': hdr.nameStyle }),
     ...(hdr.titleStyle && { 'data-title-style': hdr.titleStyle }),
     ...(hdr.titlePosition && { 'data-title-position': hdr.titlePosition }),
+    // Typography card. A chosen face is the only thing that emits these.
+    ...(settings.nameFont && { 'data-name-font': 'true' }),
+    ...(settings.titleFont && { 'data-title-font': 'true' }),
+    // Link card. Absent leaves each design's own link treatment alone.
+    ...(settings.linkStyle?.decoration && { 'data-link-style': settings.linkStyle.decoration }),
+    ...(settings.linkStyle?.color && { 'data-link-color': settings.linkStyle.color }),
     ...(colors && {
       'data-colors': 'on',
       // Only the Full Page tab owns the sheet treatment. On Header or Border,
