@@ -25,11 +25,24 @@
  * 1. Foundation
  * ====================================================================== */
 
+/* The document's own reset. The app already sets this globally via
+   tokens.css, so here it is a no-op in the editor -- but this file is inlined
+   alone into the HTML export, where that global reset is absent. Without it,
+   padded blocks (doc-body, doc-main, doc-rail) overflow the sheet. */
+.page,
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+
 .page {
   /* Paper. Overridden to Letter via [data-paper]. */
   width: 210mm;
   min-height: 297mm;
-  background: var(--paper);
+  /* Fallback matters: this file is inlined alone into the HTML export, where
+     the app's tokens.css (and its --paper) is not present. */
+  background: var(--paper, #ffffff);
   color: #191e24;
 
   /* Every knob in the style panel arrives as a custom property, so changing a
@@ -724,7 +737,7 @@
   color: #17272b;
 }
 .tpl-devtech .doc-headline {
-  font-size: var(--doc-headline-size, 13pt);
+  font-size: var(--doc-title-size, 13pt);
   font-weight: 600;
   color: #0f766e;
 }
@@ -824,7 +837,8 @@
   z-index: 1;
 }
 .tpl-timeline .tl-when {
-  font-size: 8.5pt;
+  /* 8.5pt of the 10.5pt body -- tracks the Base font size slider. */
+  font-size: calc(var(--doc-size, 10.5pt) * 0.809524);
   font-weight: 650;
   color: #39424c;
   white-space: nowrap;
@@ -982,7 +996,7 @@
   margin: 0 0 7pt;
 }
 .tpl-sidebar .doc-rail .doc-section-title {
-  font-size: 13pt;
+  font-size: var(--doc-heading-size, 13pt);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.15em;
@@ -1016,7 +1030,7 @@
   color: #e1e1e1;
 }
 .tpl-sidebar .doc-headline {
-  font-size: var(--doc-headline-size, 13pt);
+  font-size: var(--doc-title-size, 13pt);
   font-weight: 550;
   color: #6f7781;
 }
@@ -1124,7 +1138,8 @@
      keeps a coloured header looking composed rather than decorated. */
   background: #2e3a80;
   color: #eef1fc;
-  padding: 6.5mm var(--doc-margin-x, 15mm);
+  /* 6.5mm at the 14mm default, so the band follows Top & bottom margin. */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.464286) var(--doc-margin-x, 15mm);
   display: flex;
   align-items: center;
   gap: 7mm;
@@ -1201,13 +1216,15 @@
 .tpl-portal-pro .doc-rail {
   background: #193242;
   color: #e2e8f0;
-  padding: var(--doc-margin-y, 14mm) 8mm var(--doc-margin-y, 14mm) 10mm;
+  /* The rail's inset tracks the page margins: 8mm / 10mm at the 15mm default. */
+  padding: var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.533333)
+    var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.666667);
   display: flex;
   flex-direction: column;
   gap: 0;
 }
 .tpl-portal-pro .doc-rail .doc-name {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: var(--doc-font, Georgia, 'Times New Roman', serif);
   font-size: var(--doc-name-size, 24pt);
   color: #ffffff;
   font-weight: 700;
@@ -1248,10 +1265,11 @@
   opacity: 0.8;
 }
 .tpl-portal-pro .doc-rail .doc-section {
-  margin-top: 17pt;
+  /* 17pt at the preset's 0.85 spacing multiplier. */
+  margin-top: calc(var(--doc-gap, 0.85) * 20pt);
 }
 .tpl-portal-pro .doc-rail .doc-section-title {
-  font-size: 12pt;
+  font-size: var(--doc-heading-size, 12pt);
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: #ffffff;
@@ -1265,20 +1283,21 @@
 }
 .tpl-portal-pro .doc-rail .doc-skillgroup-label {
   color: #e2e8f0;
-  font-size: 13pt;
+  /* 13pt of the 10.5pt body -- tracks the Base font size slider. */
+  font-size: calc(var(--doc-size, 10.5pt) * 1.238095);
 }
 .tpl-portal-pro .doc-rail .doc-skilllines {
   padding-left: 10pt;
   color: #cfd8dc;
-  font-size: 14pt;
+  font-size: calc(var(--doc-size, 10.5pt) * 1.333333);
 }
 .tpl-portal-pro .doc-rail .doc-langrow {
-  font-size: 14pt;
+  font-size: calc(var(--doc-size, 10.5pt) * 1.333333);
   color: #cfd8dc;
 }
 .tpl-portal-pro .doc-rail .doc-summary {
-  font-size: 14pt;
-  line-height: 1.5;
+  font-size: calc(var(--doc-size, 10.5pt) * 1.333333);
+  line-height: max(1.05, calc(var(--doc-leading, 1.45) * 1.034483));
   color: #d1d5db;
   text-align: justify;
 }
@@ -1316,7 +1335,7 @@
 }
 .tpl-portal-pro .doc-main .doc-summary {
   text-align: justify;
-  line-height: 1.25;
+  line-height: max(1.05, calc(var(--doc-leading, 1.45) * 0.862069));
 }
 
 /* -- Modern Deep: dark rail with square photo and underline-bar headers -- */
@@ -1328,7 +1347,9 @@
 .tpl-modern-deep .doc-rail {
   background: #2b3a55;
   color: #d1d5db;
-  padding: var(--doc-margin-y, 14mm) 7mm var(--doc-margin-y, 14mm) 10mm;
+  /* 7mm / 10mm at the 15mm default, so the rail follows the page margins. */
+  padding: var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.466667)
+    var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.666667);
   display: flex;
   flex-direction: column;
 }
@@ -1357,10 +1378,11 @@
   opacity: 0.7;
 }
 .tpl-modern-deep .doc-rail .doc-section {
-  margin-top: 10pt;
+  /* 10pt at the preset's 0.85 spacing multiplier. */
+  margin-top: calc(var(--doc-gap, 0.85) * 11.764706pt);
 }
 .tpl-modern-deep .doc-rail .doc-section-title {
-  font-size: 13pt;
+  font-size: var(--doc-heading-size, 13pt);
   text-transform: uppercase;
   letter-spacing: 0.12em;
   color: #ffffff;
@@ -1385,10 +1407,10 @@
 .tpl-modern-deep .doc-rail .doc-skilllines {
   padding-left: 10pt;
   color: #cbd5e1;
-  font-size: 12pt;
+  font-size: calc(var(--doc-size, 10.5pt) * 1.142857);
 }
 .tpl-modern-deep .doc-rail .doc-langrow {
-  font-size: 13pt;
+  font-size: calc(var(--doc-size, 10.5pt) * 1.238095);
   color: #cbd5e1;
 }
 .tpl-modern-deep .doc-rail .doc-lang-dots {
@@ -1598,7 +1620,7 @@
 }
 .tpl-jake .doc-item-title {
   font-weight: 700;
-  font-size: 1em; /* was 10.5pt — position prints at full body size */
+  font-size: var(--doc-entry-size, 1em); /* was 10.5pt — position prints at full body size */
   color: #000;
 }
 .tpl-jake .doc-item-date {
@@ -1715,7 +1737,8 @@
 /* -- Creative top-header: compact the band -------------------------------- */
 [data-columns="one"].tpl-creative .doc-band,
 [data-columns="two"][data-header="top"].tpl-creative .doc-band {
-  padding: calc(6.5mm * 0.6) var(--doc-margin-x, 15mm);
+  /* 3.9mm at the 14mm default (6.5mm band * 0.6). */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.278571) var(--doc-margin-x, 15mm);
 }
 [data-columns="one"].tpl-creative .doc-band .doc-contact,
 [data-columns="two"][data-header="top"].tpl-creative .doc-band .doc-contact {
@@ -1778,7 +1801,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 0;
-  font-size: 8pt;
+  font-size: var(--doc-contact-size, 8pt);
 }
 .doc-header-top .doc-contact .doc-contact-sep {
   margin: 0 4pt;
@@ -2081,42 +2104,57 @@
    Section Headings — visual style, capitalisation, icons
    ====================================================================== */
 
-/* -- Capitalisation ------------------------------------------------------ */
-[data-heading-cap="uppercase"] .doc-section-title {
+/* -- Capitalisation ------------------------------------------------------
+   The control owns case in every template. The doubled .page lifts these
+   rules above the most specific skin selectors (four classes), so a rail
+   heading obeys the control exactly like a body heading. */
+.page.page[data-heading-cap="uppercase"] .doc-section-title {
   text-transform: uppercase;
 }
-[data-heading-cap="lowercase"] .doc-section-title {
+.page.page[data-heading-cap="lowercase"] .doc-section-title {
   text-transform: lowercase;
 }
-[data-heading-cap="capitalize"] .doc-section-title {
+.page.page[data-heading-cap="capitalize"] .doc-section-title {
   text-transform: capitalize;
 }
 
-/* -- Visual: none (plain) — base style, no extra decoration ------------- */
-[data-heading-visual="none"] .doc-section-title {
-  border-bottom: none;
-  background: none;
-  padding: 0;
-}
-
-/* -- Visual: underline --------------------------------------------------- */
+/* -- Visual: underline ---------------------------------------------------
+   The designs' own heading treatment -- this is the default, so it keeps
+   the exact look every template shipped with. Ornaments stay. */
 [data-heading-visual="underline"] .doc-section-title {
   border-bottom: 1.5pt solid var(--doc-accent, currentColor);
   padding-bottom: 3pt;
 }
 
-/* -- Visual: boxed ------------------------------------------------------- */
-[data-heading-visual="boxed"] .doc-section-title {
-  border: 1pt solid var(--doc-accent, currentColor);
-  border-radius: 2pt;
-  padding: 3pt 6pt;
-  display: inline-block;
+/* -- Plain / Boxed / Bold ------------------------------------------------
+   Picking one of these retires the skin's own ornament and lets the chosen
+   treatment own the heading. `content: none` removes generated bars and
+   rules; `display: block` keeps a centred heading centred once its flanking
+   pseudo-elements are gone. */
+.page.page:is([data-heading-visual="none"], [data-heading-visual="bold"]) .doc-section-title {
+  border: none;
+  background: none;
+  border-radius: 0;
+  padding: 0;
+  display: block;
 }
-
-/* -- Visual: bold -------------------------------------------------------- */
-[data-heading-visual="bold"] .doc-section-title {
+.page.page[data-heading-visual="bold"] .doc-section-title {
   font-weight: 800;
   letter-spacing: 0.02em;
+}
+.page.page[data-heading-visual="boxed"] .doc-section-title {
+  border: 1pt solid currentColor;
+  border-radius: 2pt;
+  background: none;
+  padding: 3pt 6pt;
+  display: inline-block;
+  width: auto;
+}
+.page.page:is([data-heading-visual="none"], [data-heading-visual="boxed"], [data-heading-visual="bold"])
+  .doc-section-title::before,
+.page.page:is([data-heading-visual="none"], [data-heading-visual="boxed"], [data-heading-visual="bold"])
+  .doc-section-title::after {
+  content: none;
 }
 
 /* -- Icons ----------------------------------------------------------------
@@ -2157,7 +2195,7 @@
 /* -- Full Page: Single ---------------------------------------------------
    Deliberately empty. Choosing an accent must never repaint the sheet. */
 .page[data-colors='on'][data-bg='single'] {
-  background: var(--paper);
+  background: var(--paper, #ffffff);
 }
 
 /* -- Full Page: Multi ----------------------------------------------------
