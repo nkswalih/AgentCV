@@ -295,6 +295,14 @@
 .page[data-columns='two'] > .doc-columns > .doc-col > * {
   break-inside: avoid;
 }
+/* A grid item's default min-width is its intrinsic size, so one long
+   unbreakable line plus the column's padding can push a track wider than the
+   sheet. Columns are meant to shrink and wrap -- the panel has to keep
+   reaching the page edge no matter what the copy does. */
+.page[data-columns='two'] > .doc-col-left,
+.page[data-columns='two'] > .doc-col-right {
+  min-width: 0;
+}
 
 /* =========================================================================
  * 2. Single-column rhythm shared by the ATS family
@@ -327,7 +335,12 @@
 .tpl-clean-slate,
 .tpl-quiet-focus,
 .tpl-clear {
-  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+  /* The page margin, named once. Layout rules that have to line up with the
+     sheet edge (a painted side header, for one) read these instead of
+     restating the margin -- compact scales them and stays correct. */
+  --doc-pad-y: var(--doc-margin-y, 14mm);
+  --doc-pad-x: var(--doc-margin-x, 15mm);
+  padding: var(--doc-pad-y) var(--doc-pad-x);
 }
 
 /* -- ATS Classic: centred serif, quietly formal -------------------------- */
@@ -393,7 +406,9 @@
   /* Held at 80% of the set margin rather than pinned to a fixed value: running
      tighter than the others is the whole reason this template exists, so it has
      to stay tighter at every slider position, not just the default. */
-  padding: calc(var(--doc-margin-y, 14mm) * 0.78) calc(var(--doc-margin-x, 15mm) * 0.8);
+  --doc-pad-y: calc(var(--doc-margin-y, 14mm) * 0.78);
+  --doc-pad-x: calc(var(--doc-margin-x, 15mm) * 0.8);
+  padding: var(--doc-pad-y) var(--doc-pad-x);
 }
 .tpl-compact .doc-name {
   font-size: var(--doc-name-size, 24pt);
@@ -2403,6 +2418,71 @@
   color: inherit !important;
   border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 38%, transparent) !important;
 }
+
+/* -- Side panels meet the sheet edge ------------------------------------
+   A side header is a panel that belongs to the paper, not a card floating in
+   the margin: it has to reach the edge exactly like the top band does.
+   Padded designs keep the page margin on the root, so the painted column
+   pulls itself out over that margin and pays it straight back as padding --
+   the fill grows to the edge while every line inside keeps its position.
+   The grid designs (banner, creative, two-col, sidebar, portal-pro,
+   modern-deep) pad their own panels and are left alone. */
+.page[data-header-paint]:is([data-header-side='left'], [data-header-side='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > :is(.doc-col-left, .doc-col-right):has(> [data-doc-header]) {
+  margin-top: calc(var(--doc-pad-y, 14mm) * -1);
+  margin-bottom: calc(var(--doc-pad-y, 14mm) * -1);
+  padding-top: var(--doc-pad-y, 14mm);
+  padding-bottom: var(--doc-pad-y, 14mm);
+}
+.page[data-header-paint][data-header-side='left']:not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > .doc-col-left:has(> [data-doc-header]) {
+  margin-left: calc(var(--doc-pad-x, 15mm) * -1);
+  padding-left: var(--doc-pad-x, 15mm);
+}
+.page[data-header-paint][data-header-side='right']:not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > .doc-col-right:has(> [data-doc-header]) {
+  margin-right: calc(var(--doc-pad-x, 15mm) * -1);
+  padding-right: var(--doc-pad-x, 15mm);
+}
+
+/* -- The split is a gutter, not a seam ----------------------------------
+   Two columns used to meet with no space at all, which only becomes visible
+   once one side is painted: the facing text sits straight on the colour's
+   edge, and long lines look clipped by it.
+   The gutter is exactly the page margin -- not a fixed number -- so the page
+   reads as one measured block: a margin at the sheet edge, and the same
+   margin either side of the split. Dragging the margin slider moves both
+   together, and padded designs (compact) keep their scaled proportion.
+   This is padding on the columns, never a column gap: the tracks keep their
+   exact widths, so the panel still reaches the sheet edge and its paint is
+   never disturbed. The header takes the same padding as the sections, which
+   is what keeps it centred inside the painted panel instead of drifting
+   toward the split. */
+.page[data-header-paint]:is([data-header-side='left'], [data-header-side='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > :is(.doc-col-left, .doc-col-right) {
+  --doc-split-gap: var(--doc-pad-x, 15mm);
+}
+.page[data-header-paint]:is([data-header-side='left'], [data-header-side='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > .doc-col-left {
+  padding-right: var(--doc-split-gap);
+}
+.page[data-header-paint]:is([data-header-side='left'], [data-header-side='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > .doc-col-right {
+  padding-left: var(--doc-split-gap);
+}
+
 /* -- Header ink wins over the accent switches and the Multi/Image reset -- */
 .page[data-header-paint][data-header-side] [data-doc-header]
   :is(
