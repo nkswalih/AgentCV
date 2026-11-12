@@ -233,8 +233,16 @@ export interface HeaderStyle {
 export interface LinkStyle {
   /** How clickable contact entries are marked: none, a rule, or a dotted rule. */
   decoration?: 'plain' | 'underline' | 'dotted'
-  /** Link ink: the surrounding text colour, or the document accent. */
-  color?: 'ink' | 'accent'
+  /**
+   * Link ink: the surrounding text colour, or a fixed hyperlink blue. `accent`
+   * is the legacy spelling of `blue` and still renders as the same blue.
+   */
+  color?: 'ink' | 'blue' | 'accent'
+  /**
+   * Header entries that always get the underlined accent treatment, whatever
+   * the two fields above say. Empty means every entry follows the card.
+   */
+  emphasis?: ('email' | 'phone')[]
 }
 
 export interface Settings {
@@ -295,8 +303,9 @@ export interface Settings {
     show: boolean
     /** Apply a grayscale filter to the photo. */
     grayscale: boolean
-    /** Photo position relative to the profile/header text. */
-    position: 'left' | 'top' | 'right'
+    /** Photo position relative to the profile/header text. `bottom` is only
+     *  used inside a side header, where it means "below name & title". */
+    position: 'left' | 'top' | 'right' | 'center' | 'bottom'
     /** Photo size in millimetres. */
     size: number
     /** Photo shape. */
