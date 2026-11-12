@@ -1128,6 +1128,33 @@
   font-weight: 600;
 }
 
+/* Unavailable arrangements stay visible -- they are the honest answer to
+   "why can't I pick Left?" -- but never look pressable. The note rides along
+   as a tooltip; the card prints the rule underneath the row. */
+.choice-tile[data-disabled] {
+  cursor: not-allowed;
+}
+.choice-tile[data-disabled] .choice-tile-visual {
+  opacity: 0.4;
+  border-style: dashed;
+}
+.choice-tile[data-disabled] .choice-tile-label {
+  color: var(--text-lo);
+}
+.choice-tile[data-disabled]:hover .choice-tile-visual {
+  border-color: var(--ink-600);
+}
+.choice-tile[data-disabled]:hover .choice-tile-label {
+  color: var(--text-lo);
+}
+
+.choice-tiles-hint {
+  margin: 7px 0 0;
+  font-size: var(--t-xs);
+  line-height: 1.45;
+  color: var(--text-lo);
+}
+
 /* Columns: stacks of text lines. */
 .lt-lines {
   display: flex;
@@ -1258,6 +1285,95 @@
   align-self: flex-end;
 }
 .choice-tile[data-active='true'] .lt-align-name {
+  background: var(--accent);
+}
+
+/* Photo position: a portrait square against the identity lines. */
+.lt-photo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  height: 100%;
+  padding: 8px 12px;
+}
+.lt-photo-portrait {
+  width: 20px;
+  height: 20px;
+  flex: none;
+  border-radius: 50%;
+  background: var(--ink-300);
+  transition: background-color 120ms var(--ease);
+}
+.lt-photo-text {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.lt-photo-line {
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  background: var(--ink-500);
+}
+.lt-photo-line--mid {
+  width: 76%;
+}
+.lt-photo-line--short {
+  width: 52%;
+}
+/* Flanking arrangements: portrait beside the identity. */
+.lt-photo[data-mode='left'],
+.lt-photo[data-mode='right'] {
+  flex-direction: row;
+}
+.lt-photo[data-mode='right'] .lt-photo-portrait {
+  order: 2;
+}
+.lt-photo[data-mode='right'] .lt-photo-text {
+  align-items: flex-end;
+}
+.lt-photo[data-mode='right'] .lt-photo-line {
+  align-self: flex-end;
+}
+/* Stacked arrangements: portrait above or below a full-width identity. */
+.lt-photo[data-mode='top'],
+.lt-photo[data-mode='above'],
+.lt-photo[data-mode='below'] {
+  flex-direction: column;
+  gap: 5px;
+  padding: 7px 12px;
+}
+.lt-photo[data-mode='top'] {
+  align-items: center;
+}
+.lt-photo[data-mode='top'] .lt-photo-text {
+  flex: none;
+  width: 62%;
+  align-items: center;
+}
+.lt-photo[data-mode='top'] .lt-photo-line {
+  align-self: center;
+}
+.lt-photo[data-mode='above'],
+.lt-photo[data-mode='below'] {
+  align-items: flex-start;
+}
+.lt-photo[data-mode='above'] .lt-photo-text,
+.lt-photo[data-mode='below'] .lt-photo-text {
+  flex: none;
+  width: 78%;
+}
+.lt-photo[data-mode='above'] .lt-photo-portrait {
+  order: -1;
+}
+.lt-photo[data-mode='below'] .lt-photo-portrait {
+  order: 2;
+}
+.choice-tile[data-active='true'] .lt-photo-portrait {
   background: var(--accent);
 }
 
@@ -1451,17 +1567,116 @@ input[type='range']::-moz-range-thumb {
 
 .checkbox {
   display: flex;
+  /* Label on the left, switch on the right -- the row reads like a setting, not
+     like a form field with a tick floating beside it. */
+  flex-direction: row-reverse;
   align-items: center;
-  gap: 7px;
+  justify-content: space-between;
+  gap: 10px;
   font-size: var(--t-sm);
   color: var(--text-mid);
   cursor: pointer;
+  user-select: none;
 }
+/* iOS-style switch in the AgentCV palette: a warm neutral track when off and
+   the action ink when on. The native tick is removed rather than layered over,
+   so no platform checkbox chrome leaks through. */
 .checkbox input {
-  accent-color: var(--cyan);
-  width: 14px;
-  height: 14px;
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  flex: none;
+  width: 34px;
+  height: 20px;
+  margin: 0;
+  border-radius: 999px;
+  background: var(--ink-700);
+  box-shadow: inset 0 0 0 1px var(--ink-500);
   cursor: pointer;
+  transition:
+    background-color 160ms var(--ease),
+    box-shadow 160ms var(--ease);
+}
+.checkbox input::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow:
+    0 1px 2px rgba(40, 36, 28, 0.22),
+    0 1px 3px rgba(40, 36, 28, 0.12);
+  transition: transform 160ms var(--ease);
+}
+.checkbox input:checked {
+  background: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.checkbox input:checked::after {
+  transform: translateX(14px);
+}
+.checkbox:hover input {
+  box-shadow: inset 0 0 0 1px var(--ink-400);
+}
+.checkbox:hover input:checked {
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+.checkbox input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.checkbox input:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+/* Dense multi-select grids keep the same switch, one size smaller, so a column
+   of eight options still reads as a list rather than eight large pills. */
+.apply-grid .checkbox input,
+.sides-grid .checkbox input {
+  width: 24px;
+  height: 14px;
+}
+.apply-grid .checkbox input::after,
+.sides-grid .checkbox input::after {
+  width: 10px;
+  height: 10px;
+}
+.apply-grid .checkbox input:checked::after,
+.sides-grid .checkbox input:checked::after {
+  transform: translateX(10px);
+}
+
+/* The Link Styling card: switch rows sit on hairlines so three adjacent
+   toggles read as one control group. */
+.link-switch-list {
+  display: flex;
+  flex-direction: column;
+}
+.link-switch-list .checkbox {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--ink-700);
+  font-size: var(--t-sm);
+  color: var(--text-hi);
+}
+.link-switch-list .checkbox:first-child {
+  padding-top: 0;
+}
+.link-switch-list .checkbox:last-child {
+  padding-bottom: 0;
+  border-bottom: 0;
+}
+.link-switch-advanced .checkbox {
+  padding: 7px 0;
+  color: var(--text-mid);
+}
+.link-switch-advanced .checkbox:first-child {
+  padding-top: 2px;
+}
+.link-hint {
+  margin: 12px 0 0;
 }
 
 /* One link entry: narrow label ("LinkedIn"), flexible URL, remove button. */

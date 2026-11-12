@@ -2665,8 +2665,9 @@
 }
 
 /* A header placed inside a two-column side region behaves like a rail, not a
-   wide masthead: Top goes above the identity; Left/Right sit underneath and
-   align to that edge. */
+   wide masthead: Top goes above the identity, Bottom sits underneath. Both
+   follow an explicitly chosen rail alignment; with none, the rail's own left
+   edge leads, which is how these designs are drawn. */
 .page[data-columns='two'][data-header='left'] .doc-photo-layout,
 .page[data-columns='two'][data-header='right'] .doc-photo-layout {
   flex-direction: column;
@@ -2676,27 +2677,33 @@
 .page[data-columns='two'][data-header='right'] .doc-photo-layout > .doc-header-text {
   order: 0;
 }
-.page[data-columns='two'][data-header='left'][data-photo-position='left'] .doc-photo-layout > .doc-photo-frame,
-.page[data-columns='two'][data-header='right'][data-photo-position='left'] .doc-photo-layout > .doc-photo-frame {
-  order: 1;
-  align-self: flex-start;
-  margin-block: 6pt 0;
-}
-.page[data-columns='two'][data-header='left'][data-photo-position='right'] .doc-photo-layout > .doc-photo-frame,
-.page[data-columns='two'][data-header='right'][data-photo-position='right'] .doc-photo-layout > .doc-photo-frame {
-  order: 1;
-  align-self: flex-end;
-  margin-block: 6pt 0;
-}
 .page[data-columns='two'][data-header='left'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame,
 .page[data-columns='two'][data-header='right'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame {
   order: -1;
   align-self: flex-start;
   margin-block: 0 6pt;
 }
+.page[data-columns='two'][data-header='left'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header='right'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame {
+  order: 1;
+  align-self: flex-start;
+  margin-block: 6pt 0;
+}
+.page[data-columns='two'][data-header-align='left'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header-align='left'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame {
+  align-self: flex-start;
+}
+.page[data-columns='two'][data-header-align='center'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header-align='center'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame {
+  align-self: center;
+}
+.page[data-columns='two'][data-header-align='right'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header-align='right'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame {
+  align-self: flex-end;
+}
 
-/* Narrow two-column rails: Top sits above the name. Left/Right stay below the
-   identity and align to that rail edge, which remains readable at 30-70%. */
+/* Narrow two-column rails: the portrait stands above or below the identity,
+   aligned to the same edge the rail's text uses. */
 .page .doc-profile-stack {
   display: flex;
   flex-direction: column;
@@ -2705,20 +2712,24 @@
 .page .doc-profile-stack .doc-header-text {
   order: 0;
 }
-.page .doc-profile-stack .doc-photo-frame {
-  order: 1;
-  margin-block: 6pt;
-}
-.page[data-photo-position='left'] .doc-profile-stack .doc-photo-frame {
-  align-self: flex-start;
-}
-.page[data-photo-position='right'] .doc-profile-stack .doc-photo-frame {
-  align-self: flex-end;
-}
 .page[data-photo-position='top'] .doc-profile-stack .doc-photo-frame {
   order: -1;
   align-self: flex-start;
   margin-block: 0 6pt;
+}
+.page[data-photo-position='bottom'] .doc-profile-stack .doc-photo-frame {
+  order: 1;
+  align-self: flex-start;
+  margin-block: 6pt 0;
+}
+.page[data-header-align='left'] .doc-profile-stack .doc-photo-frame {
+  align-self: flex-start;
+}
+.page[data-header-align='center'] .doc-profile-stack .doc-photo-frame {
+  align-self: center;
+}
+.page[data-header-align='right'] .doc-profile-stack .doc-photo-frame {
+  align-self: flex-end;
 }
 
 /* Retain each design's frame treatment without reintroducing fixed geometry. */
@@ -2758,22 +2769,31 @@
 /* text-align overrides the template's own centered / right alignment so the
    header-position segmented actually changes the visible layout. */
 [data-columns="one"][data-header="left"] .doc-header-text,
+[data-columns="one"][data-header="left"] .doc-rail-top-text,
 [data-columns="one"][data-header="left"] .doc-contact {
   text-align: left;
 }
 [data-columns="one"][data-header="right"] .doc-header-text,
+[data-columns="one"][data-header="right"] .doc-rail-top-text,
 [data-columns="one"][data-header="right"] .doc-contact {
   text-align: right;
 }
 [data-columns="one"][data-header="center"] .doc-header-text,
+[data-columns="one"][data-header="center"] .doc-rail-top-text,
 [data-columns="one"][data-header="center"] .doc-contact {
   text-align: center;
 }
 /* doc-photo-layout makes .doc-header a flex container. When flex-direction
    is column (photo on top), justify-content controls the vertical axis —
    use align-items for horizontal position instead. When flex-direction is
-   row (photo left/right), justify-content controls horizontal position. */
+   row (photo left/right), justify-content controls horizontal position.
+   A chosen alignment is explicit, so every identity container follows it --
+   not just .doc-header, which left the band and rail headers behind. */
 [data-columns="one"][data-header="center"] .doc-header.doc-photo-layout,
+[data-columns="one"][data-header="center"] .doc-band.doc-photo-layout,
+[data-columns="one"][data-header="center"] .doc-rail-top.doc-photo-layout,
+[data-columns="one"][data-header="center"] .doc-masthead.doc-photo-layout,
+[data-columns="one"][data-header="center"] .doc-photohead.doc-photo-layout,
 [data-columns="one"][data-header="top"] .doc-header.doc-photo-layout {
   align-items: center;
 }
@@ -2984,9 +3004,79 @@
   text-decoration: underline dotted;
   text-underline-offset: 0.2em;
 }
+
+/* -- Link blue ------------------------------------------------------------
+   Blue is a real hyperlink blue, not the document accent: a recruiter should
+   read the entry as a link at a glance. The mix leans on the entry's inherited
+   ink so the same blue stays legible on paper (dark blue on white) and on a
+   dark header band or photographic page (a lighter blue), instead of vanishing
+   into the background. */
+.page {
+  --doc-link-blue: #0b57d0;
+  --doc-link-blue: color-mix(in srgb, #0b57d0 68%, currentColor);
+}
+
 .page[data-link-color='ink'] :is(a.doc-link, .doc-contact a) {
   color: inherit;
 }
-.page[data-link-color='accent'] :is(a.doc-link, .doc-contact a) {
-  color: var(--doc-accent);
+/* !important is deliberate: template skins and the page/header ink resets both
+   hardcode link colours, and Blue is an explicit author choice that has to win.
+   Only the anchor takes the mix; descendants inherit the resolved blue so the
+   text span and glyph do not get a second, darker application of it. */
+.page:is([data-link-color='blue'], [data-link-color='accent']) a.doc-link,
+.page:is([data-link-color='blue'], [data-link-color='accent']) .doc-contact a {
+  color: var(--doc-link-blue) !important;
+}
+.page:is([data-link-color='blue'], [data-link-color='accent'])
+  :is(a.doc-link, .doc-contact a)
+  :is(.doc-contact-text, .doc-icon) {
+  color: inherit !important;
+}
+
+/* =========================================================================
+ * 7. Advanced link emphasis and the centred photo
+ * ====================================================================== */
+
+/* -- Per-entry link emphasis ---------------------------------------------
+   Advanced Settings can pin the underlined blue treatment to individual header
+   entries. The text span is targeted as well because the contact item is a flex
+   box, and decoration does not cross that boundary. */
+.page[data-link-emphasis~='email']
+  :is(a.doc-link[data-contact-key='email'], a.doc-link[data-contact-key='email'] .doc-contact-text),
+.page[data-link-emphasis~='phone']
+  :is(a.doc-link[data-contact-key='phone'], a.doc-link[data-contact-key='phone'] .doc-contact-text) {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+.page[data-link-emphasis~='email'] a.doc-link[data-contact-key='email'],
+.page[data-link-emphasis~='phone'] a.doc-link[data-contact-key='phone'] {
+  color: var(--doc-link-blue) !important;
+}
+.page[data-link-emphasis~='email']
+  a.doc-link[data-contact-key='email']
+  :is(.doc-contact-text, .doc-icon),
+.page[data-link-emphasis~='phone']
+  a.doc-link[data-contact-key='phone']
+  :is(.doc-contact-text, .doc-icon) {
+  color: inherit !important;
+}
+
+/* -- Photo above the identity (full-width headers only) -------------------
+   The text block still stretches full width, so the header's own alignment
+   keeps deciding where the name and contact sit. */
+:is(.page[data-columns='one'], .page[data-columns='two'][data-header='top'])[data-photo-position='top'] .doc-photo-layout {
+  flex-direction: column;
+}
+:is(.page[data-columns='one'], .page[data-columns='two'][data-header='top'])[data-photo-position='top'] .doc-photo-layout > .doc-photo-frame {
+  order: -1;
+  margin-block: 0 6pt;
+}
+:is(.page[data-columns='one'], .page[data-columns='two'][data-header='top'])[data-photo-position='top'] .doc-photo-layout > .doc-rail-top-text,
+:is(.page[data-columns='one'], .page[data-columns='two'][data-header='top'])[data-photo-position='top'] .doc-photo-layout > .doc-header-text {
+  align-self: stretch;
+}
+/* An explicit centred alignment in a split header centres the portrait too,
+   instead of leaving it on the text block's starting edge. */
+.page[data-columns='two'][data-header='top'][data-header-align='center'][data-photo-position='top'] .doc-photo-layout {
+  align-items: center;
 }
