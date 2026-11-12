@@ -1,6 +1,11 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 
 import { useEditor } from '../store'
+import {
+  headerTextAlign,
+  photoInSideRail,
+  resolvePhotoPlacement,
+} from '../photoPlacement'
 import { newId, applyTemplatePreset } from '../factories'
 import { api } from '../api'
 import {
@@ -198,6 +203,24 @@ function HeaderAlignGlyph({ align }: { align: 'center' | 'left' | 'right' }) {
   )
 }
 
+/** Miniature of where the portrait sits relative to name & title. */
+function PhotoPositionGlyph({
+  mode,
+}: {
+  mode: 'left' | 'right' | 'top' | 'above' | 'below'
+}) {
+  return (
+    <span className="lt-photo" data-mode={mode} aria-hidden="true">
+      <span className="lt-photo-portrait" />
+      <span className="lt-photo-text">
+        <span className="lt-photo-line" />
+        <span className="lt-photo-line lt-photo-line--mid" />
+        <span className="lt-photo-line lt-photo-line--short" />
+      </span>
+    </span>
+  )
+}
+
 /** Miniature of the contact line: an icon per entry, or words with a bullet
  *  or a rule between them. */
 function DetailsGlyph({ mode }: { mode: 'icon' | 'bullet' | 'bar' }) {
@@ -292,6 +315,7 @@ export function LeftPane() {
   const [activeId, setActiveId] = useState<string | null>(null)
   const [photoAdjustOpen, setPhotoAdjustOpen] = useState(false)
   const [headerAdvancedOpen, setHeaderAdvancedOpen] = useState(true)
+  const [linkAdvancedOpen, setLinkAdvancedOpen] = useState(true)
   if (!doc) return null
 
   const currentDoc = doc
@@ -437,12 +461,21 @@ export function LeftPane() {
   // the page is showing -- a control never appears to disagree with the sheet.
   const header = currentDoc.settings.headerStyle ?? {}
   const headerDetails = header.details ?? (currentDoc.settings.showIcons ? 'icon' : 'bullet')
-  const headerAlign =
-    columnLayout === 'two'
-      ? (header.align ?? 'center')
-      : headerPosition === 'top'
-        ? 'center'
-        : headerPosition
+  // One placement model decides what the photo control offers and what the
+  // sheet draws, so a choice can never look available but render otherwise.
+  const photoCtx = {
+    columns: columnLayout,
+    headerPosition,
+    align: header.align,
+  }
+  const headerAlign = headerTextAlign(photoCtx)
+  const photoRail = photoInSideRail(photoCtx)
+  const photoPlacement = resolvePhotoPlacement(pl.position, photoCtx)
+  const photoTileValue = photoRail
+    ? photoPlacement === 'top'
+      ? 'top'
+      : 'bottom'
+    : (photoPlacement as 'left' | 'top' | 'right')
   const headerIconStyle: HeaderIconStyle = header.iconStyle ?? 'plain'
   const headerNameStyle = header.nameStyle ?? 'normal'
   const headerTitleStyle =
@@ -460,9 +493,28 @@ export function LeftPane() {
   const linkDecoration =
     link.decoration ??
     (LINK_UNDERLINED_TEMPLATES.has(currentDoc.settings.template) ? 'underline' : 'plain')
+  const linkUnderline = linkDecoration !== 'plain'
   const linkColor = link.color ?? 'ink'
+  // 'accent' is the legacy value from before link blue was a fixed colour; it
+  // now means the same thing as 'blue'.
+  const linkBlue = linkColor === 'blue' || linkColor === 'accent'
+  const linkEmphasis = link.emphasis ?? []
+  // The contact icons are owned by the Header card's Details arrangement; the
+  // Link card mirrors it so "Link icon" and "Icon" can never disagree.
+  const linkIconsOn = headerDetails === 'icon'
   const setLink = (patch: LinkStyle) =>
     updateSettings({ linkStyle: { ...link, ...patch } })
+  const setLinkIcons = (on: boolean) =>
+    updateSettings({
+      showIcons: on,
+      headerStyle: { ...header, details: on ? 'icon' : 'bullet' },
+    })
+  const toggleEmphasis = (key: 'email' | 'phone') => {
+    const next = linkEmphasis.includes(key)
+      ? linkEmphasis.filter((k) => k !== key)
+      : [...linkEmphasis, key]
+    setLink({ emphasis: next.length > 0 ? next : undefined })
+  }
 
 
   return (
@@ -673,14 +725,57 @@ export function LeftPane() {
             checked={pl.grayscale}
             onChange={(grayscale) => updateSettings({ photoLayout: { ...pl, grayscale } })}
           />
-          <Segmented
+          <ChoiceTiles
             label="Position"
-            value={pl.position}
-            options={[
-              { value: 'left', label: 'Left' },
-              { value: 'top', label: 'Top' },
-              { value: 'right', label: 'Right' },
-            ]}
+            value={photoTileValue}
+            options={
+              photoRail
+                ? [
+                    {
+                      value: 'top' as const,
+                      label: 'Above name & title',
+                      visual: <PhotoPositionGlyph mode="above" />,
+                    },
+                    {
+                      value: 'bottom' as const,
+                      label: 'Below name & title',
+                      visual: <PhotoPositionGlyph mode="below" />,
+                    },
+                  ]
+                : [
+                    {
+                      value: 'left' as const,
+                      label: 'Left',
+                      visual: <PhotoPositionGlyph mode="left" />,
+                      disabled: headerAlign === 'center',
+                      note: 'Centred header text keeps the photo above the name',
+                    },
+                    {
+                      value: 'top' as const,
+                      label: 'Top',
+                      visual: <PhotoPositionGlyph mode="top" />,
+                      // Above the identity only composes when the identity is
+                      // centred; a left or right header would leave the photo
+                      // hanging off the text's axis.
+                      disabled: headerAlign !== 'center',
+                      note: 'Needs centred header text',
+                    },
+                    {
+                      value: 'right' as const,
+                      label: 'Right',
+                      visual: <PhotoPositionGlyph mode="right" />,
+                      disabled: headerAlign === 'center',
+                      note: 'Centred header text keeps the photo above the name',
+                    },
+                  ]
+            }
+            hint={
+              photoRail
+                ? undefined
+                : headerAlign === 'center'
+                  ? 'Centred header text keeps the photo above the name.'
+                  : 'A photo above needs centred header text.'
+            }
             onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
           />
           <Slider label="Size" value={pl.size} min={14} max={44} step={1} unit="mm" onChange={(size) => updateSettings({ photoLayout: { ...pl, size } })} />
@@ -993,28 +1088,77 @@ export function LeftPane() {
         {/* ============================================================ */}
         <div className="pane-section">
           <p className="pane-section-title">Link Styling</p>
-          <Segmented
-            label="Link style"
-            value={linkDecoration}
-            options={[
-              { value: 'plain', label: 'Plain' },
-              { value: 'underline', label: 'Underline' },
-              { value: 'dotted', label: 'Dotted' },
-            ]}
-            onChange={(decoration) => setLink({ decoration })}
-          />
-          <Segmented
-            label="Link colour"
-            value={linkColor}
-            options={[
-              { value: 'ink', label: 'Body ink' },
-              { value: 'accent', label: 'Accent' },
-            ]}
-            onChange={(color) => setLink({ color })}
-          />
-          <p className="hint" style={{ marginTop: -6 }}>
-            Applies to every clickable contact entry -- email, phone, site and
-            your extra links. The sheet shows the same treatment in the PDF.
+
+          <div className="link-switch-list">
+            <Check
+              label="Underline"
+              checked={linkUnderline}
+              onChange={(on) => setLink({ decoration: on ? 'underline' : 'plain' })}
+            />
+            <Check
+              label="Blue color"
+              checked={linkBlue}
+              onChange={(on) => setLink({ color: on ? 'blue' : 'ink' })}
+            />
+            <Check
+              label="Link icon"
+              checked={linkIconsOn}
+              onChange={setLinkIcons}
+            />
+          </div>
+
+          <div className="adv-settings" data-open={linkAdvancedOpen}>
+            <button
+              type="button"
+              className="adv-toggle"
+              aria-expanded={linkAdvancedOpen}
+              onClick={() => setLinkAdvancedOpen((v) => !v)}
+            >
+              Advanced Settings
+              <svg
+                className="adv-chev"
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <path d="m6 9 6 6 6-6" />
+              </svg>
+            </button>
+
+            {linkAdvancedOpen && (
+              <div className="adv-body">
+                <div className="field">
+                  <span className="field-label">
+                    Apply underline and blue color to header
+                  </span>
+                  <div className="link-switch-list link-switch-advanced">
+                    <Check
+                      label="Email"
+                      checked={linkEmphasis.includes('email')}
+                      onChange={() => toggleEmphasis('email')}
+                    />
+                    <Check
+                      label="Phone"
+                      checked={linkEmphasis.includes('phone')}
+                      onChange={() => toggleEmphasis('phone')}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <p className="hint link-hint">
+            Underline and Blue color reach every clickable contact entry. Use
+            Advanced Settings to force them on individual header entries even
+            when those switches are off. The sheet shows the same treatment in
+            the PDF.
           </p>
         </div>
 
