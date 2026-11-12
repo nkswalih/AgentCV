@@ -224,7 +224,7 @@ export function Contact({
     )
     if (entry.href && !preview)
       return (
-        <a className="doc-link" href={entry.href}>
+        <a className="doc-link" href={entry.href} data-contact-key={entry.key}>
           {content}
         </a>
       )

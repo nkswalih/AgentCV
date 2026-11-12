@@ -8,6 +8,7 @@
 import type { CSSProperties } from 'react'
 
 import type { ResumeDocument, Section, SectionType, TemplateId } from '../types'
+import { resolvePhotoPlacement } from '../photoPlacement'
 import { Contact, DocSection, hasContact, ProfilePhoto } from './parts'
 import { FONT_STACKS, BORDER_SIZES, HEADER_PRESETS } from './registry'
 
@@ -157,6 +158,14 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   // the older Show contact icons switch is off, and choosing Bullet or Bar
   // suppresses them. Until a choice is made, the switch decides.
   const headerIcons = hdr.details == null ? settings.showIcons : hdr.details === 'icon'
+
+  // The photo card's tiles and this attribute read one resolver, so the sheet
+  // only ever draws an arrangement the card says is available.
+  const photoPlacement = resolvePhotoPlacement(pl.position, {
+    columns: settings.columnLayout,
+    headerPosition: settings.headerPosition,
+    align: hdr.align,
+  })
 
   // Only the selected Colors tab is in effect. The other tabs keep their
   // settings for when the user returns, but they must not paint the sheet --
@@ -309,7 +318,9 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     ...(fitted && { 'data-fit': 'on' }),
     'data-columns': settings.columnLayout,
     'data-header': settings.headerPosition,
-    'data-photo-position': pl.position,
+    // The resolved arrangement, not the stored preference: a header change
+    // must never leave the sheet in a composition the card cannot describe.
+    'data-photo-position': photoPlacement,
     'data-photo-size': pl.size,
     'data-photo-shape': pl.shape,
     ...(pl.grayscale && { 'data-photo-grayscale': 'true' }),
@@ -331,7 +342,17 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     ...(settings.titleFont && { 'data-title-font': 'true' }),
     // Link card. Absent leaves each design's own link treatment alone.
     ...(settings.linkStyle?.decoration && { 'data-link-style': settings.linkStyle.decoration }),
-    ...(settings.linkStyle?.color && { 'data-link-color': settings.linkStyle.color }),
+    ...(settings.linkStyle?.color && {
+      // 'accent' was the old name for link colour. It now resolves to the fixed
+      // hyperlink blue, so legacy documents render as links rather than as body
+      // ink in the document accent.
+      'data-link-color':
+        settings.linkStyle.color === 'accent' ? 'blue' : settings.linkStyle.color,
+    }),
+    // Per-entry emphasis: only the keys the author ticked in Advanced Settings.
+    ...(settings.linkStyle?.emphasis?.length && {
+      'data-link-emphasis': settings.linkStyle.emphasis.join(' '),
+    }),
     ...(colors && {
       'data-colors': 'on',
       // Only the Full Page tab owns the sheet treatment. On Header or Border,
