@@ -2732,6 +2732,56 @@
   align-self: flex-end;
 }
 
+/* -- Flanking portrait: contact moves under the identity ------------------ */
+/* A header whose contact is a direct sibling is laid out as one row by every
+   flex skin, so a Left/Right portrait leaves the contact sitting beside the
+   name and the name wraps at whatever width is left over. Only the headers
+   that expose contact as a sibling are addressed; designs that already nest
+   it inside .doc-header-text keep their own composition. Photo spans both
+   rows, identity takes the whole remaining width, contact sits beneath it.
+   The frame guard keeps a hidden portrait from reserving an empty column. */
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame),
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) {
+  display: grid;
+  align-items: center;
+  justify-content: normal;
+  column-gap: 14pt;
+  row-gap: 2pt;
+}
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) {
+  grid-template-columns: min(var(--doc-photo-size, 24mm), 40%) minmax(0, 1fr);
+  grid-template-areas:
+    'photo identity'
+    'photo contact';
+}
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) {
+  grid-template-columns: minmax(0, 1fr) min(var(--doc-photo-size, 24mm), 40%);
+  grid-template-areas:
+    'identity photo'
+    'contact photo';
+}
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-photo-frame,
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-photo-frame {
+  grid-area: photo;
+  align-self: center;
+  margin: 0;
+}
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-header-text,
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-header-text {
+  grid-area: identity;
+  min-width: 0;
+  max-width: 100%;
+}
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-contact,
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-contact {
+  grid-area: contact;
+  justify-self: stretch;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 0;
+  text-align: inherit;
+}
+
 /* Retain each design's frame treatment without reintroducing fixed geometry. */
 .page.tpl-sidebar .doc-photo-frame {
   border: 2.5pt solid rgba(255, 255, 255, 0.28);
