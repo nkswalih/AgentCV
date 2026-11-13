@@ -8,6 +8,7 @@
 import type { CSSProperties } from 'react'
 
 import type { ResumeDocument, Section, SectionType, TemplateId } from '../types'
+import { resolveHeadingVisual } from '../headingStyles'
 import { resolvePhotoPlacement } from '../photoPlacement'
 import { Contact, DocSection, hasContact, ProfilePhoto } from './parts'
 import { FONT_STACKS, BORDER_SIZES, HEADER_PRESETS } from './registry'
@@ -324,7 +325,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     'data-photo-size': pl.size,
     'data-photo-shape': pl.shape,
     ...(pl.grayscale && { 'data-photo-grayscale': 'true' }),
-    'data-heading-visual': hs.visual,
+    'data-heading-visual': resolveHeadingVisual(hs.visual),
     'data-heading-cap': hs.capitalization,
     ...(hs.showIcons && { 'data-heading-icons': 'true' }),
     ...(hs.showIcons && { 'data-heading-icon-style': hs.iconStyle }),

@@ -325,8 +325,24 @@ export interface Settings {
 
   /** Section heading visual controls. */
   headingStyle: {
-    /** Visual style of section headings. */
-    visual: 'none' | 'underline' | 'boxed' | 'bold' | 'accent-bar'
+    /**
+     * Visual style of section headings.  The last four ids are the ones old
+     * builds wrote; they still type-check so saved documents keep opening, and
+     * `resolveHeadingVisual` maps them onto the current eight.
+     */
+    visual:
+      | 'underline'
+      | 'band'
+      | 'inline'
+      | 'double'
+      | 'bar'
+      | 'plain'
+      | 'rule'
+      | 'wavy'
+      | 'none'
+      | 'boxed'
+      | 'bold'
+      | 'accent-bar'
     /** Text capitalisation of section headings. */
     capitalization: 'none' | 'uppercase' | 'lowercase' | 'capitalize'
     /** Show icons next to section headings. */
