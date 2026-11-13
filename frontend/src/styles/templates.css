@@ -2147,43 +2147,145 @@
   text-transform: capitalize;
 }
 
-/* -- Visual: underline ---------------------------------------------------
-   The designs' own heading treatment -- this is the default, so it keeps
-   the exact look every template shipped with. Ornaments stay. */
-[data-heading-visual="underline"] .doc-section-title {
-  border-bottom: 1.5pt solid var(--doc-accent, currentColor);
-  padding-bottom: 3pt;
+/* -- Visual styles -------------------------------------------------------
+   A chosen style owns the heading's ornament and rhythm on every paper: the
+   same choice has to read the same way whatever the skin drew before.
+   Typography still belongs to the design -- face, size, casing and colour are
+   untouched -- while the rule, band, bar or wave and the space around it are
+   set here.
+
+   !important is deliberate. Several skins draw their own ornament with
+   selectors up to five classes deep (a two-column painted rail is the worst
+   case), and an author's explicit choice has to win over all of them. The
+   base rule strips whatever was there; each style then builds the chosen
+   treatment back up. */
+.page.page[data-heading-visual] .doc-section-title {
+  position: relative;
+  display: block;
+  width: auto !important;
+  margin-bottom: 5pt !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  line-height: 1.22 !important;
+}
+.page.page[data-heading-visual] .doc-section-title::before,
+.page.page[data-heading-visual] .doc-section-title::after {
+  content: none !important;
+  border: 0 !important;
+  background: none !important;
 }
 
-/* -- Plain / Boxed / Bold ------------------------------------------------
-   Picking one of these retires the skin's own ornament and lets the chosen
-   treatment own the heading. `content: none` removes generated bars and
-   rules; `display: block` keeps a centred heading centred once its flanking
-   pseudo-elements are gone. */
-.page.page:is([data-heading-visual="none"], [data-heading-visual="bold"]) .doc-section-title {
-  border: none;
-  background: none;
-  border-radius: 0;
-  padding: 0;
-  display: block;
+/* Underline: a hairline close under the words, full width. The shipped
+   default, and the calmest way to divide a section. */
+.page.page[data-heading-visual="underline"] .doc-section-title {
+  padding-bottom: 3.5pt !important;
+  border-bottom: 1pt solid color-mix(in srgb, currentColor 70%, transparent) !important;
 }
-.page.page[data-heading-visual="bold"] .doc-section-title {
-  font-weight: 800;
-  letter-spacing: 0.02em;
+
+/* Short underline: the rule hugs the words, so it reads as an underline
+   rather than a divider. Table display is the shrink-to-fit that still lets
+   a centred skin centre the block. */
+.page.page[data-heading-visual="inline"] .doc-section-title {
+  display: table !important;
+  padding-bottom: 2.5pt !important;
+  border-bottom: 1pt solid currentColor !important;
 }
-.page.page[data-heading-visual="boxed"] .doc-section-title {
-  border: 1pt solid currentColor;
-  border-radius: 2pt;
-  background: none;
-  padding: 3pt 6pt;
-  display: inline-block;
-  width: auto;
+
+/* Rules above and below: the heading is held between two hairlines and
+   centred, like a catalogue entry. */
+.page.page[data-heading-visual="double"] .doc-section-title {
+  padding: 3.5pt 0 4pt !important;
+  border-top: 0.75pt solid color-mix(in srgb, currentColor 50%, transparent) !important;
+  border-bottom: 0.75pt solid color-mix(in srgb, currentColor 50%, transparent) !important;
+  text-align: center !important;
 }
-.page.page:is([data-heading-visual="none"], [data-heading-visual="boxed"], [data-heading-visual="bold"])
-  .doc-section-title::before,
-.page.page:is([data-heading-visual="none"], [data-heading-visual="boxed"], [data-heading-visual="bold"])
-  .doc-section-title::after {
-  content: none;
+
+/* Filled band: a soft tint of the heading's own ink. Built from currentColor
+   so it is a pale grey on white paper and a pale wash on a dark rail. */
+.page.page[data-heading-visual="band"] .doc-section-title {
+  padding: 4pt 8pt !important;
+  border-radius: 2.5pt !important;
+  background: color-mix(in srgb, currentColor 9%, transparent) !important;
+  text-align: center !important;
+}
+
+/* Accent bar: a short, thick bar under the first words. */
+.page.page[data-heading-visual="bar"] .doc-section-title {
+  display: table !important;
+  padding-bottom: 7pt !important;
+}
+.page.page[data-heading-visual="bar"] .doc-section-title::after {
+  content: '' !important;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  /* Skins that draw their own tick also set width, a border and sometimes a
+     centring transform on this pseudo-element. Reset all three, then state
+     the bar's own geometry: without the width reset a 22pt skin tick wins and
+     the bar never spans its share of the heading. */
+  width: 22pt !important;
+  height: 2.5pt;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 1pt;
+  transform: none;
+  background: currentColor !important;
+}
+
+/* Plain: no ornament at all; weight alone carries the heading. */
+.page.page[data-heading-visual="plain"] .doc-section-title {
+  font-weight: 700 !important;
+}
+
+/* Rule below: a quiet hairline dropped below the heading with air between,
+   so the rule separates sections instead of decorating the title. */
+.page.page[data-heading-visual="rule"] .doc-section-title {
+  padding-bottom: 7pt !important;
+  border-bottom: 0.75pt solid color-mix(in srgb, currentColor 42%, transparent) !important;
+}
+
+/* Wavy: a hand-ruled wave along the full measure. Masked rather than drawn
+   as a border so it stays a hairline at any width and takes the heading's
+   ink, including on a dark rail. */
+.page.page[data-heading-visual="wavy"] .doc-section-title {
+  padding-bottom: 8pt !important;
+}
+.page.page[data-heading-visual="wavy"] .doc-section-title::after {
+  content: '' !important;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Same reset as the accent bar: a skin's 22pt tick, its own border and its
+     centring transform would otherwise clip the wave to a stub at the edge. */
+  width: auto !important;
+  height: 3.2pt;
+  margin: 0 !important;
+  border: 0 !important;
+  transform: none !important;
+  background: currentColor !important;
+  -webkit-mask-image: var(--wave-line);
+  -webkit-mask-size: 6pt 3.2pt;
+  -webkit-mask-repeat: repeat-x;
+  -webkit-mask-position: left bottom;
+  mask-image: var(--wave-line);
+  mask-size: 6pt 3.2pt;
+  mask-repeat: repeat-x;
+  mask-position: left bottom;
+}
+
+/* Two skins centre their headings. The three shrink-to-fit treatments are
+   centred on those too, and the accent bar follows the words instead of
+   hanging at the page edge. */
+.page.page:is(.tpl-executive, .tpl-academic)[data-heading-visual="inline"] .doc-section-title,
+.page.page:is(.tpl-executive, .tpl-academic)[data-heading-visual="bar"] .doc-section-title {
+  margin-inline: auto !important;
+}
+.page.page:is(.tpl-executive, .tpl-academic)[data-heading-visual="bar"] .doc-section-title::after {
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 /* -- Icons ----------------------------------------------------------------

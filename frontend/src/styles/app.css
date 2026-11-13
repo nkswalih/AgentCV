@@ -3315,110 +3315,182 @@ input[type='range']::-moz-range-thumb {
   margin-bottom: 0;
 }
 
-/* -- Heading style preview cards ---------------------------------------- */
-.heading-preview {
+/* -- Heading style tiles ------------------------------------------------- */
+/* Four miniature treatments per row, no captions: the drawing is the label.
+   The names live in aria-label/title so the control stays usable with a
+   screen reader and on hover. Every glyph is built from the same two bars,
+   so the eight read as one family instead of eight unrelated doodles. */
+.heading-style-grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 5px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
 }
-.heading-preview-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 4px;
-  padding: 8px 4px 6px;
+.heading-style-tile {
+  display: grid;
+  place-items: center;
+  height: 42px;
+  padding: 0;
   border: 1px solid var(--ink-600);
-  border-radius: var(--r-sm);
+  border-radius: 9px;
   background: transparent;
   cursor: pointer;
-  transition: border-color 120ms var(--ease), background 120ms var(--ease);
+  transition:
+    border-color 120ms var(--ease),
+    background 120ms var(--ease);
 }
-.heading-preview-item:hover {
+.heading-style-tile:hover {
   border-color: var(--ink-500);
   background: var(--ink-750);
 }
-.heading-preview-item[data-active='true'] {
+.heading-style-tile:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.heading-style-tile[data-active='true'] {
   border-color: var(--cyan-dim);
   background: var(--cyan-glow);
 }
-.heading-preview-label {
-  font-size: 10px;
-  color: var(--text-dim);
-  line-height: 1;
+
+/* The glyph: a short bar standing in for the words, plus an ornament bar.
+   Colour is inherited so selection is one swap, not sixteen overrides. */
+.heading-glyph {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 5px;
+  width: 62%;
+  height: 100%;
+  color: var(--text-mid);
 }
-.heading-preview-item[data-active='true'] .heading-preview-label {
+.hg-line {
+  display: block;
+  width: 100%;
+  border-radius: 1px;
+  background: currentColor;
+}
+.hg-line--text {
+  width: 62%;
+  height: 3px;
+}
+.hg-line--mark {
+  height: 2px;
+  opacity: 0.5;
+}
+.heading-style-tile[data-active='true'] .heading-glyph {
   color: var(--cyan);
 }
+.heading-style-tile[data-active='true'] .hg-line--mark {
+  opacity: 0.85;
+}
 
-/* -- Visual variants rendered inside preview cards ---------------------- */
-.heading-visual-none {
-  width: 28px;
-  height: 3px;
-  background: var(--text-mid);
-  border-radius: 1px;
+/* Underline: words, then a full-width rule. */
+.heading-glyph[data-style='underline'] .hg-line--mark {
+  width: 100%;
 }
-.heading-preview-item[data-active='true'] .heading-visual-none {
-  background: var(--cyan);
+
+/* Filled band: a tinted strip with the words inside it. */
+.heading-glyph[data-style='band'] {
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, currentColor 16%, transparent);
 }
-.heading-visual-underline {
-  width: 28px;
-  height: 3px;
-  background: var(--text-mid);
-  border-radius: 1px;
-  position: relative;
+.heading-glyph[data-style='band'] .hg-line--text {
+  width: 54%;
 }
-.heading-visual-underline::after {
+.heading-glyph[data-style='band'] .hg-line--mark {
+  display: none;
+}
+
+/* Short underline: the rule stops with the words and sits close under them,
+   which is what separates it from the full-width divider. */
+.heading-glyph[data-style='inline'] {
+  gap: 3px;
+}
+.heading-glyph[data-style='inline'] .hg-line--text,
+.heading-glyph[data-style='inline'] .hg-line--mark {
+  width: 62%;
+}
+
+/* Rules above and below: centred words between two hairlines. */
+.heading-glyph[data-style='double'] {
+  align-items: center;
+  gap: 6px;
+}
+.heading-glyph[data-style='double']::before,
+.heading-glyph[data-style='double'] .hg-line--mark {
   content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -4px;
-  height: 2px;
-  background: var(--text-mid);
+  display: block;
+  width: 100%;
+  height: 1.5px;
   border-radius: 1px;
+  background: currentColor;
+  opacity: 0.5;
 }
-.heading-preview-item[data-active='true'] .heading-visual-underline,
-.heading-preview-item[data-active='true'] .heading-visual-underline::after {
-  background: var(--cyan);
+.heading-glyph[data-style='double'] .hg-line--text {
+  width: 46%;
 }
-.heading-visual-boxed {
-  width: 28px;
-  height: 14px;
-  border: 2px solid var(--text-mid);
-  border-radius: 2px;
+
+/* Accent bar: a short, thick bar under the words. */
+.heading-glyph[data-style='bar'] {
+  gap: 4px;
 }
-.heading-preview-item[data-active='true'] .heading-visual-boxed {
-  border-color: var(--cyan);
+.heading-glyph[data-style='bar'] .hg-line--text {
+  width: 56%;
 }
-.heading-visual-bold {
-  width: 28px;
+.heading-glyph[data-style='bar'] .hg-line--mark {
+  width: 30%;
+  height: 3px;
+  opacity: 1;
+}
+
+/* Plain: one weighty word-bar, no ornament. */
+.heading-glyph[data-style='plain'] {
+  align-items: center;
+  gap: 0;
+}
+.heading-glyph[data-style='plain'] .hg-line--text {
+  width: 44%;
   height: 4px;
-  background: var(--text-hi);
-  border-radius: 1px;
 }
-.heading-visual-accent-bar {
-  width: 28px;
-  height: 3px;
-  background: var(--text-mid);
-  border-radius: 1px;
-  position: relative;
-  padding-left: 0;
+.heading-glyph[data-style='plain'] .hg-line--mark {
+  display: none;
 }
-.heading-visual-accent-bar::before {
-  content: '';
-  position: absolute;
-  left: -6px;
-  top: -3px;
-  width: 3px;
-  height: 9px;
-  background: var(--cyan);
-  border-radius: 1px;
+
+/* Rule below: words, air, then a hairline across the tile. */
+.heading-glyph[data-style='rule'] {
+  gap: 12px;
 }
-.heading-preview-item[data-active='true'] .heading-visual-accent-bar {
-  background: var(--cyan);
+.heading-glyph[data-style='rule'] .hg-line--mark {
+  width: 100%;
+  height: 1.5px;
 }
-.heading-preview-item[data-active='true'] .heading-visual-accent-bar::before {
-  background: var(--cyan);
+
+/* Wavy: a ruled wave under the words. The mask keeps the wave a hairline at
+   any width instead of a stretched bitmap. */
+.heading-glyph[data-style='wavy'] {
+  gap: 6px;
+}
+.heading-glyph[data-style='wavy'] .hg-line--text {
+  width: 56%;
+}
+.heading-glyph[data-style='wavy'] .hg-line--mark {
+  width: 100%;
+  height: 5px;
+  opacity: 0.75;
+  background: currentColor;
+  -webkit-mask-image: var(--wave-line);
+  -webkit-mask-size: 7px 5px;
+  -webkit-mask-repeat: repeat-x;
+  -webkit-mask-position: left bottom;
+  mask-image: var(--wave-line);
+  mask-size: 7px 5px;
+  mask-repeat: repeat-x;
+  mask-position: left bottom;
 }
 
 /* -- Icon style options ------------------------------------------------- */
