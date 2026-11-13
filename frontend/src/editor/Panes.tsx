@@ -1,6 +1,7 @@
 import { Fragment, useEffect, useRef, useState } from 'react'
 
 import { useEditor } from '../store'
+import { HEADING_VISUALS, resolveHeadingVisual } from '../headingStyles'
 import {
   headerTextAlign,
   photoInSideRail,
@@ -455,6 +456,9 @@ export function LeftPane() {
   const clamp = (v: number) => Math.max(30, Math.min(70, v))
   const pl = currentDoc.settings.photoLayout
   const hs = currentDoc.settings.headingStyle ?? { visual: 'underline', capitalization: 'uppercase', showIcons: true, iconStyle: 'filled' }
+  // Legacy ids resolve onto the eight current treatments, so the tile that
+  // describes the sheet is always one of the eight on screen.
+  const headingVisual = resolveHeadingVisual(hs.visual)
 
   // -- Header card state ---------------------------------------------------
   // Absent fields are "as designed", so every tile reads the effective value
@@ -1017,23 +1021,24 @@ export function LeftPane() {
         <div className="pane-section">
           <p className="pane-section-title">Section Headings</p>
           <div className="field">
-            <span className="field-label">Heading style</span>
-            <div className="heading-preview">
-              {([
-                { value: 'none', label: 'Plain' },
-                { value: 'underline', label: 'Underline' },
-                { value: 'boxed', label: 'Boxed' },
-                { value: 'bold', label: 'Bold' },
-              ] as const).map((opt) => (
+            <span className="field-label">Style</span>
+            <div className="heading-style-grid" role="radiogroup" aria-label="Heading style">
+              {HEADING_VISUALS.map((opt) => (
                 <button
                   key={opt.value}
-                  className="heading-preview-item"
-                  data-active={hs.visual === opt.value}
-                  onClick={() => updateSettings({ headingStyle: { ...hs, visual: opt.value } })}
+                  type="button"
+                  role="radio"
+                  aria-checked={headingVisual === opt.value}
                   aria-label={opt.label}
+                  title={`${opt.label} — ${opt.hint}`}
+                  className="heading-style-tile"
+                  data-active={headingVisual === opt.value}
+                  onClick={() => updateSettings({ headingStyle: { ...hs, visual: opt.value } })}
                 >
-                  <span className={`heading-visual-${opt.value}`} />
-                  <span className="heading-preview-label">{opt.label}</span>
+                  <span className="heading-glyph" data-style={opt.value} aria-hidden="true">
+                    <span className="hg-line hg-line--text" />
+                    <span className="hg-line hg-line--mark" />
+                  </span>
                 </button>
               ))}
             </div>
