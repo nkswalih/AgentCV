@@ -286,11 +286,23 @@
    template's own renderer styles each region identically to the original. */
 
 /* -- Column layout ------------------------------------------------------- */
-/* Two columns: explicit left/right containers with configurable width ratio */
+/* Two columns: explicit left/right containers with configurable width ratio.
+   The gutter between the columns is the page margin itself, not a fixed
+   number, so the sheet reads as one measured block: the same inset at the
+   left edge, between the columns, and at the right edge. Dragging the margin
+   slider moves the outer and inner insets together. */
 .page[data-columns='two'] > .doc-columns {
   display: grid;
   grid-template-columns: var(--doc-col-width, 40%) 1fr;
-  column-gap: 14pt;
+  column-gap: var(--doc-margin-x, 15mm);
+}
+/* Header left/right also lays the page out as a two-track grid. Designs that
+   paint their own rails keep their construction; every other family takes the
+   same margin-sized gutter as the header-top split. */
+.page[data-columns='two']:is([data-header='left'], [data-header='right']):not(
+    :is(.tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  ) {
+  column-gap: var(--doc-margin-x, 15mm);
 }
 .page[data-columns='two'] > .doc-columns > .doc-col > * {
   break-inside: avoid;
