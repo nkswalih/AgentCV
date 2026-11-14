@@ -8,6 +8,7 @@
  */
 
 import type { ReactNode } from 'react'
+import { BRAND_LABELS, BRAND_PATHS, type BrandIconName } from './brand-icons'
 
 export type DocIconName =
   | 'mail'
@@ -15,10 +16,6 @@ export type DocIconName =
   | 'pin'
   | 'globe'
   | 'link'
-  | 'linkedin'
-  | 'github'
-  | 'instagram'
-  | 'x'
   | 'user'
   | 'briefcase'
   | 'gradcap'
@@ -26,6 +23,7 @@ export type DocIconName =
   | 'folder'
   | 'award'
   | 'file'
+  | BrandIconName
 
 const STROKE_ICONS: Partial<Record<DocIconName, ReactNode>> = {
   user: (
@@ -100,14 +98,36 @@ const STROKE_ICONS: Partial<Record<DocIconName, ReactNode>> = {
   ),
 }
 
-const FILL_ICONS: Partial<Record<DocIconName, string>> = {
-  linkedin:
-    'M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z',
-  github:
-    'M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12',
-  x: 'M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 6.932ZM17.61 20.644h2.039L6.486 3.24H4.298Z',
-  instagram:
-    'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 1 0 0 12.324 6.162 6.162 0 0 0 0-12.324zM12 16a4 4 0 1 1 0-8 4 4 0 0 1 0 8zm6.406-11.845a1.44 1.44 0 1 0 0 2.881 1.44 1.44 0 0 0 0-2.881z',
+/**
+ * Solid field glyphs for the contact line. The old strokes read as thin
+ * outlines at print size; these silhouettes carry the same optical weight as
+ * the brand marks beside them, so a row of contact entries is one texture.
+ * The envelope and pin keep their interior cut-outs by winding/evenodd.
+ */
+const CONTACT_SOLID: Partial<Record<DocIconName, ReactNode>> = {
+  mail: (
+    <path d="M20 4H4a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Zm0 4-8 5-8-5V6l8 5 8-5v2Z" />
+  ),
+  phone: (
+    <path d="M6.62 10.79a15.05 15.05 0 0 0 6.59 6.59l2.2-2.2a1 1 0 0 1 1.02-.24 11.36 11.36 0 0 0 3.57.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1 11.36 11.36 0 0 0 .57 3.57 1 1 0 0 1-.25 1.02Z" />
+  ),
+  pin: (
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5Z"
+    />
+  ),
+  globe: (
+    <path
+      fillRule="evenodd"
+      clipRule="evenodd"
+      d="M12 2.5a9.5 9.5 0 1 0 0 19 9.5 9.5 0 0 0 0-19Zm0 1.8c2.55 1.45 4.05 4.2 4.05 7.7S14.55 18.25 12 19.7C9.45 18.25 7.95 15.5 7.95 12S9.45 5.75 12 4.3Zm-9.2 6.8h18.4v1.8H2.8Z"
+    />
+  ),
+  link: (
+    <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H7a5 5 0 0 0 0 10h4v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1ZM8 13h8v-2H8v2Zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4a5 5 0 0 0 0-10Z" />
+  ),
 }
 
 /**
@@ -176,26 +196,31 @@ export function DocIcon({
   name: DocIconName
   className?: string
   /** 'fill' forces the solid silhouette, 'outline' the stroked drawing.
-   *  Omitted (contact line, links): brands are solid by nature, everything
-   *  else is stroked. */
+   *  Omitted (contact line, links): brands and field glyphs are solid by
+   *  nature, everything else is stroked. */
   variant?: 'outline' | 'fill'
 }) {
-  const brandPath = FILL_ICONS[name]
-  const sectionFill = variant === 'fill' ? SECTION_ICON_FILLS[name] : undefined
-  const fillNode =
-    sectionFill ?? (variant === 'outline' ? undefined : brandPath && <path d={brandPath} />)
+  // A brand mark or a contact glyph is solid; asking for the section-icon
+  // fill swaps in the heading silhouette; asking for outline falls back to
+  // the stroked drawing used by the editor's style buttons.
+  const solid: ReactNode =
+    variant === 'outline'
+      ? undefined
+      : (variant === 'fill' ? SECTION_ICON_FILLS[name] : undefined) ??
+        CONTACT_SOLID[name] ??
+        (name in BRAND_PATHS ? <path d={BRAND_PATHS[name as BrandIconName]} /> : undefined)
   return (
     <svg
       className={className ?? 'doc-icon'}
       viewBox="0 0 24 24"
       aria-hidden="true"
-      fill={fillNode ? 'currentColor' : 'none'}
-      stroke={fillNode ? 'none' : 'currentColor'}
-      strokeWidth={fillNode ? undefined : 1.8}
+      fill={solid ? 'currentColor' : 'none'}
+      stroke={solid ? 'none' : 'currentColor'}
+      strokeWidth={solid ? undefined : 1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
     >
-      {fillNode ?? STROKE_ICONS[name]}
+      {solid ?? STROKE_ICONS[name]}
     </svg>
   )
 }
@@ -210,40 +235,105 @@ function hostOf(url: string): string {
   }
 }
 
-/** Brands the resume knows how to draw, matched by hostname. */
-const BRANDS: { icon: DocIconName; name: string; match: RegExp }[] = [
-  { icon: 'linkedin', name: 'LinkedIn', match: /(^|\.)linkedin\.[a-z.]+$/ },
-  { icon: 'github', name: 'GitHub', match: /(^|\.)github\.[a-z.]+$/ },
-  { icon: 'instagram', name: 'Instagram', match: /(^|\.)instagram\.[a-z.]+$/ },
-  { icon: 'x', name: 'X', match: /(^|\.)(x|twitter)\.[a-z.]+$/ },
+/** Sites the resume knows how to draw. Hosts are matched with the leading
+ *  `www.` removed, so bare domains and deep links both resolve. */
+interface BrandSite {
+  icon: BrandIconName
+  hosts: RegExp
+  aliases?: string[]
+}
+
+/**
+ * Brand marks a pasted link can resolve to. The list covers the places people
+ * put a portfolio-link on a resume -- social profiles, code hosts, writing
+ * platforms, design portfolios and competitive-programming judges. Anything
+ * not listed keeps the generic link glyph.
+ */
+const BRAND_SITES: BrandSite[] = [
+  { icon: 'linkedin', hosts: /(^|\.)linkedin\.[a-z.]+$/, aliases: ['ln'] },
+  { icon: 'github', hosts: /(^|\.)github\.[a-z.]+$/, aliases: ['gh'] },
+  { icon: 'youtube', hosts: /(^|\.)(youtube\.[a-z.]+|youtu\.be)$/, aliases: ['yt'] },
+  { icon: 'behance', hosts: /(^|\.)behance\.[a-z.]+$/ },
+  { icon: 'instagram', hosts: /(^|\.)instagram\.[a-z.]+$/, aliases: ['ig'] },
+  { icon: 'x', hosts: /(^|\.)(x\.com|twitter\.com)$/, aliases: ['twitter'] },
+  { icon: 'dribbble', hosts: /(^|\.)dribbble\.[a-z.]+$/ },
+  { icon: 'medium', hosts: /(^|\.)medium\.[a-z.]+$/ },
+  {
+    icon: 'stackoverflow',
+    hosts: /(^|\.)stackoverflow\.[a-z.]+$/,
+    aliases: ['stack overflow', 'so'],
+  },
+  { icon: 'gitlab', hosts: /(^|\.)gitlab\.[a-z.]+$/ },
+  { icon: 'bitbucket', hosts: /(^|\.)bitbucket\.[a-z.]+$/, aliases: ['bit bucket'] },
+  { icon: 'facebook', hosts: /(^|\.)(facebook\.[a-z.]+|fb\.com)$/, aliases: ['fb'] },
+  { icon: 'telegram', hosts: /(^|\.)(t\.me|telegram\.[a-z.]+)$/, aliases: ['tg'] },
+  { icon: 'whatsapp', hosts: /(^|\.)(wa\.me|whatsapp\.[a-z.]+)$/, aliases: ['wa'] },
+  { icon: 'threads', hosts: /(^|\.)threads\.(net|com)$/ },
+  { icon: 'tiktok', hosts: /(^|\.)tiktok\.[a-z.]+$/, aliases: ['tik tok'] },
+  { icon: 'discord', hosts: /(^|\.)(discord\.[a-z.]+|discord\.gg)$/ },
+  { icon: 'codepen', hosts: /(^|\.)codepen\.[a-z.]+$/, aliases: ['code pen'] },
+  { icon: 'figma', hosts: /(^|\.)figma\.[a-z.]+$/ },
+  { icon: 'kaggle', hosts: /(^|\.)kaggle\.[a-z.]+$/ },
+  { icon: 'leetcode', hosts: /(^|\.)leetcode\.(com|cn)$/, aliases: ['leet code'] },
+  { icon: 'hackerrank', hosts: /(^|\.)hackerrank\.[a-z.]+$/, aliases: ['hacker rank'] },
+  { icon: 'devdotto', hosts: /(^|\.)dev\.to$/, aliases: ['devto', 'dev.to', 'dev'] },
+  { icon: 'npm', hosts: /(^|\.)(npmjs\.(com|org)|npm\.im)$/ },
+  { icon: 'codeforces', hosts: /(^|\.)codeforces\.(com|org)$/, aliases: ['code forces'] },
+  { icon: 'codechef', hosts: /(^|\.)codechef\.[a-z.]+$/, aliases: ['code chef'] },
+  { icon: 'hackerearth', hosts: /(^|\.)hackerearth\.[a-z.]+$/, aliases: ['hacker earth'] },
+  { icon: 'replit', hosts: /(^|\.)replit\.(com|app)$/ },
+  { icon: 'vercel', hosts: /(^|\.)vercel\.(app|com)$/ },
+  { icon: 'netlify', hosts: /(^|\.)netlify\.(app|com)$/ },
+  { icon: 'substack', hosts: /(^|\.)substack\.com$/ },
+  { icon: 'reddit', hosts: /(^|\.)reddit\.[a-z.]+$/ },
+  { icon: 'bluesky', hosts: /(^|\.)(bsky\.app|bsky\.social)$/, aliases: ['bsky'] },
+  {
+    icon: 'mastodon',
+    hosts: /(^|\.)(mastodon\.[a-z.]+|mstdn\.[a-z.]+|fosstodon\.org)$/,
+  },
+  { icon: 'pinterest', hosts: /(^|\.)pinterest\.[a-z.]+$/ },
+  { icon: 'twitch', hosts: /(^|\.)twitch\.tv$/ },
+  { icon: 'soundcloud', hosts: /(^|\.)soundcloud\.[a-z.]+$/, aliases: ['sound cloud'] },
+  { icon: 'spotify', hosts: /(^|\.)spotify\.com$/ },
+  {
+    icon: 'googlescholar',
+    hosts: /(^|\.)scholar\.google\.[a-z.]+$/,
+    aliases: ['scholar', 'google scholar', 'scholar google'],
+  },
+  { icon: 'orcid', hosts: /(^|\.)orcid\.org$/ },
+  { icon: 'researchgate', hosts: /(^|\.)researchgate\.net$/, aliases: ['research gate'] },
+  { icon: 'upwork', hosts: /(^|\.)upwork\.[a-z.]+$/ },
+  { icon: 'fiverr', hosts: /(^|\.)fiverr\.[a-z.]+$/ },
 ]
+
+function brandFor(icon: BrandIconName): { icon: DocIconName; name: string } {
+  return { icon, name: BRAND_LABELS[icon] }
+}
+
+/** Whether a label names a site in the catalogue (canonical name or alias). */
+function labelMatches(label: string, site: BrandSite): boolean {
+  const value = label.trim().toLowerCase()
+  if (!value) return false
+  if (BRAND_LABELS[site.icon].toLowerCase() === value) return true
+  return (site.aliases ?? []).some((alias) => alias === value)
+}
 
 /**
  * The brand behind a link, from its label or its host -- "LinkedIn",
  * "github.com/ada", "https://www.x.com/…" all resolve. Null for anything else.
  */
 export function linkBrand(label: string, url: string): { icon: DocIconName; name: string } | null {
+  const named = BRAND_SITES.find((site) => labelMatches(label, site))
+  if (named) return brandFor(named.icon)
   const host = hostOf(url)
-  const named = BRANDS.find((b) => b.name.toLowerCase() === label.trim().toLowerCase())
-  if (named) return { icon: named.icon, name: named.name }
-  const hosted = BRANDS.find((b) => b.match.test(host))
-  return hosted ? { icon: hosted.icon, name: hosted.name } : null
+  if (!host) return null
+  const hosted = BRAND_SITES.find((site) => site.hosts.test(host))
+  return hosted ? brandFor(hosted.icon) : null
 }
 
 /** Pick a brand icon for a link from its label or URL; anything else is generic. */
 export function iconForLink(label: string, url: string): DocIconName {
   return linkBrand(label, url)?.icon ?? 'link'
-}
-
-/** Label a pasted URL suggests ("linkedin.com/in/you" -> "LinkedIn"), if any. */
-export function suggestLinkLabel(url: string): string | null {
-  const host = hostOf(url)
-  return BRANDS.find((b) => b.match.test(host))?.name ?? null
-}
-
-/** Whether a label was auto-filled by suggestion, and so may be re-filled. */
-export function isKnownLinkLabel(label: string): boolean {
-  return BRANDS.some((b) => b.name.toLowerCase() === label.trim().toLowerCase())
 }
 
 /** Icon mapping for section headings. */
