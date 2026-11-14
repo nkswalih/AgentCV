@@ -116,6 +116,18 @@
   margin: 0 3.5pt;
   color: #9aa4af;
 }
+/* Icon per entry is the arrangement where the marks already separate the ways
+   to reach someone, so those rows separate with air instead of an interpunct.
+   Detected by the icon wrapper: bullet and bar render bare entries. */
+.page [data-doc-header] .doc-contact-row:has(.doc-contact-item) > .doc-contact-sep {
+  display: none;
+}
+.page [data-doc-header]
+  .doc-contact-row:has(.doc-contact-item)
+  > :not(.doc-contact-sep):not(:last-child) {
+  /* After the entry, not before the next one, so a wrapped entry starts flush. */
+  margin-right: 1.1em;
+}
 /* The link row is the one that wraps: five profiles do not fit a line, and a
    middot carried onto the next line reads as a stray bullet. It separates with
    air instead, so every wrapped line still starts on an address. Bar mode keeps
