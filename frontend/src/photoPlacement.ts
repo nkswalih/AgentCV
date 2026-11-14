@@ -17,7 +17,8 @@ export type PhotoPlacement = 'left' | 'top' | 'right' | 'bottom'
 export interface HeaderPlacementContext {
   columns: 'one' | 'two'
   headerPosition: 'top' | 'left' | 'right' | 'center'
-  /** Header card alignment. Only read in two-column mode. */
+  /** Header card alignment. Read in two-column mode, and for a one-column top
+   *  header, where the header position leaves the horizontal axis open. */
   align?: 'left' | 'center' | 'right'
 }
 
@@ -25,12 +26,24 @@ export interface HeaderPlacementContext {
 export function headerTextAlign(
   ctx: HeaderPlacementContext,
 ): 'left' | 'center' | 'right' {
-  if (ctx.columns === 'two') return ctx.align ?? 'center'
+  if (ctx.columns === 'two') {
+    if (ctx.align) return ctx.align
+    // A side region leads from its own edge until the card says otherwise:
+    // the sheet's two-column defaults are Left for a left header and Right
+    // for a right one.
+    if (ctx.headerPosition === 'left') return 'left'
+    if (ctx.headerPosition === 'right') return 'right'
+    return 'center'
+  }
   if (ctx.headerPosition === 'left' || ctx.headerPosition === 'right') {
     return ctx.headerPosition
   }
-  // In one column, "top" and "center" both mean a centred identity.
-  return 'center'
+  // A one-column header at the top (or centre) does not own the horizontal
+  // axis, so the header card leads there. This is the state a document lands
+  // in after switching two columns back to one, and ignoring it painted a
+  // left-aligned header centred.
+  if (ctx.headerPosition === 'center') return 'center'
+  return ctx.align ?? 'center'
 }
 
 /** True when the header sits inside a narrow side rail, not above the body. */
@@ -49,6 +62,13 @@ export function resolvePhotoPlacement(
 
   if (photoInSideRail(ctx)) {
     return stored === 'top' ? 'top' : 'bottom'
+  }
+
+  // A one-column top band keeps the portrait above the identity whatever the
+  // text alignment inside it is. The photo arrangement is its own choice, and
+  // the alignment control must never relocate the portrait.
+  if (ctx.columns === 'one' && (ctx.headerPosition ?? 'top') === 'top') {
+    return 'top'
   }
 
   const align = headerTextAlign(ctx)
