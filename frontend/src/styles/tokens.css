@@ -43,9 +43,10 @@
 
   --paper: #ffffff;
 
-  /* A hairline wave used by the heading-style glyph and the sheet's Wavy
-     heading. One drawing keeps the miniature and the page in step. */
-  --wave-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='7' height='5' viewBox='0 0 7 5'%3E%3Cpath d='M0 4 Q1.75 1 3.5 4 T7 4' fill='none' stroke='%23000' stroke-width='1.3' stroke-linecap='round'/%3E%3C/svg%3E");
+  /* The heading ornament's wave: a sharp zigzag, one wavelength per 4 units,
+     stretched to the mask box. A single drawing keeps the card miniature and
+     the sheet in step. */
+  --wave-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5' preserveAspectRatio='none'%3E%3Cpath d='M0 4 L2 1 L4 4 L6 1 L8 4' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 
   /* Home sidebar: the one card that is warmer than the canvas. */
   --panel-soft: #e9e6de;

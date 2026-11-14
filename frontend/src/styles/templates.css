@@ -2177,11 +2177,12 @@
   background: none !important;
 }
 
-/* Underline: a hairline close under the words, full width. The shipped
-   default, and the calmest way to divide a section. */
+/* Underline: a full-width rule in the document's accent ink, set close under
+   the words. The ornament is part of the identity, so it takes the accent
+   colour rather than a grey mix of the text ink. */
 .page.page[data-heading-visual="underline"] .doc-section-title {
-  padding-bottom: 3.5pt !important;
-  border-bottom: 1pt solid color-mix(in srgb, currentColor 70%, transparent) !important;
+  padding-bottom: 2pt !important;
+  border-bottom: 1pt solid var(--doc-accent, currentColor) !important;
 }
 
 /* Short underline: the rule hugs the words, so it reads as an underline
@@ -2246,11 +2247,11 @@
   border-bottom: 0.75pt solid color-mix(in srgb, currentColor 42%, transparent) !important;
 }
 
-/* Wavy: a hand-ruled wave along the full measure. Masked rather than drawn
-   as a border so it stays a hairline at any width and takes the heading's
-   ink, including on a dark rail. */
+/* Wavy: a sharp zigzag ruled along the full measure, in the accent ink,
+   sitting close under the words. Masked rather than drawn as a border so it
+   stays a hairline at any width and survives print rasterisation. */
 .page.page[data-heading-visual="wavy"] .doc-section-title {
-  padding-bottom: 8pt !important;
+  padding-bottom: 6pt !important;
 }
 .page.page[data-heading-visual="wavy"] .doc-section-title::after {
   content: '' !important;
@@ -2261,19 +2262,32 @@
   /* Same reset as the accent bar: a skin's 22pt tick, its own border and its
      centring transform would otherwise clip the wave to a stub at the edge. */
   width: auto !important;
-  height: 3.2pt;
+  height: 4pt;
   margin: 0 !important;
   border: 0 !important;
   transform: none !important;
-  background: currentColor !important;
+  background: var(--doc-accent, currentColor) !important;
   -webkit-mask-image: var(--wave-line);
-  -webkit-mask-size: 6pt 3.2pt;
+  -webkit-mask-size: 8pt 4pt;
   -webkit-mask-repeat: repeat-x;
   -webkit-mask-position: left bottom;
   mask-image: var(--wave-line);
-  mask-size: 6pt 3.2pt;
+  mask-size: 8pt 4pt;
   mask-repeat: repeat-x;
   mask-position: left bottom;
+}
+
+/* Painted rails keep their own ink: the accent is chosen against paper, and a
+   dark rail needs the heading's white to stay visible. */
+.page.page:is(.tpl-portal-pro, .tpl-modern-deep)
+  :is(.doc-rail, .doc-rail-top)
+  .doc-section-title {
+  border-bottom-color: currentColor !important;
+}
+.page.page:is(.tpl-portal-pro, .tpl-modern-deep)
+  :is(.doc-rail, .doc-rail-top)
+  .doc-section-title::after {
+  background-color: currentColor !important;
 }
 
 /* Two skins centre their headings. The three shrink-to-fit treatments are

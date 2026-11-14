@@ -3470,7 +3470,7 @@ input[type='range']::-moz-range-thumb {
   height: 1.5px;
 }
 
-/* Wavy: a ruled wave under the words. The mask keeps the wave a hairline at
+/* Wavy: a zigzag ruled under the words. The mask keeps the wave a hairline at
    any width instead of a stretched bitmap. */
 .heading-glyph[data-style='wavy'] {
   gap: 6px;
@@ -3484,11 +3484,11 @@ input[type='range']::-moz-range-thumb {
   opacity: 0.75;
   background: currentColor;
   -webkit-mask-image: var(--wave-line);
-  -webkit-mask-size: 7px 5px;
+  -webkit-mask-size: 8px 5px;
   -webkit-mask-repeat: repeat-x;
   -webkit-mask-position: left bottom;
   mask-image: var(--wave-line);
-  mask-size: 7px 5px;
+  mask-size: 8px 5px;
   mask-repeat: repeat-x;
   mask-position: left bottom;
 }
