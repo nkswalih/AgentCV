@@ -33,7 +33,7 @@ import {
 import { ResumeThumb } from '../components/ResumeThumb'
 import { demoDocument } from '../templates/demo'
 import { extractPalette } from './imagePalette'
-import { DocIcon, SECTION_ICONS, isKnownLinkLabel, suggestLinkLabel } from '../templates/doc-icons'
+import { DocIcon, SECTION_ICONS } from '../templates/doc-icons'
 import { Check, ChoiceTiles, Segmented, Slider, Text } from './fields'
 import { SectionCard, useDragSensors, DRAG_MODIFIERS } from './SectionCard'
 import { PhotoAdjustDialog } from './PhotoAdjustDialog'
@@ -475,6 +475,12 @@ export function LeftPane() {
   const headerAlign = headerTextAlign(photoCtx)
   const photoRail = photoInSideRail(photoCtx)
   const photoPlacement = resolvePhotoPlacement(pl.position, photoCtx)
+  // A one-column header at the top keeps the portrait above the identity
+  // whatever the text alignment inside the band is; everywhere else "above"
+  // still needs centred text, because a flanking photo is the only other
+  // composition the row can hold.
+  const photoTopOnly =
+    (columnLayout === 'one' && headerPosition === 'top') || headerAlign === 'center'
   const photoTileValue = photoRail
     ? photoPlacement === 'top'
       ? 'top'
@@ -557,7 +563,10 @@ export function LeftPane() {
           {columnLayout === 'one' && (
             <ChoiceTiles
               label="Header Position"
-              value={headerPosition === 'top' ? 'center' : headerPosition}
+              // The axis the sheet actually shows. A top header has no
+              // horizontal position of its own, so the card's alignment is
+              // what the strip must report.
+              value={headerAlign}
               options={[
                 { value: 'center', label: 'Center', visual: <HeaderAlignGlyph align="center" /> },
                 { value: 'left', label: 'Left', visual: <HeaderAlignGlyph align="left" /> },
@@ -751,33 +760,33 @@ export function LeftPane() {
                       value: 'left' as const,
                       label: 'Left',
                       visual: <PhotoPositionGlyph mode="left" />,
-                      disabled: headerAlign === 'center',
-                      note: 'Centred header text keeps the photo above the name',
+                      disabled: photoTopOnly,
+                      note: 'This header keeps the photo above the name',
                     },
                     {
                       value: 'top' as const,
                       label: 'Top',
                       visual: <PhotoPositionGlyph mode="top" />,
-                      // Above the identity only composes when the identity is
-                      // centred; a left or right header would leave the photo
-                      // hanging off the text's axis.
-                      disabled: headerAlign !== 'center',
-                      note: 'Needs centred header text',
+                      // Above the identity only composes when the header allows
+                      // it: a one-column top band always does, a two-column
+                      // masthead only with centred text.
+                      disabled: !photoTopOnly,
+                      note: 'Needs a top header or centred header text',
                     },
                     {
                       value: 'right' as const,
                       label: 'Right',
                       visual: <PhotoPositionGlyph mode="right" />,
-                      disabled: headerAlign === 'center',
-                      note: 'Centred header text keeps the photo above the name',
+                      disabled: photoTopOnly,
+                      note: 'This header keeps the photo above the name',
                     },
                   ]
             }
             hint={
               photoRail
                 ? undefined
-                : headerAlign === 'center'
-                  ? 'Centred header text keeps the photo above the name.'
+                : photoTopOnly
+                  ? 'This header keeps the photo above the identity.'
                   : 'A photo above needs centred header text.'
             }
             onChange={(position) => updateSettings({ photoLayout: { ...pl, position } })}
@@ -838,9 +847,10 @@ export function LeftPane() {
               { value: 'right', label: 'Right', visual: <HeaderAlignGlyph align="right" /> },
             ]}
             onChange={(align) =>
-              // One column has no side panel: there the header position IS the
-              // alignment, so both controls move together instead of fighting.
-              columnLayout === 'two'
+              // In a split layout the card owns the alignment. In one column
+              // the header position usually owns it, except at the top, where
+              // the position says nothing horizontal and the card leads.
+              columnLayout === 'two' || headerPosition === 'top'
                 ? setHeader({ align })
                 : updateSettings({ headerPosition: align })
             }
@@ -1248,8 +1258,9 @@ function PhotoField() {
 
 /**
  * Editable list of extra links -- LinkedIn, GitHub, Instagram, X, a portfolio.
- * Pasting a known profile URL auto-fills its label and the resume draws the
- * matching brand icon; anything else keeps a generic one.
+ * The resume draws the brand mark the URL belongs to and prints the address,
+ * minus its scheme. A label is optional: type one only when the address alone
+ * is too long or too cryptic, and it replaces the printed address.
  */
 function LinksField() {
   const { doc, updateBasics } = useEditor()
@@ -1260,15 +1271,10 @@ function LinksField() {
   const patch = (i: number, part: Partial<Link>) =>
     set(links.map((l, j) => (j === i ? { ...l, ...part } : l)))
 
-  /** Detect the brand as the URL is typed or pasted, and name the link from it
-      -- but never overwrite a label the author actually chose. */
+  /** Detect the brand from the URL as it is typed or pasted; the icon is
+      chosen from the host, so the printed line stays the address itself. */
   const onUrlChange = (i: number, url: string) => {
-    const suggested = suggestLinkLabel(url)
-    if (suggested && (links[i].label.trim() === '' || isKnownLinkLabel(links[i].label))) {
-      patch(i, { url, label: suggested })
-    } else {
-      patch(i, { url })
-    }
+    patch(i, { url })
   }
 
   return (
@@ -1282,8 +1288,8 @@ function LinksField() {
           <input
             className="input link-label"
             value={link.label}
-            placeholder="LinkedIn"
-            aria-label="Link label"
+            placeholder="Label"
+            aria-label="Link label (optional)"
             onChange={(e) => patch(i, { label: e.target.value })}
           />
           <input
