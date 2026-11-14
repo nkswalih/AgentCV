@@ -329,10 +329,13 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     'data-heading-cap': hs.capitalization,
     ...(hs.showIcons && { 'data-heading-icons': 'true' }),
     ...(hs.showIcons && { 'data-heading-icon-style': hs.iconStyle }),
-    // Header card. Alignment is a split-layout control only: in one column the
-    // header position already aligns the block, and two settings must never
-    // fight over the same axis.
-    ...(settings.columnLayout === 'two' && hdr.align && { 'data-header-align': hdr.align }),
+    // Header card. In a split layout the alignment decides the side region. In
+    // one column the header position owns the axis -- except at the top, where
+    // it says nothing horizontal and the card's alignment leads.
+    ...(hdr.align &&
+      (settings.columnLayout === 'two' || (settings.headerPosition ?? 'top') === 'top') && {
+        'data-header-align': hdr.align,
+      }),
     ...(hdr.details && { 'data-header-details': hdr.details }),
     ...(hdr.details === 'icon' && hdr.iconStyle && { 'data-header-icon': hdr.iconStyle }),
     ...(hdr.nameStyle && { 'data-name-style': hdr.nameStyle }),

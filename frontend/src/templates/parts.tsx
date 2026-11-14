@@ -18,7 +18,7 @@ import type {
   SkillsSection,
   SummaryItem,
 } from '../types'
-import { DocIcon, iconForLink, SECTION_ICONS, type DocIconName } from './doc-icons'
+import { DocIcon, linkBrand, SECTION_ICONS, type DocIconName } from './doc-icons'
 
 export function ProfilePhoto({
   src,
@@ -137,6 +137,20 @@ function normalizeUrl(url: string): string {
   return /^https?:\/\//i.test(value) ? value : `https://${value}`
 }
 
+/**
+ * The address as it should read on paper: no scheme, no `www.`, no trailing
+ * slash. A resume header is a caption, not a hyperlink target -- the anchor
+ * already carries the full URL, so the printed line stays short enough for
+ * the second contact row.
+ */
+function bareUrl(url: string): string {
+  return url
+    .trim()
+    .replace(/^https?:\/\//i, '')
+    .replace(/^www\./i, '')
+    .replace(/\/+$/, '')
+}
+
 interface ContactEntry {
   key: string
   icon: DocIconName
@@ -148,40 +162,57 @@ interface ContactEntry {
  * Every contact line entry, already resolved to its link target: email dials a
  * mailto, phone a tel, everything web-shaped gets an https prefix it can click
  * through. Empty fields contribute nothing.
+ *
+ * The entries are split into the two rows a resume header reads best in:
+ * the plain ways to reach someone (email, phone, place) on the first line, and
+ * the places their work lives (website, profiles) on the second. A pasted URL
+ * decides its own mark -- `linkedin.com/in/ada` arrives as LinkedIn, a GitHub
+ * profile as GitHub, a personal site as the globe.
  */
-function contactEntries(basics: Basics): ContactEntry[] {
-  const entries: ContactEntry[] = []
+function contactGroups(basics: Basics): { plain: ContactEntry[]; links: ContactEntry[] } {
+  const plain: ContactEntry[] = []
+  const links: ContactEntry[] = []
 
   const email = basics.email.trim()
-  if (email) entries.push({ key: 'email', icon: 'mail', text: email, href: `mailto:${email}` })
+  if (email) plain.push({ key: 'email', icon: 'mail', text: email, href: `mailto:${email}` })
 
   const phone = basics.phone.trim()
   if (phone) {
     // Keep digits and the leading +; everything else is formatting.
     const tel = phone.replace(/[^\d+]/g, '')
-    entries.push({ key: 'phone', icon: 'phone', text: phone, href: `tel:${tel}` })
+    plain.push({ key: 'phone', icon: 'phone', text: phone, href: `tel:${tel}` })
   }
 
   const location = basics.location.trim()
-  if (location) entries.push({ key: 'location', icon: 'pin', text: location })
+  if (location) plain.push({ key: 'location', icon: 'pin', text: location })
 
   const website = basics.website.trim()
-  if (website)
-    entries.push({ key: 'website', icon: 'globe', text: website, href: normalizeUrl(website) })
+  if (website) {
+    links.push({
+      key: 'website',
+      icon: linkBrand('', website)?.icon ?? 'globe',
+      // The address itself, printed the way people read it: no scheme, no
+      // www. A URL parses for an ATS; a nickname does not.
+      text: bareUrl(website),
+      href: normalizeUrl(website),
+    })
+  }
 
   for (const link of basics.links) {
     const url = link.url.trim()
     const label = link.label.trim()
     if (!url && !label) continue
-    entries.push({
+    links.push({
       key: link.id,
-      icon: iconForLink(label, url),
-      text: label || url,
+      icon: linkBrand(label, url)?.icon ?? 'link',
+      // An author-written label replaces the address; with no label the
+      // address carries the entry, minus the scheme it was pasted with.
+      text: label || bareUrl(url),
       href: url ? normalizeUrl(url) : undefined,
     })
   }
 
-  return entries
+  return { plain, links }
 }
 
 /**
@@ -206,8 +237,8 @@ export function Contact({
   stacked?: boolean
   icons?: boolean
 }) {
-  const entries = contactEntries(basics)
-  if (entries.length === 0) return null
+  const { plain, links } = contactGroups(basics)
+  if (plain.length === 0 && links.length === 0) return null
 
   const preview = useContext(PreviewContext)
   const renderEntry = (entry: ContactEntry) => {
@@ -231,29 +262,37 @@ export function Contact({
     return <span className={entry.href ? 'doc-link' : undefined}>{content}</span>
   }
 
+  // A whole row reads as one inline run, so separators sit only between the
+  // entries on that row -- never at a row boundary.
+  const renderRow = (entries: ContactEntry[], row: 'plain' | 'links') => (
+    <div className="doc-contact-row" data-row={row}>
+      {entries.map((entry, i) => (
+        <Fragment key={entry.key}>
+          {i > 0 && <span className="doc-contact-sep">·</span>}
+          {renderEntry(entry)}
+        </Fragment>
+      ))}
+    </div>
+  )
+
   if (stacked) {
     return (
       <div className="doc-contact">
-        {entries.map((e) => (
-          <div className="doc-contact-row" key={e.key}>
-            {renderEntry(e)}
+        {[...plain, ...links].map((entry) => (
+          <div className="doc-contact-row" key={entry.key}>
+            {renderEntry(entry)}
           </div>
         ))}
       </div>
     )
   }
 
-  const nodes: ReactNode[] = []
-  entries.forEach((entry, i) => {
-    if (i > 0)
-      nodes.push(
-        <span className="doc-contact-sep" key={`sep-${entry.key}`}>
-          ·
-        </span>,
-      )
-    nodes.push(<Fragment key={entry.key}>{renderEntry(entry)}</Fragment>)
-  })
-  return <div className="doc-contact">{nodes}</div>
+  return (
+    <div className="doc-contact">
+      {plain.length > 0 && renderRow(plain, 'plain')}
+      {links.length > 0 && renderRow(links, 'links')}
+    </div>
+  )
 }
 
 function Bullets({ bullets }: { bullets: string[] }) {
