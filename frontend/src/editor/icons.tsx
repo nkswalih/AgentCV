@@ -121,6 +121,22 @@ export const DownloadIcon = () => (
   </svg>
 )
 
+/** Arrow curling back to the left: step back through history. */
+export const UndoIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <path d="M6 9.3 2.7 6 6 2.7" />
+    <path d="M2.7 6h7a3.7 3.7 0 0 1 3.7 3.7v.4" />
+  </svg>
+)
+
+/** Mirror of UndoIcon: step forward again. */
+export const RedoIcon = () => (
+  <svg {...base} aria-hidden="true">
+    <path d="M10 9.3 13.3 6 10 2.7" />
+    <path d="M13.3 6h-7A3.7 3.7 0 0 0 2.6 9.7v.4" />
+  </svg>
+)
+
 export const Pencil = () => (
   <svg {...base} aria-hidden="true">
     <path d="M11.1 2.9 13.1 4.9 6.4 11.6l-2.9.9.9-2.9 6.7-6.7Z" />

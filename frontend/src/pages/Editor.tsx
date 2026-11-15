@@ -13,9 +13,13 @@ import {
   LinkIcon,
   LogoMark,
   MailIcon,
+  RedoIcon,
+  UndoIcon,
 } from '../editor/icons'
 import { PagePreview } from '../editor/PagePreview'
 import { LeftPane, RightPane } from '../editor/Panes'
+import { useHistoryKeys } from '../editor/useHistoryKeys'
+import { PageMeta } from '../components/PageMeta'
 
 /** The share sheet is optional, so ask the browser before assuming it. */
 type FileShareNavigator = Navigator & {
@@ -35,6 +39,64 @@ function SaveState() {
   )
 }
 
+/** The undo / redo glyphs for the user's own keyboard, not the one we test on. */
+function historyShortcuts() {
+  const apple = /mac|iphone|ipad/i.test(navigator.userAgent)
+  return apple
+    ? { undo: '⌘Z', redo: '⇧⌘Z' }
+    : { undo: 'Ctrl+Z', redo: 'Ctrl+Shift+Z' }
+}
+
+/**
+ * Undo / redo as one segmented pair.
+ *
+ * Each button's tooltip names the action it would move. That is the only place
+ * the history is visible, so it has to say "Undo phone" rather than "Undo" --
+ * the difference between stepping back once and undoing an afternoon. The
+ * shortcut rides along because a keyboard editor has no menu to discover it in.
+ */
+function HistoryControls() {
+  const undo = useEditor((s) => s.undo)
+  const redo = useEditor((s) => s.redo)
+  const past = useEditor((s) => s.past)
+  const future = useEditor((s) => s.future)
+  // Newest first out of the stack: exactly what each button would reverse.
+  const undoLabel = past.at(-1)?.label
+  const redoLabel = future.at(-1)?.label
+  const keys = historyShortcuts()
+
+  return (
+    <div className="history-group">
+      <button
+        type="button"
+        className="btn btn-outline history-btn"
+        onClick={undo}
+        disabled={!undoLabel}
+        aria-label={undoLabel ? `Undo ${undoLabel}` : 'Nothing to undo'}
+        aria-keyshortcuts="Control+Z Meta+Z"
+        title={
+          undoLabel ? `Undo ${undoLabel} (${keys.undo})` : 'Nothing to undo'
+        }
+      >
+        <UndoIcon />
+      </button>
+      <button
+        type="button"
+        className="btn btn-outline history-btn"
+        onClick={redo}
+        disabled={!redoLabel}
+        aria-label={redoLabel ? `Redo ${redoLabel}` : 'Nothing to redo'}
+        aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y"
+        title={
+          redoLabel ? `Redo ${redoLabel} (${keys.redo})` : 'Nothing to redo'
+        }
+      >
+        <RedoIcon />
+      </button>
+    </div>
+  )
+}
+
 export function Editor() {
   const { id } = useParams<{ id: string }>()
   const load = useEditor((s) => s.load)
@@ -43,6 +105,7 @@ export function Editor() {
   const rename = useEditor((s) => s.rename)
   const saveNow = useEditor((s) => s.saveNow)
   const [exportOpen, setExportOpen] = useState(false)
+  useHistoryKeys()
 
   // The topbar's two popovers share the usual outside-click + Escape contract.
   const [nameOpen, setNameOpen] = useState(false)
@@ -192,6 +255,7 @@ export function Editor() {
 
   return (
     <div className="shell">
+      <PageMeta title="Resume editor: AgentCV" noindex />
       <header className="topbar">
         <Link className="wordmark" to="/" aria-label="Back to resumes">
           <LogoMark size={30} />
@@ -242,6 +306,8 @@ export function Editor() {
         </div>
 
         <span className="topbar-spacer" />
+
+        <HistoryControls />
 
         <SaveState />
 

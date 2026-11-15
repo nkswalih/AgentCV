@@ -163,35 +163,6 @@
 .topbar-menu {
   position: relative;
 }
-.btn-outline {
-  background: var(--ink-850);
-  border-color: var(--ink-600);
-  color: var(--text-mid);
-}
-.btn-outline:hover:not(:disabled) {
-  background: var(--ink-800);
-  color: var(--text-hi);
-}
-.kebab-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  color: var(--text-mid);
-}
-.kebab-btn[aria-expanded='true'] {
-  background: var(--ink-800);
-  border-color: var(--ink-500);
-  color: var(--text-hi);
-}
-.download-btn {
-  min-height: 38px;
-  padding: 0 16px;
-  border-radius: 10px;
-}
-.download-btn svg {
-  width: 15px;
-  height: 15px;
-}
 
 .topbar-dropdown {
   position: absolute;
@@ -371,6 +342,58 @@
   padding: 5px;
   width: 26px;
   height: 26px;
+}
+
+/* Topbar actions. These come after the base .btn rules on purpose: a variant
+   declared earlier in the file would lose every property it shares with the
+   base and quietly render as an ordinary button. */
+.btn-outline {
+  background: var(--ink-850);
+  border-color: var(--ink-600);
+  color: var(--text-mid);
+}
+.btn-outline:hover:not(:disabled) {
+  background: var(--ink-800);
+  color: var(--text-hi);
+}
+.kebab-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  color: var(--text-mid);
+}
+.kebab-btn[aria-expanded='true'] {
+  background: var(--ink-800);
+  border-color: var(--ink-500);
+  color: var(--text-hi);
+}
+.download-btn {
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 10px;
+}
+.download-btn svg {
+  width: 15px;
+  height: 15px;
+}
+
+/* Undo / redo sit together but stay two buttons: a merged pill at this size
+   looks like a border bug, and each one is disabled on its own. */
+.history-group {
+  display: inline-flex;
+  flex: none;
+  gap: 6px;
+}
+.history-btn {
+  width: 30px;
+  height: 38px;
+  padding: 0;
+  border-radius: 9px;
+  color: var(--text-mid);
+}
+.history-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Tiny reset button that lives inside a field's value readout. */
