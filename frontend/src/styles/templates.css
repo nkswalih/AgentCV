@@ -2644,7 +2644,20 @@
   padding-left: var(--doc-split-gap);
 }
 
-/* -- Header ink wins over the accent switches and the Multi/Image reset -- */
+/* One gutter, not two. The padding above is the split gap, and the paint of a
+   side panel runs through it, so the gap the eye sees is exactly one page
+   margin. The grid's own column gap would stack on top of that padding and
+   push the facing text a double margin away from the panel, which reads as a
+   hole rather than a gutter. */
+.page[data-header-paint][data-columns='two']:is([data-header='left'], [data-header='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  ) {
+  column-gap: 0;
+}
+
+/* -- Header ink wins over the accent switches and the Multi/Image reset --
+   Links are excluded: Blue is an explicit author choice, and an anchor with no
+   explicit colour simply inherits, which is the header ink anyway. */
 .page[data-header-paint][data-header-side] [data-doc-header]
   :is(
     .doc-name,
