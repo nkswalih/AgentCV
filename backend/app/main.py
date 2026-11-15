@@ -73,13 +73,17 @@ if FRONTEND_DIST.is_dir():
         404 and the app looks broken on this origin (while working fine on the
         Vite dev server). Anything that is not a real file falls back to
         index.html and lets the client router take it from there.
+
+        A missed *file* is not a route. Serving index.html for, say, a deleted
+        icon answers an image request with HTML and teaches the browser to cache
+        that HTML under the image URL, so only extensionless paths fall back.
         """
 
         async def get_response(self, path: str, scope):  # type: ignore[override]
             try:
                 return await super().get_response(path, scope)
             except StarletteHTTPException as exc:
-                if exc.status_code == 404:
+                if exc.status_code == 404 and not Path(path).suffix:
                     return await super().get_response("index.html", scope)
                 raise
 
