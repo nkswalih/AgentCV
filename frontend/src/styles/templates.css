@@ -2550,9 +2550,10 @@
   background: transparent !important;
 }
 /* Keep the panel's own ink legible over the photograph, matching the
-   Single/Multi panels. */
+   Single/Multi panels. Document links keep their author-chosen colour. */
 .page[data-header-paint='image']:is([data-header-side='left'], [data-header-side='right'])
-  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) * {
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
+  :not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *) {
   color: inherit !important;
   border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 38%, transparent) !important;
 }
@@ -2571,11 +2572,16 @@
   color: var(--doc-header-text, currentColor);
 }
 /* Template inks are hardcoded per slot; on a painted panel they all yield to
-   the header's own ink so every line stays legible. */
+   the header's own ink so every line stays legible. Document links are the one
+   exception: Blue is an explicit author choice (see the Link Styling rules), so
+   the anchor and the glyph/text inside it are left to that rule instead of
+   being flattened to the panel ink. */
 .page[data-header-paint='single']
-  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) *,
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
+  :not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *),
 .page[data-header-paint='multi']
-  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) * {
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
+  :not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *) {
   color: inherit !important;
   border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 38%, transparent) !important;
 }
@@ -2671,7 +2677,7 @@
     .doc-rail-top-text,
     a.doc-link,
     .doc-icon
-  ) {
+  ):not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *) {
   color: var(--doc-header-text, currentColor) !important;
 }
 .page[data-header-paint] [data-doc-header],
@@ -2691,7 +2697,10 @@
   background: var(--doc-header-page-bg, transparent);
   color: var(--doc-header-page-text, #0f172a);
 }
-.page[data-header-paint][data-page-paint='true'] * {
+/* The page fill flattens decorative template ink; an explicit link colour is
+   still the author's call, so anchors keep it. */
+.page[data-header-paint][data-page-paint='true']
+  :not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *) {
   color: inherit !important;
 }
 /* The header band still owns its own ink above. */
@@ -3307,9 +3316,13 @@
 .page:is([data-link-color='blue'], [data-link-color='accent']) .doc-contact a {
   color: var(--doc-link-blue) !important;
 }
+/* The whole subtree follows the anchor's resolved blue: contact entries wrap
+   their label in an extra span, and the header-ink reset targets that span
+   directly, so naming only one wrapper class leaves white text under a blue
+   anchor. */
 .page:is([data-link-color='blue'], [data-link-color='accent'])
   :is(a.doc-link, .doc-contact a)
-  :is(.doc-contact-text, .doc-icon) {
+  * {
   color: inherit !important;
 }
 
@@ -3334,10 +3347,10 @@
 }
 .page[data-link-emphasis~='email']
   a.doc-link[data-contact-key='email']
-  :is(.doc-contact-text, .doc-icon),
+  *,
 .page[data-link-emphasis~='phone']
   a.doc-link[data-contact-key='phone']
-  :is(.doc-contact-text, .doc-icon) {
+  * {
   color: inherit !important;
 }
 
