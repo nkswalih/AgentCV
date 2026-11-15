@@ -4,10 +4,12 @@
  */
 
 import { MailIcon } from '../editor/icons'
+import { PageMeta } from '../components/PageMeta'
 
 export function CoverLetters() {
   return (
     <div className="dash">
+      <PageMeta title="Cover letters: AgentCV" />
       <div className="dash-inner">
         <header className="page-head">
           <h1 className="page-title">Cover Letters</h1>

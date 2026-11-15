@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { api } from '../api'
+import { PageMeta } from '../components/PageMeta'
 import { normalizeSettings } from '../factories'
 import { useFitToPage } from '../fit'
 import { ResumePage } from '../templates/ResumePage'
@@ -156,6 +157,7 @@ export function Print() {
 
   return (
     <div data-print-ready={ready ? 'true' : 'false'}>
+      <PageMeta title="Print: AgentCV" noindex />
       <div ref={pageRef}>
         <ResumePage doc={doc} forExport fit={fit} />
       </div>

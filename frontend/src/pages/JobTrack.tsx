@@ -4,10 +4,12 @@
  */
 
 import { BriefcaseIcon } from '../editor/icons'
+import { PageMeta } from '../components/PageMeta'
 
 export function JobTrack() {
   return (
     <div className="dash">
+      <PageMeta title="Job tracker: AgentCV" />
       <div className="dash-inner">
         <header className="page-head">
           <h1 className="page-title">Job Track</h1>

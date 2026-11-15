@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 
 import { api } from '../api'
+import { PageMeta } from '../components/PageMeta'
 import { ResumeThumb } from '../components/ResumeThumb'
 import { useTemplatePicker } from '../components/TemplatePicker'
 import { Kebab, Plus } from '../editor/icons'
@@ -97,6 +98,7 @@ export function Dashboard() {
 
   return (
     <div className="dash">
+      <PageMeta title="AgentCV: resume builder with live preview and PDF export" />
       <div className="dash-inner">
         <header className="page-head">
           <h1 className="page-title">My Resumes</h1>
