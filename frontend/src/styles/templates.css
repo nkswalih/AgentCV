@@ -3350,19 +3350,18 @@
  * -------------------------------------------------------------------------
  * The identity block needs one clear breath before the first section title,
  * but that breath is part of the page's rhythm, not a separate rule: it runs
- * slightly wider than the section cadence (10pt at the default multiplier) so
- * the header still reads as the top of the page without leaving a hole under
- * it. Expressed through --doc-gap, the spacing slider scales it with
- * everything else.
+ * wider than the section cadence so the header still reads as the top of the
+ * page, while staying tighter than a blank block would. Expressed through
+ * --doc-gap, the spacing slider scales it with everything else.
  *
  * The margin sits on whatever region follows the header rather than on the
  * skin itself, so no template adds its own top padding and the page margin
  * stays the only horizontal inset.
  *
  * A painted band is the exception: it already carries its own bottom padding
- * as part of the band, so the join below it takes the section cadence rather
- * than a second, wider breath. Without this the air under a filled header
- * measured roughly double the air between sections.
+ * as part of the band, so the join below it takes a slightly smaller breath.
+ * Without that the air under a filled header measured roughly double the air
+ * between sections.
  *
  * Banner and Creative are excluded: their identity sits in a solid band and
  * the padded .doc-body underneath already supplies the inset.
@@ -3370,12 +3369,12 @@
 .page:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-body,
 .page:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-columns,
 .page:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 14pt);
+  margin-top: calc(var(--doc-gap, 1) * 19pt);
 }
 .page[data-header-paint]:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-body,
 .page[data-header-paint]:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-columns,
 .page[data-header-paint]:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 11pt);
+  margin-top: calc(var(--doc-gap, 1) * 18pt);
 }
 
 /* A flanking portrait makes the header a row: align-items is the vertical
