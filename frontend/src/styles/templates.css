@@ -2499,24 +2499,27 @@
 
 /* A top header band is flush with the sheet: Single, Multi and Image share the
    same geometry, so switching treatment never shifts the band by a margin.
-   The padded designs put the page margin on the root, so the band reaches the
-   sheet edges by cancelling that margin and paying it back as padding. */
+   Padded designs put their page padding on the root, so the band reaches the
+   sheet edges by cancelling that padding and paying it back as padding. The
+   base is --doc-pad-*, not the margin itself: a design like Compact scales its
+   own padding down, and cancelling the raw margin would push its band past the
+   sheet edge instead of up to it. */
 .page[data-header-paint][data-header-side='full'] .doc-main > [data-doc-header] {
-  margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -1) 0;
-  padding: calc(var(--doc-margin-y, 14mm) * 0.62) var(--doc-margin-x, 15mm)
-    calc(var(--doc-margin-y, 14mm) * 0.42);
+  margin: calc(var(--doc-pad-y, 14mm) * -1) calc(var(--doc-pad-x, 15mm) * -1) 0;
+  padding: calc(var(--doc-pad-y, 14mm) * 0.62) var(--doc-pad-x, 15mm)
+    calc(var(--doc-pad-y, 14mm) * 0.42);
 }
 .page[data-header-paint][data-header-side='full'] .doc-rail > [data-doc-header] {
-  margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -0.58) 0;
-  padding: calc(var(--doc-margin-y, 14mm) * 0.62) calc(var(--doc-margin-x, 15mm) * 0.58)
-    calc(var(--doc-margin-y, 14mm) * 0.42);
+  margin: calc(var(--doc-pad-y, 14mm) * -1) calc(var(--doc-pad-x, 15mm) * -0.58) 0;
+  padding: calc(var(--doc-pad-y, 14mm) * 0.62) calc(var(--doc-pad-x, 15mm) * 0.58)
+    calc(var(--doc-pad-y, 14mm) * 0.42);
 }
 
 /* Grid designs own their own padding and are left alone. */
 .page[data-header-paint][data-header-side='full']:not(:is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)) > [data-doc-header] {
-  margin: calc(var(--doc-margin-y, 14mm) * -1) calc(var(--doc-margin-x, 15mm) * -1) 0;
-  padding: calc(var(--doc-margin-y, 14mm) * 0.62) var(--doc-margin-x, 15mm)
-    calc(var(--doc-margin-y, 14mm) * 0.42);
+  margin: calc(var(--doc-pad-y, 14mm) * -1) calc(var(--doc-pad-x, 15mm) * -1) 0;
+  padding: calc(var(--doc-pad-y, 14mm) * 0.62) var(--doc-pad-x, 15mm)
+    calc(var(--doc-pad-y, 14mm) * 0.42);
 }
 
 /* -- Image · side header: the photograph fills the whole column ----------

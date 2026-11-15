@@ -223,11 +223,17 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     headerMultiActive &&
     colors?.headerPresetId === 'custom' &&
     !!(colors?.headerPageBackgroundColor || colors?.headerPageTextColor)
-  // A side header exists only where the sheet can actually hold one: the
-  // resolved position decides, so a painted header can never float inside the
-  // page margin on an arrangement no rule paints.
+  // Where the painted surface sits -- not where the ink sits. A side panel only
+  // exists where the sheet is divided into regions, so only a split page can
+  // carry one. One column is a single region: its identity is always a
+  // full-width band, and `data-header` alone chooses which edge the ink aligns
+  // to. Deriving this from the position alone made a one-column band inherit the
+  // side-panel geometry, which no side rule paints there -- the band shrank back
+  // inside the page margin instead of crossing the sheet.
   const headerSide =
-    headerPos === 'left' || headerPos === 'right' ? headerPos : 'full'
+    settings.columnLayout === 'two' && (headerPos === 'left' || headerPos === 'right')
+      ? headerPos
+      : 'full'
 
   // Border treatment. The frame is drawn with real CSS borders on the sheet, so
   // paper size never changes and each template's own padding keeps the content
@@ -862,7 +868,10 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       </header>
     )
 
-    if (headerPos === 'left') {
+    // A side masthead is a split-page composition. In one column the band stays
+    // full width and only its ink follows the chosen edge, exactly as in every
+    // other design -- the header position must not quietly re-split the page.
+    if (isTwoCol && headerPos === 'left') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `${colW}% 1fr` }}>
           <div className="doc-col doc-col-left">
@@ -879,7 +888,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
         </div>
       )
     }
-    if (headerPos === 'right') {
+    if (isTwoCol && headerPos === 'right') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `1fr ${colW}%` }}>
           <div className="doc-col doc-col-left">
@@ -936,7 +945,9 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       </header>
     )
 
-    if (headerPos === 'left') {
+    // Same rule as Creative: a side masthead needs a split page. One column
+    // keeps the full-width photo head and only moves its ink.
+    if (isTwoCol && headerPos === 'left') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `${colW}% 1fr` }}>
           <div className="doc-col doc-col-left">
@@ -953,7 +964,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
         </div>
       )
     }
-    if (headerPos === 'right') {
+    if (isTwoCol && headerPos === 'right') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `1fr ${colW}%` }}>
           <div className="doc-col doc-col-left">
@@ -1010,7 +1021,9 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       </header>
     )
 
-    if (headerPos === 'left') {
+    // Editorial's split masthead is a two-column idea; in one column the
+    // masthead stays the full-width newspaper rule and the position moves its ink.
+    if (isTwoCol && headerPos === 'left') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `${colW}% 1fr` }}>
           <div className="doc-col doc-col-left">
@@ -1027,7 +1040,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
         </div>
       )
     }
-    if (headerPos === 'right') {
+    if (isTwoCol && headerPos === 'right') {
       return (
         <div {...rootProps} style={{ ...style, display: 'grid', gridTemplateColumns: `1fr ${colW}%` }}>
           <div className="doc-col doc-col-left">
