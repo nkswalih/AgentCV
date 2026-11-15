@@ -21,6 +21,27 @@ const LAYOUT_DEFAULTS = {
   rightColumn: [] as string[],
 } as const
 
+/**
+ * Resolve the stored header position to a placement the layout can actually
+ * draw.
+ *
+ * One column stores the identity's *text alignment* in the same field, so
+ * 'center' is a legitimate value there. A split page only has three real
+ * placements, and a value it cannot draw used to reach the sheet as an
+ * attribute no rule paints -- a painted header then floated inside the page
+ * margin instead of banding the sheet. Every reader of the field goes through
+ * here, so a control, a saved document and the renderer can never disagree
+ * about what a position means.
+ */
+export function resolveHeaderPosition(
+  columnLayout: Settings['columnLayout'],
+  position: Settings['headerPosition'] | undefined,
+): Settings['headerPosition'] {
+  const value = position ?? LAYOUT_DEFAULTS.headerPosition
+  if (columnLayout !== 'two') return value
+  return value === 'left' || value === 'right' ? value : 'top'
+}
+
 const PHOTO_LAYOUT_DEFAULTS = {
   show: true,
   grayscale: false,
@@ -126,12 +147,18 @@ export function normalizeSettings(settings: Settings): Settings {
             ? colors.singleAccent ?? storedAccent
             : storedAccent
 
+  // A split page can only place the identity at the top, left or right. One
+  // column stores its text alignment in the same field, so a saved 'center'
+  // (or any value a future control invents) resolves to the top band here,
+  // once, instead of leaving the sheet with an arrangement no rule paints.
+  const columnLayout = settings.columnLayout ?? LAYOUT_DEFAULTS.columnLayout
+
   return {
     ...LAYOUT_DEFAULTS,
     ...settings,
     accentColor: accentForTarget,
-    columnLayout: settings.columnLayout ?? LAYOUT_DEFAULTS.columnLayout,
-    headerPosition: settings.headerPosition ?? LAYOUT_DEFAULTS.headerPosition,
+    columnLayout,
+    headerPosition: resolveHeaderPosition(columnLayout, settings.headerPosition),
     columnWidth: settings.columnWidth ?? LAYOUT_DEFAULTS.columnWidth,
     leftColumn: settings.leftColumn ?? LAYOUT_DEFAULTS.leftColumn,
     rightColumn: settings.rightColumn ?? LAYOUT_DEFAULTS.rightColumn,

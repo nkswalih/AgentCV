@@ -9,6 +9,7 @@ import type { CSSProperties } from 'react'
 
 import type { ResumeDocument, Section, SectionType, TemplateId } from '../types'
 import { resolveHeadingVisual } from '../headingStyles'
+import { resolveHeaderPosition } from '../factories'
 import { resolvePhotoPlacement } from '../photoPlacement'
 import { Contact, DocSection, hasContact, ProfilePhoto } from './parts'
 import { FONT_STACKS, BORDER_SIZES, HEADER_PRESETS } from './registry'
@@ -160,11 +161,16 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
   // suppresses them. Until a choice is made, the switch decides.
   const headerIcons = hdr.details == null ? settings.showIcons : hdr.details === 'icon'
 
+  // Where the identity sits, resolved once for the whole render: the layout,
+  // the sheet's own data attributes and the photo resolver all read this, so a
+  // stored alignment value can never reach them as a placement.
+  const headerPos = resolveHeaderPosition(settings.columnLayout, settings.headerPosition)
+
   // The photo card's tiles and this attribute read one resolver, so the sheet
   // only ever draws an arrangement the card says is available.
   const photoPlacement = resolvePhotoPlacement(pl.position, {
     columns: settings.columnLayout,
-    headerPosition: settings.headerPosition,
+    headerPosition: headerPos,
     align: hdr.align,
   })
 
@@ -217,10 +223,11 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     headerMultiActive &&
     colors?.headerPresetId === 'custom' &&
     !!(colors?.headerPageBackgroundColor || colors?.headerPageTextColor)
+  // A side header exists only where the sheet can actually hold one: the
+  // resolved position decides, so a painted header can never float inside the
+  // page margin on an arrangement no rule paints.
   const headerSide =
-    settings.columnLayout === 'two' && (settings.headerPosition ?? 'top') !== 'top'
-      ? settings.headerPosition ?? 'top'
-      : 'full'
+    headerPos === 'left' || headerPos === 'right' ? headerPos : 'full'
 
   // Border treatment. The frame is drawn with real CSS borders on the sheet, so
   // paper size never changes and each template's own padding keeps the content
@@ -318,7 +325,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     'data-export': forExport ? 'true' : 'false',
     ...(fitted && { 'data-fit': 'on' }),
     'data-columns': settings.columnLayout,
-    'data-header': settings.headerPosition,
+    'data-header': headerPos,
     // The resolved arrangement, not the stored preference: a header change
     // must never leave the sheet in a composition the card cannot describe.
     'data-photo-position': photoPlacement,
@@ -333,7 +340,7 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     // one column the header position owns the axis -- except at the top, where
     // it says nothing horizontal and the card's alignment leads.
     ...(hdr.align &&
-      (settings.columnLayout === 'two' || (settings.headerPosition ?? 'top') === 'top') && {
+      (settings.columnLayout === 'two' || headerPos === 'top') && {
         'data-header-align': hdr.align,
       }),
     ...(hdr.details && { 'data-header-details': hdr.details }),
@@ -404,7 +411,6 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     : sections
 
   // -- Layout column resolution (shared by all templates) ------------------
-  const headerPos = settings.headerPosition ?? 'top'
   const leftIds = settings.leftColumn ?? []
   const rightIds = settings.rightColumn ?? []
   const colW = settings.columnWidth ?? 40

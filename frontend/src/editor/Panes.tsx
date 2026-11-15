@@ -7,7 +7,7 @@ import {
   photoInSideRail,
   resolvePhotoPlacement,
 } from '../photoPlacement'
-import { newId, applyTemplatePreset } from '../factories'
+import { newId, applyTemplatePreset, resolveHeaderPosition } from '../factories'
 import { api } from '../api'
 import {
   loadCustomTemplates,
@@ -338,11 +338,22 @@ export function LeftPane() {
   function switchToTwo() {
     const all = currentDoc.sections.map((s) => s.id)
     const mid = Math.ceil(all.length / 2)
-    updateSettings({
-      columnLayout: 'two',
-      leftColumn: all.slice(0, mid),
-      rightColumn: all.slice(mid),
-    })
+    // One column stores text alignment in headerPosition ('center' is the
+    // default there), but a split layout only has three real placements, so the
+    // value is resolved to one the layout can draw -- otherwise the position
+    // strip shows no tile selected and the sheet gets a header it cannot paint.
+    const headerPosition = resolveHeaderPosition('two', currentDoc.settings.headerPosition)
+    updateSettings(
+      {
+        columnLayout: 'two',
+        headerPosition,
+        leftColumn: all.slice(0, mid),
+        rightColumn: all.slice(mid),
+      },
+      // One click, one undo step: the column lists are bookkeeping, not a
+      // second thing the user chose.
+      'columns',
+    )
   }
 
   /** Flatten back to one column, preserving combined order. */
@@ -515,10 +526,15 @@ export function LeftPane() {
   const setLink = (patch: LinkStyle) =>
     updateSettings({ linkStyle: { ...link, ...patch } })
   const setLinkIcons = (on: boolean) =>
-    updateSettings({
-      showIcons: on,
-      headerStyle: { ...header, details: on ? 'icon' : 'bullet' },
-    })
+    // The switch and the Header card's arrangement are the same decision, so
+    // they undo as one.
+    updateSettings(
+      {
+        showIcons: on,
+        headerStyle: { ...header, details: on ? 'icon' : 'bullet' },
+      },
+      'contact icons',
+    )
   const toggleEmphasis = (key: 'email' | 'phone') => {
     const next = linkEmphasis.includes(key)
       ? linkEmphasis.filter((k) => k !== key)
@@ -1449,7 +1465,7 @@ export function RightPane() {
       preset.leftColumn = []
       preset.rightColumn = []
     }
-    updateSettings(preset)
+    updateSettings(preset, 'template')
   }
 
   function handleSaveTemplate() {
