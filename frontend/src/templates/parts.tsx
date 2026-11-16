@@ -595,8 +595,14 @@ export function SectionBody({
     )
   }
 
-  // Skills in inline mode renders the whole set at once (see above).
-  return <>{section.type === 'skills' ? render(items[0]) : items.map((i) => render(i))}</>
+  // The flattened grid is built from the section rather than from one entry, so
+  // it renders once. Inline skills print one block per group and therefore go
+  // through the ordinary item map -- rendering only items[0] dropped every
+  // group after the first.
+  if (section.type === 'skills' && (section as SkillsSection).layout === 'bullets') {
+    return <>{render(items[0])}</>
+  }
+  return <>{items.map((i) => render(i))}</>
 }
 
 /**
