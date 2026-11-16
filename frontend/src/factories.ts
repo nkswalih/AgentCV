@@ -1,6 +1,13 @@
 /** Constructors for new sections and items, with fresh ids. */
 
-import type { Section, SectionItem, SectionType, Settings, TemplateId } from './types'
+import type {
+  HeaderStyle,
+  Section,
+  SectionItem,
+  SectionType,
+  Settings,
+  TemplateId,
+} from './types'
 
 export const newId = () =>
   // crypto.randomUUID is available in every browser this app targets.
@@ -357,6 +364,15 @@ interface TemplatePreset {
   paperSize?: 'A4' | 'Letter'
   /** Section-title case. Omitted = the uppercase house default. */
   capitalization?: Settings['headingStyle']['capitalization']
+  /** Section-title icons. Omitted = the house default (drawn). */
+  headingIcons?: boolean
+  /**
+   * The header card state this design ships with. Omitted = bare contact
+   * entries and no alignment override, which is the resting state of a document
+   * that never opened the card. Applying a design resets the card, so a mark or
+   * axis chosen for a previous design cannot survive the switch.
+   */
+  headerStyle?: HeaderStyle
 }
 
 const TEMPLATE_PRESETS: Record<TemplateId, TemplatePreset> = {
@@ -374,7 +390,7 @@ const TEMPLATE_PRESETS: Record<TemplateId, TemplatePreset> = {
   'portal-pro':   { fontFamily: 'Georgia',          columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.85,marginX: 15, marginY: 14, lineHeight: 1.45, accentColor: '#1e293b', showIcons: true,  showPhoto: true,  photoPosition: 'top', photoShape: 'circle', photoSize: 32, columnWidth: 43 },
   'modern-deep':  { fontFamily: 'Merriweather',     columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.85,marginX: 15, marginY: 14, lineHeight: 1.45, accentColor: '#2b3a55', showIcons: true,  showPhoto: true,  photoPosition: 'top', photoShape: 'square', photoSize: 32, columnWidth: 43 },
   'serif-ats':    { fontFamily: 'Times New Roman',  columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1,   marginX: 15, marginY: 14, lineHeight: 1.65,  accentColor: '#191e24', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
-  'jake':         { fontFamily: 'Times New Roman',  columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1.85, marginX: 12.7, marginY: 12.7, lineHeight: 2,  accentColor: '#191e24', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40, fontSize: 11, paperSize: 'Letter', capitalization: 'none' },
+  'jake':         { fontFamily: 'Times New Roman',  columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1.85, marginX: 12.7, marginY: 12.7, lineHeight: 2,  accentColor: '#191e24', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40, fontSize: 11, paperSize: 'Letter', capitalization: 'none', headingIcons: false, headerStyle: { align: 'center', details: 'bar' } },
   'banner':       { fontFamily: 'Inter',            columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.87, marginX: 15, marginY: 14, lineHeight: 1.65,  accentColor: '#374151', showIcons: false, showPhoto: true,  photoPosition: 'top', photoShape: 'rounded', photoSize: 28, columnWidth: 40 },
   'editorial':    { fontFamily: 'Georgia',          columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.75, marginX: 15, marginY: 14, lineHeight: 1.65,  accentColor: '#171b21', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
   'two-col':      { fontFamily: 'Inter',            columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.85, marginX: 15, marginY: 14, lineHeight: 1.65,  accentColor: '#273038', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 50 },
@@ -424,11 +440,22 @@ export function applyTemplatePreset(template: TemplateId): Partial<Settings> {
       borderColor: '#000000',
     },
     // Headings: standard underline style, case per design. Jake's small caps
-    // are drawn by the font, so the text must reach it untransformed.
+    // are drawn by the font, so the text must reach it untransformed, and its
+    // section titles carry no icon column.
     headingStyle: {
       ...HEADING_STYLE_DEFAULTS,
+      ...(p.headingIcons != null ? { showIcons: p.headingIcons } : {}),
       ...(p.capitalization ? { capitalization: p.capitalization } : {}),
     },
+    // Header card: reset to the design's own arrangement. Without this a mark
+    // or alignment chosen for the previous design survives the switch and the
+    // new one renders as a hybrid of the two.
+    headerStyle: p.headerStyle ?? {},
+    // Link and face cards: also template-owned. A dotted link or an exotic
+    // name face chosen for another design must not follow the user here.
+    linkStyle: undefined,
+    nameFont: undefined,
+    titleFont: undefined,
     // Colors: null = template CSS defaults
     colors: undefined,
     // Layout
