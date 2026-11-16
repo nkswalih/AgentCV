@@ -271,6 +271,9 @@ const ITALIC_TITLE_TEMPLATES = new Set<TemplateId>([
   'academic',
   'portal-pro',
   'modern-deep',
+  // Jake prints no title by design; one the author adds is set in the same
+  // italic its secondary entry rows use.
+  'jake',
 ])
 
 /** Designs whose links are underlined by default, so the Link card's resting

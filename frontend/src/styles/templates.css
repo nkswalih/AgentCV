@@ -1640,8 +1640,17 @@
   letter-spacing: 0;
   color: #000;
 }
+/* The reference has no professional title, so the sheet says nothing under the
+   name -- but that is the data being empty, not the design refusing to print
+   one. A title the author writes keeps the page's own ink and face, in the
+   design's secondary voice (the italic its entry rows already use), and still
+   answers the header card's Italic/Upright and size controls: no font-size is
+   set here, so --doc-title-size keeps working. */
 .tpl-jake .doc-headline {
-  display: none;
+  display: block;
+  margin-top: calc(1.5pt * var(--jake-lead));
+  font-style: italic;
+  color: #000;
 }
 .tpl-jake .doc-contact {
   display: flex;
