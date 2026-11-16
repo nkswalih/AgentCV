@@ -81,10 +81,33 @@ if FRONTEND_DIST.is_dir():
 
         async def get_response(self, path: str, scope):  # type: ignore[override]
             try:
-                return await super().get_response(path, scope)
+                response = await super().get_response(path, scope)
             except StarletteHTTPException as exc:
                 if exc.status_code == 404 and not Path(path).suffix:
-                    return await super().get_response("index.html", scope)
-                raise
+                    response = await super().get_response("index.html", scope)
+                else:
+                    raise
+            response.headers["cache-control"] = self._cache_policy(path)
+            return response
+
+        @staticmethod
+        def _cache_policy(path: str) -> str:
+            """Vite fingerprints bundles; it does not fingerprint the shell.
+
+            Everything under /assets/ carries a content hash in its name and can
+            be cached for as long as the browser likes. index.html names the
+            current bundle, so it has to be revalidated -- otherwise a rebuild
+            lands on disk and the browser keeps loading the previous one, which
+            looks exactly like the fix never shipped. Non-hashed extras
+            (favicon, manifest, offline shell) are revalidated too: a 304 costs
+            nothing on localhost and they do change between builds.
+
+            The mount is rooted at "/" and Starlette hands the path through
+            os.path.normpath, so on Windows the separator is a backslash. Path
+            parts compare the same on either platform.
+            """
+            if Path(path).parts[:1] == ("assets",):
+                return "public, max-age=31536000, immutable"
+            return "no-cache"
 
     app.mount("/", SpaFiles(directory=FRONTEND_DIST, html=True), name="frontend")
