@@ -1666,18 +1666,28 @@
 /* One pipe after each entry, so a wrapped line starts flush on an address
    rather than on a dangling mark. The app's own separator spans are switched
    off: this design's pipe is its ornament, and keeping both would double the
-   mark at the row boundary. */
-.tpl-jake .doc-contact-sep {
+   mark at the row boundary.
+
+   The pipe is this design's Bar arrangement -- it is the mark the Bar tile
+   draws -- so every rule in the group below is written as "the pipe state" and
+   steps aside the moment the header card asks for Bullet or Icon. `:not()` on
+   two values, not a list of the state we know about: a document saved before
+   the card existed has no arrangement at all and must still print the
+   reference's own line. */
+.page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
+  .doc-contact-sep {
   display: none;
 }
-.tpl-jake .doc-contact-row > *::after {
+.page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
+  .doc-contact-row > *::after {
   content: '|';
   /* The reference separates entries with one interword space on each side of
      the bar, not with the bar's own side bearings. */
   margin: 0 3.3pt;
   color: #000;
 }
-.tpl-jake .doc-contact-row:last-child > :last-child::after {
+.page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
+  .doc-contact-row:last-child > :last-child::after {
   content: none;
 }
 /* The reference leads with the phone number; source order puts email first,
@@ -1685,15 +1695,12 @@
 .tpl-jake .doc-contact-row[data-row='plain'] > [data-contact-key='phone'] {
   order: -1;
 }
-/* Icon arrangement: the marks already separate the entries, so no pipes. */
-.page[data-header-details='icon'] .tpl-jake .doc-contact-row > *::after {
-  content: none;
-}
 /* The link row normally separates its entries with air, because a middot
-   stranded at a line break reads as a stray bullet. This design prints on one
-   line and owns its pipes, so that air would land as a hole between the last
-   pipe and the final link. Icon mode keeps it: there the marks do the work. */
-.page:not([data-header-details='bar']):not([data-header-details='icon']).tpl-jake
+   stranded at a line break reads as a stray bullet. In the pipe state that air
+   would land as a hole between the last pipe and the final link, so it goes.
+   Bullet and Icon keep it: there the marks do the work, and a wrapped link must
+   still start on an address. */
+.page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
   .doc-contact-row[data-row='links']
   > :not(.doc-contact-sep):not(:last-child) {
   margin-right: 0;
