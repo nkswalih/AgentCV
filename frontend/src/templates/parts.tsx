@@ -261,7 +261,14 @@ export function Contact({
           {content}
         </a>
       )
-    return <span className={entry.href ? 'doc-link' : undefined}>{content}</span>
+    // The key travels in miniature too: designs may reorder or emphasise an
+    // entry by it (Jake leads with the phone number), and a thumbnail should
+    // show the same arrangement the exported page will.
+    return (
+      <span className={entry.href ? 'doc-link' : undefined} data-contact-key={entry.key}>
+        {content}
+      </span>
+    )
   }
 
   // A whole row reads as one inline run, so separators sit only between the

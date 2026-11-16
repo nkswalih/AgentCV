@@ -1707,6 +1707,13 @@
   text-decoration: underline;
   text-underline-offset: 1pt;
 }
+/* The telephone number is the one contact entry the reference prints as plain
+   text: only the mail and profile links carry an underline. It stays a link so
+   the exported PDF can still dial it. */
+.tpl-jake .doc-contact [data-contact-key='phone'],
+.tpl-jake .doc-contact [data-contact-key='phone'] .doc-contact-text {
+  text-decoration: none;
+}
 
 /* -- Section titles: \large\scshape\raggedright + \titlerule ------------- */
 .tpl-jake .doc-section {
