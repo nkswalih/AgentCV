@@ -266,11 +266,15 @@ export function Contact({
 
   // A whole row reads as one inline run, so separators sit only between the
   // entries on that row -- never at a row boundary.
+  // The separator is ornament, not content: each design draws its own glyph
+  // (an interpunct, a pipe, nothing at all), so the span carries no text and
+  // the CSS supplies the mark. It also keeps the raw string out of the PDF's
+  // text layer, where it would otherwise sit between two addresses.
   const renderRow = (entries: ContactEntry[], row: 'plain' | 'links') => (
     <div className="doc-contact-row" data-row={row}>
       {entries.map((entry, i) => (
         <Fragment key={entry.key}>
-          {i > 0 && <span className="doc-contact-sep">·</span>}
+          {i > 0 && <span className="doc-contact-sep" aria-hidden="true" />}
           {renderEntry(entry)}
         </Fragment>
       ))}

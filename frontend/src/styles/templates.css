@@ -116,6 +116,12 @@
   margin: 0 3.5pt;
   color: #9aa4af;
 }
+/* The span is ornament, not content: each design draws its own mark, so the
+   glyph lives here rather than in the markup and never lands in the PDF text
+   layer next to an address. Bar and Bullet restate this at higher specificity. */
+.doc-contact-sep::after {
+  content: '\00b7';
+}
 /* Icon per entry is the arrangement where the marks already separate the ways
    to reach someone, so those rows separate with air instead of an interpunct.
    Detected by the icon wrapper: bullet and bar render bare entries. */
