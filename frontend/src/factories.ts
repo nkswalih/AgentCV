@@ -351,6 +351,12 @@ interface TemplatePreset {
   photoShape: 'circle' | 'square' | 'rounded'
   photoSize: number
   columnWidth: number
+  /** Body size in pt. Omitted = the app default (10.5pt). */
+  fontSize?: number
+  /** Omitted = A4. Letter matches the reference Jake's Resume output. */
+  paperSize?: 'A4' | 'Letter'
+  /** Section-title case. Omitted = the uppercase house default. */
+  capitalization?: Settings['headingStyle']['capitalization']
 }
 
 const TEMPLATE_PRESETS: Record<TemplateId, TemplatePreset> = {
@@ -368,7 +374,7 @@ const TEMPLATE_PRESETS: Record<TemplateId, TemplatePreset> = {
   'portal-pro':   { fontFamily: 'Georgia',          columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.85,marginX: 15, marginY: 14, lineHeight: 1.45, accentColor: '#1e293b', showIcons: true,  showPhoto: true,  photoPosition: 'top', photoShape: 'circle', photoSize: 32, columnWidth: 43 },
   'modern-deep':  { fontFamily: 'Merriweather',     columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.85,marginX: 15, marginY: 14, lineHeight: 1.45, accentColor: '#2b3a55', showIcons: true,  showPhoto: true,  photoPosition: 'top', photoShape: 'square', photoSize: 32, columnWidth: 43 },
   'serif-ats':    { fontFamily: 'Times New Roman',  columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1,   marginX: 15, marginY: 14, lineHeight: 1.65,  accentColor: '#191e24', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
-  'jake':         { fontFamily: 'Times New Roman',  columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1.85, marginX: 15, marginY: 14, lineHeight: 2,  accentColor: '#191e24', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
+  'jake':         { fontFamily: 'Times New Roman',  columnLayout: 'one', headerPosition: 'top', sectionSpacing: 1.85, marginX: 12.7, marginY: 12.7, lineHeight: 2,  accentColor: '#191e24', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40, fontSize: 11, paperSize: 'Letter', capitalization: 'none' },
   'banner':       { fontFamily: 'Inter',            columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.87, marginX: 15, marginY: 14, lineHeight: 1.65,  accentColor: '#374151', showIcons: false, showPhoto: true,  photoPosition: 'top', photoShape: 'rounded', photoSize: 28, columnWidth: 40 },
   'editorial':    { fontFamily: 'Georgia',          columnLayout: 'one', headerPosition: 'top', sectionSpacing: 0.75, marginX: 15, marginY: 14, lineHeight: 1.65,  accentColor: '#171b21', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 40 },
   'two-col':      { fontFamily: 'Inter',            columnLayout: 'two', headerPosition: 'left', sectionSpacing: 0.85, marginX: 15, marginY: 14, lineHeight: 1.65,  accentColor: '#273038', showIcons: false, showPhoto: false, photoPosition: 'top', photoShape: 'circle', photoSize: 24, columnWidth: 50 },
@@ -394,12 +400,14 @@ export function applyTemplatePreset(template: TemplateId): Partial<Settings> {
     accentColor: p.accentColor,
     showIcons: p.showIcons,
     // Typography: null = "let the template's CSS defaults apply"
-    fontSize: 10.5,
+    fontSize: p.fontSize ?? 10.5,
     nameSize: null,
     titleSize: null,
     headingSize: null,
     entrySize: null,
     contactSize: null,
+    // Paper stock: a design typeset for Letter must not be re-fitted to A4.
+    paperSize: p.paperSize ?? 'A4',
     // Photo: per-template defaults
     showPhoto: p.showPhoto,
     photoLayout: {
@@ -415,8 +423,12 @@ export function applyTemplatePreset(template: TemplateId): Partial<Settings> {
       borderWidth: 1,
       borderColor: '#000000',
     },
-    // Headings: standard underline style
-    headingStyle: { ...HEADING_STYLE_DEFAULTS },
+    // Headings: standard underline style, case per design. Jake's small caps
+    // are drawn by the font, so the text must reach it untransformed.
+    headingStyle: {
+      ...HEADING_STYLE_DEFAULTS,
+      ...(p.capitalization ? { capitalization: p.capitalization } : {}),
+    },
     // Colors: null = template CSS defaults
     colors: undefined,
     // Layout

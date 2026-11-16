@@ -1591,61 +1591,114 @@
   font-weight: 700;
 }
 
-/* -- Jake's Resume: exact LaTeX replica ------------------------------------
-   Source: https://github.com/jakegut/resume
-   11pt Times, centred \scshape header, \titlerule under section titles,
-   tight \vspace{-Npt} rhythm, pipe-separated contact, underlined links.
-   Every size/space below is expressed relative to the app's shared
-   --doc-size / --doc-gap / --doc-leading / --doc-margin-* variables so this
-   template responds to the same sliders as every other one — it previously
-   hardcoded pt values and silently ignored all of them. */
+/* -- Jake's Resume: measured replica of the LaTeX original ----------------
+   Source: https://github.com/jakegut/resume (sb2nov-derived class).
+
+   Reproduced to the point: Letter paper, 12.7mm margins (36pt), 11pt Times,
+   a \Huge small-caps name, one centred pipe-separated contact line, a 0.4pt
+   \titlerule under small-caps section titles, tabular two-row entry heads and
+   a nested itemize for bullets.
+
+   Every vertical distance is the reference's measured pt value multiplied by
+   --jake-lead (the leading slider halved) or --jake-gap (the spacing slider
+   over 1.85). Both sliders therefore stay live, while the shipped preset --
+   leading 2, spacing 1.85 -- reproduces the measured baseline table exactly. */
 .tpl-jake {
+  --jake-lead: calc(var(--doc-leading, 1.42) / 2);
+  --jake-gap: calc(var(--doc-gap, 1) / 1.85);
   font-family: var(--doc-font, 'Times New Roman', Times, serif);
   font-size: var(--doc-size, 11pt);
-  line-height: calc(var(--doc-leading, 1.42) * 0.81); /* ≈1.15 at the default leading */
-  /* No padding override here on purpose: .tpl-jake already sits in the
-     shared skin selector (Section 2) that sets
-     padding: var(--doc-margin-y) var(--doc-margin-x) — redeclaring it here
-     with fixed mm values was overriding both margin sliders. */
+  line-height: calc(14pt * var(--jake-lead));
+  color: #000;
+  /* Padding stays with the shared skin rule (Section 2), so both margin
+     sliders keep working; only the rhythm constants belong to this design. */
 }
 
-/* -- Header: centred \Huge \scshape name, pipe contact ------------------- */
+/* -- Header: \Huge\scshape name over a single pipe-separated line ---------
+   The original prints phone | mail | profiles as one centred run. The app
+   builds two rows (plain, then links), so the rows are laid out side by side
+   here and a pipe bridges their boundary -- the reference's single line. */
 .tpl-jake .doc-header {
   text-align: center;
   border: none;
   padding: 0;
-  margin: 0 0 2pt;
+  margin: 0;
+}
+/* The shared header is a flex column with a 12pt gap between the identity
+   block and the contact line. The reference stacks them 4.33pt apart, so the
+   distance belongs to the contact's own margin here. */
+.page.tpl-jake [data-doc-header] {
+  gap: 0;
 }
 .tpl-jake .doc-name {
-  font-size: var(--doc-name-size, 24pt);
+  /* 2.25em of an 11pt body = 24.75pt, \Huge set solid: the cap height, not a
+     generous line box, decides where the name sits. */
+  font-size: var(--doc-name-size, 2.25em);
   font-weight: 700;
   font-variant: small-caps;
+  line-height: 0.72;
+  letter-spacing: 0;
   color: #000;
-  letter-spacing: 0.02em;
-  line-height: 1.1;
 }
 .tpl-jake .doc-headline {
   display: none;
 }
 .tpl-jake .doc-contact {
-  margin-top: 1pt;
-  font-size: var(--doc-contact-size, 10pt);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+  margin-top: calc(4.33pt * var(--jake-lead));
+  font-size: var(--doc-contact-size, 0.91em);
+  line-height: calc(12pt * var(--jake-lead));
   color: #000;
   text-align: center;
 }
-/* LaTeX uses $|$ pipe separators — hide the · text node without an
-   inline-block width hack (which can misbehave with some line-wrapping),
-   then draw the pipe at a size that tracks the contact line itself. */
-.tpl-jake .doc-contact-sep {
-  margin: 0 4pt;
-  font-size: 0;
+.tpl-jake .doc-contact-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
 }
-.tpl-jake .doc-contact-sep::after {
+.tpl-jake .doc-contact-row + .doc-contact-row {
+  margin-top: 0;
+}
+/* One pipe after each entry, so a wrapped line starts flush on an address
+   rather than on a dangling mark. The app's own separator spans are switched
+   off: this design's pipe is its ornament, and keeping both would double the
+   mark at the row boundary. */
+.tpl-jake .doc-contact-sep {
+  display: none;
+}
+.tpl-jake .doc-contact-row > *::after {
   content: '|';
-  font-size: 0.91em;
+  /* The reference separates entries with one interword space on each side of
+     the bar, not with the bar's own side bearings. */
+  margin: 0 3.3pt;
   color: #000;
 }
-/* Underlined links like LaTeX \underline{} */
+.tpl-jake .doc-contact-row:last-child > :last-child::after {
+  content: none;
+}
+/* The reference leads with the phone number; source order puts email first,
+   so the phone entry is pulled to the front of its row. */
+.tpl-jake .doc-contact-row[data-row='plain'] > [data-contact-key='phone'] {
+  order: -1;
+}
+/* Icon arrangement: the marks already separate the entries, so no pipes. */
+.page[data-header-details='icon'] .tpl-jake .doc-contact-row > *::after {
+  content: none;
+}
+/* The link row normally separates its entries with air, because a middot
+   stranded at a line break reads as a stray bullet. This design prints on one
+   line and owns its pipes, so that air would land as a hole between the last
+   pipe and the final link. Icon mode keeps it: there the marks do the work. */
+.page:not([data-header-details='bar']):not([data-header-details='icon']).tpl-jake
+  .doc-contact-row[data-row='links']
+  > :not(.doc-contact-sep):not(:last-child) {
+  margin-right: 0;
+}
+/* Underlined links like \underline{} */
 .tpl-jake .doc-link,
 .tpl-jake .doc-contact a,
 .tpl-jake a.doc-link .doc-contact-text,
@@ -1655,36 +1708,86 @@
   text-underline-offset: 1pt;
 }
 
-/* -- Section titles: \scshape\raggedright\large + \titlerule + vspace ---- */
+/* -- Section titles: \large\scshape\raggedright + \titlerule ------------- */
 .tpl-jake .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 6pt);
+  margin-top: calc(6.03pt * var(--jake-gap));
 }
-.tpl-jake .doc-section:first-of-type {
-  margin-top: calc(var(--doc-gap, 1) * 4pt);
+/* 14.07pt measured from the last contact baseline -- the shared header-to-body
+   join is a different distance, and it is zeroed below, so this margin is the
+   whole gap. Page-scoped because the shared rule is not. */
+.tpl-jake .doc-section:first-of-type,
+.page.tpl-jake .doc-body > .doc-section:first-child {
+  margin-top: calc(14.77pt * var(--jake-gap));
+}
+.page.page[data-columns='one'].tpl-jake [data-doc-header] + .doc-body {
+  margin-top: 0;
 }
 .tpl-jake .doc-section-title {
-  font-size: var(--doc-heading-size, 13pt); /* \large at 11pt base ≈ 13.2pt */
+  font-size: var(--doc-heading-size, 1.087em); /* 11.96pt = \large of 11pt */
   font-variant: small-caps;
-  font-weight: 600;
-  letter-spacing: 0.05em;
+  font-weight: 400;
+  letter-spacing: 0;
   color: #000;
-  margin: 0 0 2pt;
-  padding: 0 0 2pt;
-  border-bottom: 0.5pt solid #000;
-  line-height: 1.2;
+  line-height: calc(14pt * var(--jake-lead));
+  margin: 0 0 calc(1.83pt * var(--jake-gap));
+  padding: 0 0 calc(1.42pt * var(--jake-lead));
+  border-bottom: 0.4pt solid currentColor;
+}
+/* Underline is this design's resting treatment, and \titlerule is its honest
+   measure: a 0.4pt hairline 1.42pt under the words. The generic Underline
+   style draws 1pt in the accent, 2pt lower -- the same idea at the wrong
+   weight for a LaTeX page. Any other chosen treatment still wins. */
+.page.page.tpl-jake[data-heading-visual='underline'] .doc-section-title {
+  line-height: calc(14pt * var(--jake-lead)) !important;
+  margin-bottom: calc(1.83pt * var(--jake-gap)) !important;
+  padding-bottom: calc(1.42pt * var(--jake-lead)) !important;
+  border-bottom: 0.4pt solid currentColor !important;
 }
 
-/* -- Entry items: tight \vspace{-2pt} rhythm, tabular two-line heads -----
-   \resumeSubheading{#1 Position}{#2 Date}{#3 Company}{#4 Location}:
-   only #3/#4 are wrapped in \small — #1/#2 print at the body's normal
-   size. The previous CSS shrank all four to ~10pt, which doesn't match. */
+/* -- Entries: \resumeSubheading, tabular rows ----------------------------
+   The entry list is indented 0.15in (10.8pt) from the text block -- the
+   \leftmargin of \resumeSubHeadingListStart -- and stops 5.4pt short of the
+   right edge, which is the width the original's tabular* fills. */
 .tpl-jake .doc-item {
   break-inside: avoid;
+  margin-left: 10.8pt;
+  margin-right: 5.4pt;
 }
 .tpl-jake .doc-item + .doc-item {
-  margin-top: calc(var(--doc-gap, 1) * 3pt);
+  /* The gap between records is paid by the bullet list's own bottom padding;
+     what is left here only settles the rounding so consecutive heads land on
+     the reference's 18.1pt pitch. */
+  margin-top: calc(0.11pt * var(--jake-gap));
+}
+/* A record with no bullets ends on its second row, which the original pads
+   with a larger \vspace: 4.46pt instead of 0.11. */
+.tpl-jake .doc-item:not(:has(.doc-bullets)) + .doc-item {
+  margin-top: calc(4.46pt * var(--jake-gap));
 }
 .tpl-jake .doc-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6pt;
+  line-height: calc(13.5pt * var(--jake-lead));
+}
+.tpl-jake .doc-item-head-swap,
+.tpl-jake .doc-item-head-dual {
+  display: flex;
+  flex-direction: column;
+  /* Stretch, not the shared baseline: in a column, baseline alignment makes
+     each row shrink to its text, so the date would sit beside the title
+     instead of on the right edge. */
+  align-items: stretch;
+  /* 0.75pt is one device pixel in the exported page. The reference sets its two
+     tabular rows 13.5pt apart; the italic row carries a slightly lower
+     baseline, so the box gap supplies the remainder. A smaller gap rounds to
+     zero in some heads and to a whole pixel in others, which produced two
+     different row pitches on the same page. */
+  gap: calc(0.75pt * var(--jake-lead));
+}
+.tpl-jake .doc-item-head-swap .doc-item-row,
+.tpl-jake .doc-item-head-dual .doc-item-row {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -1692,70 +1795,136 @@
 }
 .tpl-jake .doc-item-title {
   font-weight: 700;
-  font-size: var(--doc-entry-size, 1em); /* was 10.5pt — position prints at full body size */
+  font-size: var(--doc-entry-size, 1em);
   color: #000;
 }
 .tpl-jake .doc-item-date {
   font-weight: 400;
-  font-size: 1em; /* was 10pt — same row as position, also full body size */
+  font-size: 1em;
+  font-style: normal;
   color: #000;
   white-space: nowrap;
   flex: none;
 }
-.tpl-jake .doc-item-sub {
+/* The two secondary slots -- the degree under a school, the employer under a
+   role, a project's stack beside its name -- are all \small italics. Which of
+   them a record shows is the head kind's business, not the type's. */
+.tpl-jake .doc-item-sub,
+.tpl-jake .doc-item-meta {
   font-style: italic;
   font-weight: 400;
-  font-size: 0.91em; /* \small ≈ 10pt of an 11pt body */
-  color: #000;
-}
-.tpl-jake .doc-item-meta {
-  font-style: italic; /* was missing — LaTeX wraps location in \textit{\small ...} */
   font-size: 0.91em;
   color: #000;
 }
+/* Row one carries the plain fields at body size, row two the \small italics.
+   Education therefore leads with the school and its town, the degree and its
+   dates beneath; Experience leads with the dates, the employer and town
+   beneath. Which fields land on which row is the data's choice (the head
+   kind); how each row is set is this design's. */
+.tpl-jake .doc-item-head-swap .doc-item-row:first-child > :last-child {
+  font-size: 1em;
+  font-style: normal;
+  font-weight: 400;
+}
+.tpl-jake .doc-item-head-swap .doc-item-row:last-child > * {
+  font-size: 0.91em;
+  font-style: italic;
+  font-weight: 400;
+}
+/* Projects print one row: \textbf{Name} | \emph{stack} on the left at \small,
+   the dates at body size on the right, the whole row sitting 2pt lower than an
+   experience head because the original opens it with its own \vspace. */
+.tpl-jake .doc-item-head-beside {
+  padding-top: calc(2.05pt * var(--jake-lead));
+}
+.tpl-jake .doc-item-head-beside .doc-item-title {
+  font-size: 0.91em;
+  font-weight: 700;
+}
+.tpl-jake .doc-item-head-beside .doc-item-beside {
+  font-size: 1em;
+  font-weight: 400;
+  font-style: italic;
+}
+.tpl-jake .doc-item-head-beside .doc-item-beside::before {
+  content: ' | ';
+  font-style: normal;
+  font-weight: 400;
+}
 
-/* -- Bullets: standard \itemize, wrapped in \small ------------------------ */
+/* -- Bullets: nested \itemize, \small, 14pt pitch ------------------------
+   The marker is out of flow on a hanging-indent first line, so wrapped text
+   returns to the item's left edge. The list's bottom padding is what separates
+   one record's last bullet from the next record's head. */
 .tpl-jake .doc-bullets {
-  margin: 1pt 0 0;
-  padding-left: 14pt;
+  list-style: none;
+  margin: calc(0.6pt * var(--jake-lead)) 0 0;
+  padding: 0 0 calc(3.16pt * var(--jake-gap)) 24pt;
 }
 .tpl-jake .doc-bullets li {
+  position: relative;
   font-size: 0.91em;
-  line-height: 1.35;
-  margin-bottom: 0.5pt;
+  /* A 14pt line measures 18.67px, and the export can only place it on whole
+     pixels, so the pitch alternates 18/19px and averages 13.875pt. 13.9 is
+     that mean: the same alternation, without overshooting it on every line. */
+  line-height: calc(13.9pt * var(--jake-lead));
+  margin: 0;
   color: #000;
 }
-.tpl-jake .doc-bullets li:last-child {
-  margin-bottom: 0;
+/* Out of flow, so the marker cannot grow the line box the way a raised
+   inline-block does -- that added 0.2pt to every bullet's pitch.
+
+   Sized by its ink, not by its type size: the reference's marker is Computer
+   Modern's \textbullet at 5.98pt, whose dot fills most of the em and prints
+   ~2.6pt across. Times' bullet is a much smaller part of its em, so the same
+   5.98pt type prints a dot half that size. Setting the marker at body size
+   gives the Times glyph the reference's dot without redrawing it. */
+.tpl-jake .doc-bullets li::before {
+  content: '\2022';
+  position: absolute;
+  left: -9.3pt;
+  top: 0;
+  font-size: 1.1em;
+  line-height: inherit;
 }
 
-/* -- Skills: \small{\textbf{Label}{: item, item, item} \\ ...} -----------
-   This is one inline paragraph line per category, bold label + colon +
-   comma-separated list — never a bulleted <li> list, which the previous
-   CSS rendered it as. */
+/* -- Skills: bold label, colon, one comma-run per line ------------------- */
 .tpl-jake .doc-skillgroup {
-  margin-bottom: 1pt;
-  line-height: 1.35;
+  margin-left: 10.8pt;
+  font-size: 0.91em;
+  line-height: calc(11.9pt * var(--jake-lead));
+}
+/* The first line follows a \titlerule: 1.4pt of \vspace, the rest of the
+   13.5pt gap being the line's own half-leading. `:first-of-type`, not
+   `:first-child`: the section title is the section's first child, so the group
+   never is one. */
+.tpl-jake .doc-skillgroup:first-of-type {
+  padding-top: calc(1.4pt * var(--jake-gap));
+}
+/* The reference breaks each skill line with `\\` inside one \small paragraph, so
+   the category lines are separated by the leading alone -- no paragraph gap. */
+.tpl-jake .doc-skillgroup + .doc-skillgroup {
+  margin-top: 0;
 }
 .tpl-jake .doc-skillgroup-label {
   font-weight: 700;
-  font-size: 0.91em;
   color: #000;
 }
-.tpl-jake .doc-skillgroup-label::after {
+/* A colon belongs to an inline list. Pill tags are a set, not a sentence, and
+   read wrong with punctuation in front of them. */
+.tpl-jake .doc-skillgroup-label:has(+ .doc-skilllines)::after {
   content: ': ';
 }
 .tpl-jake .doc-skilllines {
   margin: 0;
-  padding-left: 0;
+  padding: 0;
   list-style: none;
   display: inline;
-  font-size: 0.91em;
   color: #000;
 }
 .tpl-jake .doc-skilllines li {
   display: inline;
-  margin-bottom: 0;
+  margin: 0;
 }
 .tpl-jake .doc-skilllines li:not(:last-child)::after {
   content: ', ';
@@ -1763,14 +1932,17 @@
 
 /* -- Languages row ------------------------------------------------------- */
 .tpl-jake .doc-langrow {
+  margin-left: 10.8pt;
   font-size: 0.91em;
+  line-height: calc(11.9pt * var(--jake-lead));
   color: #000;
 }
 
 /* -- Summary ------------------------------------------------------------ */
 .tpl-jake .doc-summary {
+  margin-left: 10.8pt;
   font-size: 1em;
-  line-height: calc(var(--doc-leading, 1.42) * 0.86);
+  line-height: calc(14pt * var(--jake-lead));
   color: #000;
 }
 

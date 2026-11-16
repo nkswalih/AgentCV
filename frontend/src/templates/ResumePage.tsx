@@ -11,7 +11,7 @@ import type { ResumeDocument, Section, SectionType, TemplateId } from '../types'
 import { resolveHeadingVisual } from '../headingStyles'
 import { resolveHeaderPosition } from '../factories'
 import { resolvePhotoPlacement } from '../photoPlacement'
-import { Contact, DocSection, hasContact, ProfilePhoto } from './parts'
+import { Contact, DocSection, hasContact, ProfilePhoto, type HeadKind } from './parts'
 import { FONT_STACKS, BORDER_SIZES, HEADER_PRESETS } from './registry'
 
 /** Sections that live in the Sidebar template's left rail. */
@@ -1112,11 +1112,21 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
 
   /** Render a list of sections into DocSection components. */
   function renderSections(sections: Section[]) {
+    // Jake's Resume prints a house shape per entry type rather than one shared
+    // head: the school leads and the degree sits under it, experience puts the
+    // dates on the title row and the place beneath, and a project's stack rides
+    // beside its name. Every other design keeps the shared head.
+    const jakeHeads: Partial<Record<SectionType, HeadKind>> = {
+      education: 'swap',
+      experience: 'dual',
+      projects: 'beside',
+    }
     return sections.map((s: Section) => (
       <DocSection
         key={s.id}
         section={s}
         timeline={spine && SPINE_TYPES.has(s.type)}
+        head={template === 'jake' ? jakeHeads[s.type] : undefined}
       />
     ))
   }

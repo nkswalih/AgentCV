@@ -314,10 +314,20 @@ function Bullets({ bullets }: { bullets: string[] }) {
 }
 
 /**
- * Title / subtitle / date, the shape almost every entry type shares. Each slot
- * disappears when empty, and the flex row simply has one fewer child -- which is
- * why a missing date leaves no hole where it would have sat.
+ * Entry-head layout, chosen by the design rather than by the data:
+ *
+ * - `default`  stacks the subtitle under the title, date beside the title.
+ * - `swap`     puts the place over the dates and the subtitle under them.
+ * - `dual`     keeps the dates on the title's row and drops the place to the
+ *              second row.
+ * - `beside`   sets the subtitle on the title's own line -- a project's stack
+ *              printed beside its name.
+ *
+ * `swap`/`dual` describe where each field sits, so the same record can read
+ * "school over dates" or "dates over place" without touching the data.
  */
+export type HeadKind = 'default' | 'swap' | 'dual' | 'beside'
+
 function ItemHead({
   title,
   sub,
@@ -325,7 +335,7 @@ function ItemHead({
   date,
   hideDate,
   inlineSub,
-  swap,
+  head = 'default',
 }: {
   title: string
   sub?: string
@@ -336,25 +346,47 @@ function ItemHead({
   /** Single-line heads: the subtitle rides beside the title instead of
       stacking beneath it -- how a certification row wants to read. */
   inlineSub?: boolean
-  /** Two spread rows: location tops the right column, the date sits under it
-      -- how a university / degree pair wants to read. */
-  swap?: boolean
+  head?: HeadKind
 }) {
   const hasSub = !!sub?.trim()
   const hasMeta = !!meta?.trim()
-  if (swap) {
+  const showsDate = !hideDate && !!date?.trim()
+  if (head === 'swap' || head === 'dual') {
+    // The two spread layouts differ only in which field owns the right column
+    // of each row. Each cell keeps the class of the field it holds, so a place
+    // stays a place and a date stays a date for the typography rules.
+    const cell = (value: string, kind: 'date' | 'meta') => (
+      <div className={kind === 'date' ? 'doc-item-date' : 'doc-item-meta'}>{value}</div>
+    )
+    const firstRight = head === 'swap' ? meta : date
+    const firstRightKind = head === 'swap' ? 'meta' : 'date'
+    const secondRight = head === 'swap' ? date : meta
+    const secondRightKind = head === 'swap' ? 'date' : 'meta'
+    const firstRightShown = head === 'swap' ? hasMeta : showsDate
+    const secondRightShown = head === 'swap' ? showsDate : hasMeta
     return (
-      <div className="doc-item-head doc-item-head-swap">
+      <div className={`doc-item-head doc-item-head-${head}`}>
         <div className="doc-item-row">
           {title.trim() && <div className="doc-item-title">{title}</div>}
-          {hasMeta && <div className="doc-item-meta">{meta}</div>}
+          {firstRightShown && cell(firstRight ?? '', firstRightKind)}
         </div>
-        {(hasSub || (date?.trim() && !hideDate)) && (
+        {(hasSub || secondRightShown) && (
           <div className="doc-item-row">
             {hasSub && <div className="doc-item-sub">{sub}</div>}
-            {!hideDate && date?.trim() && <div className="doc-item-date">{date}</div>}
+            {secondRightShown && cell(secondRight ?? '', secondRightKind)}
           </div>
         )}
+      </div>
+    )
+  }
+  if (head === 'beside') {
+    return (
+      <div className="doc-item-head doc-item-head-beside">
+        <div className="doc-item-title">
+          {title}
+          {hasSub && <span className="doc-item-sub doc-item-beside">{sub}</span>}
+        </div>
+        {showsDate && <div className="doc-item-date">{date}</div>}
       </div>
     )
   }
@@ -389,10 +421,6 @@ function ItemHead({
   )
 }
 
-/** Entry-head layout: default stacks date beside the title; 'swap' spreads
-    location over the date (Jake's two-line heads). */
-type HeadKind = 'default' | 'swap'
-
 function Experience({ item, bare, head }: { item: ExperienceItem; bare?: boolean; head?: HeadKind }) {
   return (
     <div className="doc-item">
@@ -402,7 +430,7 @@ function Experience({ item, bare, head }: { item: ExperienceItem; bare?: boolean
         meta={item.location}
         date={dateRange(item.startDate, item.endDate, item.current)}
         hideDate={bare}
-        swap={head === 'swap'}
+        head={head}
       />
       <Bullets bullets={item.bullets} />
     </div>
@@ -410,15 +438,19 @@ function Experience({ item, bare, head }: { item: ExperienceItem; bare?: boolean
 }
 
 function Education({ item, bare, head }: { item: EducationItem; bare?: boolean; head?: HeadKind }) {
+  // `swap` is the school-led record: the institution becomes the head line and
+  // the degree drops to the italic second line, which is the reading order
+  // Jake's Resume prints.
+  const schoolLeads = head === 'swap'
   return (
     <div className="doc-item">
       <ItemHead
-        title={item.degree}
-        sub={item.institution}
+        title={schoolLeads ? item.institution : item.degree}
+        sub={schoolLeads ? item.degree : item.institution}
         meta={item.location}
         date={dateRange(item.startDate, item.endDate)}
         hideDate={bare}
-        swap={head === 'swap'}
+        head={head}
       />
       {item.grade.trim() && <div className="doc-item-meta">{item.grade}</div>}
       <Bullets bullets={item.bullets} />
@@ -462,7 +494,7 @@ function Project({ item, bare, head }: { item: ProjectItem; bare?: boolean; head
         meta={item.url}
         date={dateRange(item.startDate, item.endDate)}
         hideDate={bare}
-        swap={head === 'swap'}
+        head={head}
       />
       <Bullets bullets={item.bullets} />
     </div>
@@ -494,7 +526,7 @@ function Custom({ item, bare, head }: { item: CustomItem; bare?: boolean; head?:
         sub={item.subtitle}
         date={item.date}
         hideDate={bare}
-        swap={head === 'swap'}
+        head={head}
       />
       <Bullets bullets={item.bullets} />
     </div>
@@ -518,10 +550,14 @@ export function SectionBody({
   section,
   tags,
   timeline,
+  head,
 }: {
   section: Section
   tags?: boolean
   timeline?: boolean
+  /** Entry-head shape for the dated item types; designs that print a house
+      style (Jake's Resume) choose which field leads each row. */
+  head?: HeadKind
 }) {
   const items = visibleItems(section)
   const onSpine = timeline && TIMELINE_TYPES.has(section.type)
@@ -534,9 +570,9 @@ export function SectionBody({
       case 'summary':
         return <SummaryParagraph key={i.id} item={i as SummaryItem} />
       case 'experience':
-        return <Experience key={i.id} item={i as ExperienceItem} bare={onSpine} />
+        return <Experience key={i.id} item={i as ExperienceItem} bare={onSpine} head={head} />
       case 'education':
-        return <Education key={i.id} item={i as EducationItem} bare={onSpine} />
+        return <Education key={i.id} item={i as EducationItem} bare={onSpine} head={head} />
       case 'skills': {
         const s = section as SkillsSection
         // Column mode: every group's skills merge into one flat grid and the
@@ -572,13 +608,13 @@ export function SectionBody({
         return <Skills key={g.id} item={g} tags={tags} />
       }
       case 'projects':
-        return <Project key={i.id} item={i as ProjectItem} bare={onSpine} />
+        return <Project key={i.id} item={i as ProjectItem} bare={onSpine} head={head} />
       case 'certifications':
         return <Certification key={i.id} item={i as CertificationItem} />
       case 'languages':
         return <Language key={i.id} item={i as LanguageItem} />
       case 'custom':
-        return <Custom key={i.id} item={i as CustomItem} bare={onSpine} />
+        return <Custom key={i.id} item={i as CustomItem} bare={onSpine} head={head} />
     }
   }
 
@@ -614,10 +650,12 @@ export function DocSection({
   section,
   tags,
   timeline,
+  head,
 }: {
   section: Section
   tags?: boolean
   timeline?: boolean
+  head?: HeadKind
 }) {
   if (!section.visible) return null
   if (visibleItems(section).length === 0) return null
@@ -626,7 +664,7 @@ export function DocSection({
   // decide which one shows, keeping the icons in lockstep with the Section
   // Headings controls without threading settings through every template.
   return (
-    <section className="doc-section">
+    <section className="doc-section" data-type={section.type}>
       <h2 className="doc-section-title">
         {sectionIcon && (
           <>
@@ -636,7 +674,7 @@ export function DocSection({
         )}
         {section.title}
       </h2>
-      <SectionBody section={section} tags={tags} timeline={timeline} />
+      <SectionBody section={section} tags={tags} timeline={timeline} head={head} />
     </section>
   )
 }
