@@ -55,7 +55,7 @@ def _date_range(start: str, end: str, current: bool = False) -> str:
         return _escape(to)
     if not to:
         return _escape(start)
-    return f"{_escape(start)} --- {_escape(to)}"
+    return f"{_escape(start)} -- {_escape(to)}"
 
 
 def _item_head(title: str, sub: str, meta: str, date: str) -> str:

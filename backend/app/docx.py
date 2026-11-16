@@ -152,7 +152,7 @@ def _document_xml(doc: ResumeDocument, paper: PaperSize) -> str:
                 end = getattr(item, "end_date", "")
                 if getattr(item, "current", False):
                     end = "Present"
-                date = " — ".join(p for p in (start.strip(), end.strip()) if p)
+                date = " – ".join(p for p in (start.strip(), end.strip()) if p)
                 title_line = " · ".join(str(p).strip() for p in head_parts[:1])
                 rest_line = " · ".join(str(p).strip() for p in head_parts[1:])
                 meta = " | ".join(p for p in (rest_line, date) if p)

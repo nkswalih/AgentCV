@@ -95,13 +95,15 @@ function visibleItems(section: Section): SectionItem[] {
   return section.items.filter((i) => i.visible && textOf(section.type, i).some((v) => v.trim() !== ''))
 }
 
-/** "Jan 2024 — Present", collapsing gracefully when either end is missing. */
+/** "Jan 2024 – Present", collapsing gracefully when either end is missing.
+    The separator is an en dash: it joins two ends of one range, where an em
+    dash would read as a break in the sentence. */
 function dateRange(start: string, end: string, current?: boolean) {
   const to = current ? 'Present' : end.trim()
   if (!start.trim() && !to) return ''
   if (!start.trim()) return to
   if (!to) return start
-  return `${start} — ${to}`
+  return `${start} – ${to}`
 }
 
 /** The date line of any entry that carries one -- the timeline layout lifts
