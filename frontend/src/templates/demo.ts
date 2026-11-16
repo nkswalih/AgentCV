@@ -700,50 +700,74 @@ const ATTORNEY: ResumeDocument = {
 }
 
 // =============================================================================
-// 15. jake - Software Engineer, early career
+// 15. jake - the reference resume this template replicates
 // =============================================================================
-const SWE_EARLY_CAREER: ResumeDocument = {
+// Not a stand-in persona: this is the content of the original resume the design
+// was measured against, so the picker card advertises the page it actually
+// produces. Section order, dates, and line breaks are the reference's own --
+// education newest first, two entries in date order, and skills as one line per
+// category. Editing these strings edits what every preview of the design shows.
+const JAKE_REFERENCE: ResumeDocument = {
   basics: {
-    fullName: 'Arjun Mehta', headline: 'Software Engineer',
-    email: 'arjun.mehta@example.com', phone: '+91 99000 12345', location: 'Pune, India',
+    fullName: 'Jake Ryan', headline: '',
+    email: 'jake@su.edu', phone: '123-456-7890', location: '',
     website: '', photoUrl: '', summary: '',
-    links: [{ id: 'l1', label: 'GitHub', url: 'github.com/arjunmehta' }, { id: 'l2', label: 'LinkedIn', url: 'linkedin.com/in/arjunmehta' }],
+    // Unlabelled on purpose: the reference prints the addresses themselves,
+    // where a label would print "LinkedIn" instead of "linkedin.com/in/jake".
+    links: [
+      { id: 'l1', label: '', url: 'linkedin.com/in/jake' },
+      { id: 'l2', label: '', url: 'github.com/jake' },
+    ],
   },
   sections: [
     { id: 's-edu', title: 'Education', visible: true, type: 'education', items: [
-      { id: 'i-edu1', visible: true, degree: 'B.Tech, Computer Science', institution: 'College of Engineering, Pune', location: 'Pune', startDate: '2018', endDate: '2022', grade: '8.9 CGPA', bullets: [] },
+      { id: 'i-edu1', visible: true, degree: 'Bachelor of Arts in Computer Science, Minor in Business', institution: 'Southwestern University', location: 'Georgetown, TX', startDate: 'Aug. 2018', endDate: 'May 2021', grade: '', bullets: [] },
+      { id: 'i-edu2', visible: true, degree: 'Associate’s in Liberal Arts', institution: 'Blinn College', location: 'Bryan, TX', startDate: 'Aug. 2014', endDate: 'May 2018', grade: '', bullets: [] },
     ] },
     { id: 's-exp', title: 'Experience', visible: true, type: 'experience', items: [
-      { id: 'i-e1', visible: true, position: 'Software Engineer', company: 'Solace Technologies', location: 'Pune', startDate: '2022', endDate: '', current: true,
+      { id: 'i-e1', visible: true, position: 'Undergraduate Research Assistant', company: 'Texas A&M University', location: 'College Station, TX', startDate: 'June 2020', endDate: '', current: true,
         bullets: [
-          'Built a REST API in FastAPI and PostgreSQL handling over 2 million requests per day.',
-          'Migrated a legacy monolith into three services, cutting deploy time from 40 minutes to 6.',
-          'Wrote the team\'s integration test suite, caught 3 production bound regressions in the first month.',
-          'Introduced Redis caching on the highest traffic endpoint, reducing average response time by 60%.',
+          'Developed a REST API using FastAPI and PostgreSQL to store data from learning management systems',
+          'Developed a full-stack web application using Flask, React, PostgreSQL and Docker to analyze GitHub data',
+          'Explored ways to visualize GitHub collaboration in a classroom setting',
         ] },
-      { id: 'i-e2', visible: true, position: 'Backend Intern', company: 'Fieldstone Labs', location: 'Remote', startDate: '2021', endDate: '2022', current: false,
+      { id: 'i-e2', visible: true, position: 'Information Technology Support Specialist', company: 'Southwestern University', location: 'Georgetown, TX', startDate: 'Sep. 2018', endDate: '', current: true,
         bullets: [
-          'Built an internal admin dashboard using Flask and React used by the whole support team.',
-          'Fixed eleven bugs in the core billing module during a three month internship.',
+          'Communicate with managers to set up campus computers used on campus',
+          'Assess and troubleshoot computer problems brought by students, faculty and staff',
+          'Maintain upkeep of computers, classroom equipment, and 200 printers across campus',
+        ] },
+      { id: 'i-e3', visible: true, position: 'Artificial Intelligence Research Assistant', company: 'Southwestern University', location: 'Georgetown, TX', startDate: 'May 2019', endDate: 'July 2019', current: false,
+        bullets: [
+          'Explored methods to generate video game dungeons based off of The Legend of Zelda',
+          'Developed a game in Java to test the generated dungeons',
+          'Contributed 50K+ lines of code to an established codebase via Git',
+          'Conducted a human subject study to determine which video game dungeon generation technique is enjoyable',
+          'Wrote an 8-page paper and gave multiple presentations on-campus',
+          'Presented virtually to the World Conference on Computational Intelligence',
         ] },
     ] },
     { id: 's-proj', title: 'Projects', visible: true, type: 'projects', items: [
-      { id: 'i-p1', visible: true, name: 'Gitlytics', role: 'Python, Flask, React, PostgreSQL, Docker', url: '', startDate: 'Jun 2020', endDate: 'Present',
+      { id: 'i-p1', visible: true, name: 'Gitlytics', role: 'Python, Flask, React, PostgreSQL, Docker', url: '', startDate: 'June 2020', endDate: 'Present',
         bullets: [
-          'Developed a full stack app with Flask serving a REST API and a React frontend.',
-          'Implemented GitHub OAuth to pull user repository data.',
-          'Used Celery and Redis for asynchronous tasks.',
+          'Developed a full-stack web application using with Flask serving a REST API with React as the frontend',
+          'Implemented GitHub OAuth to get data from user’s repositories',
+          'Visualized GitHub data to show collaboration',
+          'Used Celery and Redis for asynchronous tasks',
         ] },
-      { id: 'i-p2', visible: true, name: 'Simple Paintball', role: 'Java, Maven, TravisCI, Git', url: '', startDate: 'May 2018', endDate: 'May 2020',
+      { id: 'i-p2', visible: true, name: 'Simple Paintball', role: 'Spigot API, Java, Maven, TravisCI, Git', url: '', startDate: 'May 2018', endDate: 'May 2020',
         bullets: [
-          'Minecraft server plugin with 2,000 downloads and a 4.5 out of 5 star average review.',
-          'Set up continuous delivery with TravisCI to build the plugin on every release.',
+          'Developed a Minecraft server plugin to entertain kids during free time for a previous job',
+          'Published plugin to websites gaining 2K+ downloads and an average 4.5/5-star review',
+          'Implemented continuous delivery using TravisCI to build the plugin upon new a release',
+          'Collaborated with Minecraft server administrators to suggest features and get feedback about the plugin',
         ] },
     ] },
     { id: 's-skill', title: 'Technical Skills', visible: true, type: 'skills', layout: 'inline', marker: 'bullet', columns: 1, items: [
-      { id: 'i-sk1', visible: true, category: 'Languages', skills: ['Java', 'Python', 'C/C++', 'SQL', 'JavaScript', 'HTML/CSS'] },
-      { id: 'i-sk2', visible: true, category: 'Frameworks', skills: ['React', 'Node.js', 'Flask', 'FastAPI', 'JUnit'] },
-      { id: 'i-sk3', visible: true, category: 'Developer Tools', skills: ['Git', 'Docker', 'Google Cloud Platform', 'VS Code'] },
+      { id: 'i-sk1', visible: true, category: 'Languages', skills: ['Java', 'Python', 'C/C++', 'SQL (Postgres)', 'JavaScript', 'HTML/CSS', 'R'] },
+      { id: 'i-sk2', visible: true, category: 'Frameworks', skills: ['React', 'Node.js', 'Flask', 'JUnit', 'WordPress', 'Material-UI', 'FastAPI'] },
+      { id: 'i-sk3', visible: true, category: 'Developer Tools', skills: ['Git', 'Docker', 'TravisCI', 'Google Cloud Platform', 'VS Code', 'Visual Studio', 'PyCharm', 'IntelliJ', 'Eclipse'] },
+      { id: 'i-sk4', visible: true, category: 'Libraries', skills: ['pandas', 'NumPy', 'Matplotlib'] },
     ] },
   ],
   settings: NO_PHOTO,
@@ -943,7 +967,7 @@ const VARIANT_BY_TEMPLATE: Record<TemplateId, ResumeDocument> = {
   'portal-pro': CONSULTANT_PORTAL,
   'modern-deep': UX_DESIGNER,
   'serif-ats': ATTORNEY,
-  jake: SWE_EARLY_CAREER,
+  jake: JAKE_REFERENCE,
   banner: CONTENT_LEAD,
   editorial: JOURNALIST,
   'two-col': HR_MANAGER,
