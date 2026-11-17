@@ -13,6 +13,18 @@ export const newId = () =>
   // crypto.randomUUID is available in every browser this app targets.
   crypto.randomUUID().replace(/-/g, '').slice(0, 12)
 
+/** Designs whose own sheet underlines its links. */
+const LINK_UNDERLINED_TEMPLATES = new Set<TemplateId>(['jake'])
+
+/**
+ * The link treatment a design prints before the author touches the Link card.
+ * The card and the sheet both read it from here, so the tick next to
+ * "Underline" is a statement about the paper rather than a guess about it.
+ */
+export function restingLinkDecoration(template: TemplateId): 'underline' | 'plain' {
+  return LINK_UNDERLINED_TEMPLATES.has(template) ? 'underline' : 'plain'
+}
+
 /**
  * Documented defaults for settings added after the original schema. They exist
  * for exactly one purpose: hydrating documents stored before these fields were

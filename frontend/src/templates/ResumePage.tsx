@@ -9,7 +9,7 @@ import type { CSSProperties } from 'react'
 
 import type { ResumeDocument, Section, SectionType, TemplateId } from '../types'
 import { resolveHeadingVisual } from '../headingStyles'
-import { resolveHeaderPosition } from '../factories'
+import { resolveHeaderPosition, restingLinkDecoration } from '../factories'
 import { resolvePhotoPlacement } from '../photoPlacement'
 import { Contact, DocSection, hasContact, ProfilePhoto, type HeadKind } from './parts'
 import { FONT_STACKS, BORDER_SIZES, HEADER_PRESETS } from './registry'
@@ -357,8 +357,11 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     // Typography card. A chosen face is the only thing that emits these.
     ...(settings.nameFont && { 'data-name-font': 'true' }),
     ...(settings.titleFont && { 'data-title-font': 'true' }),
-    // Link card. Absent leaves each design's own link treatment alone.
-    ...(settings.linkStyle?.decoration && { 'data-link-style': settings.linkStyle.decoration }),
+    // Link card. The resolved value is written down, not just the stored one:
+    // a ticked Underline has to describe the sheet, so a design whose own
+    // treatment is partial cannot leave the card claiming more than it does.
+    'data-link-style':
+      settings.linkStyle?.decoration ?? restingLinkDecoration(settings.template),
     ...(settings.linkStyle?.color && {
       // 'accent' was the old name for link colour. It now resolves to the fixed
       // hyperlink blue, so legacy documents render as links rather than as body

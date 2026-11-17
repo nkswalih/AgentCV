@@ -1698,6 +1698,10 @@
      the bar, not with the bar's own side bearings. */
   margin: 0 3.3pt;
   color: #000;
+  /* The bar is ornament, and a generated text box on the entry inherits that
+     entry's link rule, printing a 2pt dash under every pipe. An atomic inline
+     takes no propagated decoration, and still sits on the same baseline. */
+  display: inline-block;
 }
 .page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
   .doc-contact-row:last-child > :last-child::after {
@@ -1718,7 +1722,10 @@
   > :not(.doc-contact-sep):not(:last-child) {
   margin-right: 0;
 }
-/* Underlined links like \underline{} */
+/* Underlined links like \underline{}. The reference leaves the telephone number
+   plain, but one card cannot promise "every clickable entry" and exempt one of
+   them, so the phone takes the same rule as the rest of the row. It stays a
+   link so the exported PDF can still dial it. */
 .tpl-jake .doc-link,
 .tpl-jake .doc-contact a,
 .tpl-jake a.doc-link .doc-contact-text,
@@ -1726,13 +1733,6 @@
   color: #000;
   text-decoration: underline;
   text-underline-offset: 1pt;
-}
-/* The telephone number is the one contact entry the reference prints as plain
-   text: only the mail and profile links carry an underline. It stays a link so
-   the exported PDF can still dial it. */
-.tpl-jake .doc-contact [data-contact-key='phone'],
-.tpl-jake .doc-contact [data-contact-key='phone'] .doc-contact-text {
-  text-decoration: none;
 }
 
 /* -- Section titles: \large\scshape\raggedright + \titlerule ------------- */
@@ -3487,17 +3487,27 @@
    Links are the clickable contact entries (email, phone, site, extra links).
    Underline draws a rule the width of the text; dotted keeps it lighter for
    designs where a solid rule reads as a typo. The text span is listed because
-   the contact item is a flex box and decoration stops at that boundary. */
-.page[data-link-style='plain'] :is(a.doc-link, .doc-contact a, a.doc-link .doc-contact-text, .doc-contact a .doc-contact-text) {
+   the contact item is a flex box and decoration stops at that boundary.
+
+   Selectors key off the link class, never the element: the sheet renders a real
+   anchor, but a thumbnail cannot let a click navigate and renders the same
+   entry as a span. Both have to answer to the card. Only `.doc-link` is named,
+   so a plain contact entry such as the town stays out of it. */
+.page[data-link-style='plain'] :is(.doc-link, .doc-link .doc-contact-text) {
   text-decoration: none;
 }
-.page[data-link-style='underline'] :is(a.doc-link, .doc-contact a, a.doc-link .doc-contact-text, .doc-contact a .doc-contact-text) {
+.page[data-link-style='underline'] :is(.doc-link, .doc-link .doc-contact-text) {
   text-decoration: underline;
   text-underline-offset: 0.16em;
 }
-.page[data-link-style='dotted'] :is(a.doc-link, .doc-contact a, a.doc-link .doc-contact-text, .doc-contact a .doc-contact-text) {
+.page[data-link-style='dotted'] :is(.doc-link, .doc-link .doc-contact-text) {
   text-decoration: underline dotted;
   text-underline-offset: 0.2em;
+}
+/* Jake places its rule at the measured 1pt; the card's shared offset would lift
+   it by half a point, and the replica keeps its own geometry. */
+.page.tpl-jake[data-link-style='underline'] :is(.doc-link, .doc-link .doc-contact-text) {
+  text-underline-offset: 1pt;
 }
 
 /* -- Link blue ------------------------------------------------------------
@@ -3511,24 +3521,21 @@
   --doc-link-blue: color-mix(in srgb, #0b57d0 68%, currentColor);
 }
 
-.page[data-link-color='ink'] :is(a.doc-link, .doc-contact a) {
+.page[data-link-color='ink'] .doc-link {
   color: inherit;
 }
 /* !important is deliberate: template skins and the page/header ink resets both
    hardcode link colours, and Blue is an explicit author choice that has to win.
-   Only the anchor takes the mix; descendants inherit the resolved blue so the
+   Only the entry takes the mix; descendants inherit the resolved blue so the
    text span and glyph do not get a second, darker application of it. */
-.page:is([data-link-color='blue'], [data-link-color='accent']) a.doc-link,
-.page:is([data-link-color='blue'], [data-link-color='accent']) .doc-contact a {
+.page:is([data-link-color='blue'], [data-link-color='accent']) .doc-link {
   color: var(--doc-link-blue) !important;
 }
-/* The whole subtree follows the anchor's resolved blue: contact entries wrap
+/* The whole subtree follows the entry's resolved blue: contact entries wrap
    their label in an extra span, and the header-ink reset targets that span
    directly, so naming only one wrapper class leaves white text under a blue
-   anchor. */
-.page:is([data-link-color='blue'], [data-link-color='accent'])
-  :is(a.doc-link, .doc-contact a)
-  * {
+   entry. */
+.page:is([data-link-color='blue'], [data-link-color='accent']) .doc-link * {
   color: inherit !important;
 }
 
@@ -3539,23 +3546,24 @@
 /* -- Per-entry link emphasis ---------------------------------------------
    Advanced Settings can pin the underlined blue treatment to individual header
    entries. The text span is targeted as well because the contact item is a flex
-   box, and decoration does not cross that boundary. */
+   box, and decoration does not cross that boundary. Element-agnostic for the
+   same reason as the card above: a thumbnail renders the entry as a span. */
 .page[data-link-emphasis~='email']
-  :is(a.doc-link[data-contact-key='email'], a.doc-link[data-contact-key='email'] .doc-contact-text),
+  :is(.doc-link[data-contact-key='email'], .doc-link[data-contact-key='email'] .doc-contact-text),
 .page[data-link-emphasis~='phone']
-  :is(a.doc-link[data-contact-key='phone'], a.doc-link[data-contact-key='phone'] .doc-contact-text) {
+  :is(.doc-link[data-contact-key='phone'], .doc-link[data-contact-key='phone'] .doc-contact-text) {
   text-decoration: underline;
   text-underline-offset: 0.16em;
 }
-.page[data-link-emphasis~='email'] a.doc-link[data-contact-key='email'],
-.page[data-link-emphasis~='phone'] a.doc-link[data-contact-key='phone'] {
+.page[data-link-emphasis~='email'] .doc-link[data-contact-key='email'],
+.page[data-link-emphasis~='phone'] .doc-link[data-contact-key='phone'] {
   color: var(--doc-link-blue) !important;
 }
 .page[data-link-emphasis~='email']
-  a.doc-link[data-contact-key='email']
+  .doc-link[data-contact-key='email']
   *,
 .page[data-link-emphasis~='phone']
-  a.doc-link[data-contact-key='phone']
+  .doc-link[data-contact-key='phone']
   * {
   color: inherit !important;
 }

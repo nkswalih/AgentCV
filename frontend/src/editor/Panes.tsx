@@ -7,7 +7,12 @@ import {
   photoInSideRail,
   resolvePhotoPlacement,
 } from '../photoPlacement'
-import { newId, applyTemplatePreset, resolveHeaderPosition } from '../factories'
+import {
+  newId,
+  applyTemplatePreset,
+  resolveHeaderPosition,
+  restingLinkDecoration,
+} from '../factories'
 import { api } from '../api'
 import {
   loadCustomTemplates,
@@ -276,10 +281,6 @@ const ITALIC_TITLE_TEMPLATES = new Set<TemplateId>([
   'jake',
 ])
 
-/** Designs whose links are underlined by default, so the Link card's resting
- *  tile agrees with the sheet. */
-const LINK_UNDERLINED_TEMPLATES = new Set<TemplateId>(['jake'])
-
 /** A font picker over the ATS-safe catalogue. With `sameAsBody`, the empty
  *  option means "inherit the body face" -- the resting state of every design. */
 function FontSelect({
@@ -515,8 +516,7 @@ export function LeftPane() {
   // other design rests on Plain.
   const link = currentDoc.settings.linkStyle ?? {}
   const linkDecoration =
-    link.decoration ??
-    (LINK_UNDERLINED_TEMPLATES.has(currentDoc.settings.template) ? 'underline' : 'plain')
+    link.decoration ?? restingLinkDecoration(currentDoc.settings.template)
   const linkUnderline = linkDecoration !== 'plain'
   const linkColor = link.color ?? 'ink'
   // 'accent' is the legacy value from before link blue was a fixed colour; it
