@@ -1600,16 +1600,19 @@
    \titlerule under small-caps section titles, tabular two-row entry heads and
    a nested itemize for bullets.
 
-   Every vertical distance is the reference's measured pt value multiplied by
-   --jake-lead (the leading slider halved) or --jake-gap (the spacing slider
-   over 1.85). Both sliders therefore stay live, while the shipped preset --
-   leading 2, spacing 1.85 -- reproduces the measured baseline table exactly. */
+   Vertical rhythm follows the panel, not a private scale: the line height
+   slider is the same multiplier of the body size every other design uses
+   (14pt on 11pt = 1.2727 at the reference), and the spacing slider is a plain
+   multiplier of this design's measured section gaps. Pitches are written in em
+   of their own text, so the body-size slider moves type and leading together.
+   The shipped preset (leading 1.2727, spacing 1) reproduces the measured
+   baseline table exactly. */
 .tpl-jake {
-  --jake-lead: calc(var(--doc-leading, 1.42) / 2);
-  --jake-gap: calc(var(--doc-gap, 1) / 1.85);
+  --jake-lead: calc(var(--doc-leading, 1.2727) / 1.2727);
+  --jake-gap: var(--doc-gap, 1);
   font-family: var(--doc-font, 'Times New Roman', Times, serif);
   font-size: var(--doc-size, 11pt);
-  line-height: calc(14pt * var(--jake-lead));
+  line-height: var(--doc-leading, 1.2727);
   color: #000;
   /* Padding stays with the shared skin rule (Section 2), so both margin
      sliders keep working; only the rhythm constants belong to this design. */
@@ -1660,7 +1663,7 @@
   justify-content: center;
   margin-top: calc(4.33pt * var(--jake-lead));
   font-size: var(--doc-contact-size, 0.91em);
-  line-height: calc(12pt * var(--jake-lead));
+  line-height: calc(1.199em * var(--jake-lead));
   color: #000;
   text-align: center;
 }
@@ -1752,7 +1755,7 @@
   font-weight: 400;
   letter-spacing: 0;
   color: #000;
-  line-height: calc(14pt * var(--jake-lead));
+  line-height: calc(1.171em * var(--jake-lead));
   margin: 0 0 calc(1.83pt * var(--jake-gap));
   padding: 0 0 calc(1.42pt * var(--jake-lead));
   border-bottom: 0.4pt solid currentColor;
@@ -1762,7 +1765,7 @@
    style draws 1pt in the accent, 2pt lower -- the same idea at the wrong
    weight for a LaTeX page. Any other chosen treatment still wins. */
 .page.page.tpl-jake[data-heading-visual='underline'] .doc-section-title {
-  line-height: calc(14pt * var(--jake-lead)) !important;
+  line-height: calc(1.171em * var(--jake-lead)) !important;
   margin-bottom: calc(1.83pt * var(--jake-gap)) !important;
   padding-bottom: calc(1.42pt * var(--jake-lead)) !important;
   border-bottom: 0.4pt solid currentColor !important;
@@ -1793,7 +1796,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 6pt;
-  line-height: calc(13.5pt * var(--jake-lead));
+  line-height: calc(1.227em * var(--jake-lead));
 }
 .tpl-jake .doc-item-head-swap,
 .tpl-jake .doc-item-head-dual {
@@ -1889,9 +1892,10 @@
   position: relative;
   font-size: 0.91em;
   /* A 14pt line measures 18.67px, and the export can only place it on whole
-     pixels, so the pitch alternates 18/19px and averages 13.875pt. 13.9 is
-     that mean: the same alternation, without overshooting it on every line. */
-  line-height: calc(13.9pt * var(--jake-lead));
+     pixels, so the pitch alternates 18/19px and averages 13.875pt. 1.389em
+     (13.9pt of this 0.91em text) is that mean: the same alternation, without
+     overshooting it on every line. */
+  line-height: calc(1.389em * var(--jake-lead));
   margin: 0;
   color: #000;
 }
@@ -1916,7 +1920,7 @@
 .tpl-jake .doc-skillgroup {
   margin-left: 10.8pt;
   font-size: 0.91em;
-  line-height: calc(11.9pt * var(--jake-lead));
+  line-height: calc(1.189em * var(--jake-lead));
 }
 /* The first line follows a \titlerule: 1.4pt of \vspace, the rest of the
    13.5pt gap being the line's own half-leading. `:first-of-type`, not
@@ -1958,7 +1962,7 @@
 .tpl-jake .doc-langrow {
   margin-left: 10.8pt;
   font-size: 0.91em;
-  line-height: calc(11.9pt * var(--jake-lead));
+  line-height: calc(1.189em * var(--jake-lead));
   color: #000;
 }
 
@@ -1966,7 +1970,7 @@
 .tpl-jake .doc-summary {
   margin-left: 10.8pt;
   font-size: 1em;
-  line-height: calc(14pt * var(--jake-lead));
+  line-height: calc(1.2727em * var(--jake-lead));
   color: #000;
 }
 
