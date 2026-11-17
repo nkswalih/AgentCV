@@ -101,9 +101,15 @@ export function applyCustomTemplate(
   tpl: CustomTemplate,
   currentSections: { id: string }[],
 ): Partial<Settings> {
+  // A snapshot only holds the settings it knew about. Spreading it whole would
+  // write `undefined` over a choice it never captured, which is how applying a
+  // saved design used to erase the author's link treatment.
+  const captured = Object.fromEntries(
+    Object.entries(tpl.settings).filter(([, value]) => value !== undefined),
+  ) as Partial<Settings>
   const patch: Partial<Settings> = {
     template: tpl.baseTemplate,
-    ...tpl.settings,
+    ...captured,
   }
 
   if (tpl.settings.columnLayout === 'two') {
