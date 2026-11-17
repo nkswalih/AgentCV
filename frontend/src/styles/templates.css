@@ -37,7 +37,8 @@
 }
 
 .page {
-  /* Paper. Overridden to Letter via [data-paper]. */
+  /* Paper. A4 is the stock every design is fitted to; Letter is an explicit
+     user choice and arrives through [data-paper]. */
   width: 210mm;
   min-height: 297mm;
   /* Fallback matters: this file is inlined alone into the HTML export, where
@@ -1594,7 +1595,7 @@
 /* -- Jake's Resume: measured replica of the LaTeX original ----------------
    Source: https://github.com/jakegut/resume (sb2nov-derived class).
 
-   Reproduced to the point: Letter paper, 12.7mm margins (36pt), 11pt Times,
+   Reproduced to the point: 12.7mm margins (36pt), 11pt Times,
    a \Huge small-caps name, one centred pipe-separated contact line, a 0.4pt
    \titlerule under small-caps section titles, tabular two-row entry heads and
    a nested itemize for bullets.
