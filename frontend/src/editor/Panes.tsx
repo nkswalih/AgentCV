@@ -1515,27 +1515,10 @@ export function RightPane() {
           <Text label="Location" value={doc.basics.location} onChange={(location) => updateBasics({ location })} />
           <Text label="Website" type="url" value={doc.basics.website} onChange={(website) => updateBasics({ website })} />
           <LinksField />
-          {/* One choice, two places to make it. The Header card's Details
-              Arrangement is where the arrangement lives; this switch is the
-              shortcut people reach for while editing contact details, so it
-              writes the same field instead of a second flag the page would
-              have to reconcile. Read back from that field for the same
-              reason: a Bar or Bullet arrangement must not show a ticked box. */}
           <Check
             label="Show contact icons"
-            checked={
-              (doc.settings.headerStyle?.details ??
-                (doc.settings.showIcons ? 'icon' : 'bullet')) === 'icon'
-            }
-            onChange={(on) =>
-              updateSettings({
-                showIcons: on,
-                headerStyle: {
-                  ...(doc.settings.headerStyle ?? {}),
-                  details: on ? 'icon' : 'bullet',
-                },
-              })
-            }
+            checked={doc.settings.showIcons}
+            onChange={(showIcons) => updateSettings({ showIcons })}
           />
         </section>
 

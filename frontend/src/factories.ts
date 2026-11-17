@@ -367,10 +367,10 @@ interface TemplatePreset {
   /** Section-title icons. Omitted = the house default (drawn). */
   headingIcons?: boolean
   /**
-   * The header card state this design ships with. Omitted = bare contact
-   * entries and no alignment override, which is the resting state of a document
-   * that never opened the card. Applying a design resets the card, so a mark or
-   * axis chosen for a previous design cannot survive the switch.
+   * The header card state this design is drawn with. Omitted = the design has
+   * no opinion, so the card keeps whatever the user already chose. A design
+   * that declares one owns those two fields on selection, the way it owns its
+   * margins or accent.
    */
   headerStyle?: HeaderStyle
 }
@@ -448,15 +448,11 @@ export function applyTemplatePreset(template: TemplateId): Partial<Settings> {
       ...(p.headingIcons != null ? { showIcons: p.headingIcons } : {}),
       ...(p.capitalization ? { capitalization: p.capitalization } : {}),
     },
-    // Header card: reset to the design's own arrangement. Without this a mark
-    // or alignment chosen for the previous design survives the switch and the
-    // new one renders as a hybrid of the two.
-    headerStyle: p.headerStyle ?? {},
-    // Link and face cards: also template-owned. A dotted link or an exotic
-    // name face chosen for another design must not follow the user here.
-    linkStyle: undefined,
-    nameFont: undefined,
-    titleFont: undefined,
+    // Header, link and face choices belong to the user, not to the design
+    // switch: only a design that draws its own masthead states the card here,
+    // and every other design leaves a chosen mark, axis, link style or face
+    // exactly as the user left it.
+    ...(p.headerStyle ? { headerStyle: p.headerStyle } : {}),
     // Colors: null = template CSS defaults
     colors: undefined,
     // Layout
