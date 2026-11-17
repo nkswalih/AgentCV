@@ -3570,6 +3570,20 @@
 :is(.page[data-columns='one'], .page[data-columns='two'][data-header='top'])[data-photo-position='top'] .doc-photo-layout > .doc-header-text {
   align-self: stretch;
 }
+/* The other half of that axis: the reach block and the split header's side
+   region are flex children too, so on their own they shrink-wrap and the
+   header's align-items places that little box instead of letting its text
+   alignment act. A shrink-wrapped contact under a full-width name is the
+   "name left, contact floating in the middle" header: both boxes are on the
+   page axis, but the name's block is the wider of the two. Stretching hands
+   the axis back to the text-align every skin, header position and header card
+   already sets, so a stacked header can no longer contradict itself. */
+.page[data-columns='one'][data-photo-position='top']
+  [data-doc-header].doc-photo-layout
+  > :is(.doc-contact, .doc-header-side) {
+  align-self: stretch;
+}
+
 /* An explicit centred alignment in a split header centres the portrait too,
    instead of leaving it on the text block's starting edge. */
 .page[data-columns='two'][data-header='top'][data-header-align='center'][data-photo-position='top'] .doc-photo-layout {
