@@ -18,7 +18,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .db import init_db
 from .pdf import renderer
-from .routers import export, resumes, uploads
+from .routers import export, imports, resumes, uploads
 from .routers.uploads import UPLOAD_DIR
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
@@ -49,6 +49,7 @@ app.add_middleware(
 app.include_router(resumes.router)
 app.include_router(export.router)
 app.include_router(uploads.router)
+app.include_router(imports.router)
 
 
 @app.get("/api/health")
