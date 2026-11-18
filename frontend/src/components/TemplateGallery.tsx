@@ -58,7 +58,7 @@ export function TemplateGallery({ selected, onSelect, busy, busyId }: Props) {
         ))}
       </div>
 
-      <div className="tp-grid tpl-grid">
+      <div className="tp-grid">
         {visible.map((t) => (
           <button
             key={t.id}

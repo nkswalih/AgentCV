@@ -4615,15 +4615,30 @@ input[type='range']::-moz-range-thumb {
   color: var(--text-lo);
 }
 
-/* The gallery keeps its own grid padding so it aligns with the filter chips. */
+/* The gallery owns the padding of the scrolling body so the category bar can
+   run edge to edge and still line up with the cards. */
 .tpl-gallery {
   display: flex;
   flex-direction: column;
-  gap: 14px;
   min-width: 0;
+  padding: 0 18px 18px;
 }
-.tpl-grid {
-  gap: 12px;
+/* Categories stay put while the wall of designs scrolls: they are the one
+   control the author reaches for mid-scroll. */
+.tpl-gallery .tp-filters {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  gap: 8px;
+  margin: 0 -18px;
+  padding: 12px 18px;
+  background: var(--ink-850);
+  border-bottom: 1px solid var(--ink-700);
+  box-shadow: 0 8px 14px -12px rgba(40, 36, 28, 0.5);
+}
+.tpl-gallery .tp-grid {
+  padding: 16px 0 0 !important;
+  gap: 18px;
 }
 .tp-card[data-selected='true'] {
   border-color: var(--accent);
