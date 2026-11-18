@@ -164,6 +164,13 @@ interface EditorState {
   removeItem: (sectionId: string, itemId: string) => void
   updateItem: (sectionId: string, itemId: string, patch: Record<string, unknown>) => void
   moveItem: (sectionId: string, from: number, to: number) => void
+
+  /**
+   * Swap every piece of content for an imported draft, in one undo step.
+   * Settings are untouched: an import changes what the resume says, never the
+   * design it says it in.
+   */
+  replaceContent: (basics: Basics, sections: Section[]) => void
 }
 
 let saveTimer: ReturnType<typeof setTimeout> | undefined
@@ -441,6 +448,21 @@ export const useEditor = create<EditorState>()(
               s.items = arrayMove(s.items as never[], from, to) as never
             }),
           { label: 'reordering entries' },
+        )
+      },
+
+      replaceContent(basics, sections) {
+        edit(
+          (doc) => {
+            doc.basics = { ...basics }
+            doc.sections = sections
+            // The new sections have new ids, so old column assignments would
+            // point at nothing. Empty lists let each design place its own
+            // sections by type, which is exactly what a fresh import wants.
+            doc.settings.leftColumn = []
+            doc.settings.rightColumn = []
+          },
+          { label: 'imported content' },
         )
       },
     }

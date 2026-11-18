@@ -1,3 +1,4 @@
+import type { ExtractResult } from './importDoc'
 import type { Resume, ResumeDocument, ResumeSummary, TemplateId } from './types'
 
 // Same-origin: Vite proxies /api to the backend in dev, and the backend serves
@@ -54,6 +55,22 @@ export const api = {
   duplicate: (id: string) => request<Resume>(`/resumes/${id}/duplicate`, { method: 'POST' }),
 
   remove: (id: string) => request<void>(`/resumes/${id}`, { method: 'DELETE' }),
+
+  /**
+   * Read an uploaded resume into editable content.
+   *
+   * The file is posted as-is and nothing is stored: the response is a draft
+   * for review, and only the author's confirmation writes a resume.
+   */
+  async extractResume(file: File): Promise<ExtractResult> {
+    const body = new FormData()
+    body.append('file', file)
+    const res = await fetch(`${BASE}/import/extract`, { method: 'POST', body })
+    if (!res.ok) {
+      throw new Error((await readError(res)) ?? `Could not read that file (${res.status})`)
+    }
+    return (await res.json()) as ExtractResult
+  },
 
   /** Upload a full-page resume backdrop. Returns the stored, same-origin URL. */
   async uploadBackground(file: File): Promise<string> {
