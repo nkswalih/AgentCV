@@ -1,12 +1,18 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Navigate, Route, Routes, useSearchParams } from 'react-router-dom'
 
 import { CoverLetters } from './pages/CoverLetters'
 import { Dashboard } from './pages/Dashboard'
 import { Editor } from './pages/Editor'
 import { HomeLayout } from './pages/HomeLayout'
 import { JobTrack } from './pages/JobTrack'
-import { NewResume } from './pages/NewResume'
 import { Print } from './pages/Print'
+
+/** `/new` was a page before the flow became a dialog. Keep the link alive. */
+function OldNewRoute() {
+  const [params] = useSearchParams()
+  const query = params.toString()
+  return <Navigate to={query ? `/?${query}` : '/'} replace />
+}
 
 export function App() {
   return (
@@ -14,7 +20,7 @@ export function App() {
       <Routes>
         <Route element={<HomeLayout />}>
           <Route path="/" element={<Dashboard />} />
-          <Route path="/new" element={<NewResume />} />
+          <Route path="/new" element={<OldNewRoute />} />
           <Route path="/cover-letters" element={<CoverLetters />} />
           <Route path="/job-track" element={<JobTrack />} />
         </Route>

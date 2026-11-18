@@ -4465,9 +4465,6 @@ input[type='range']::-moz-range-thumb {
 
 /* ------------------------------------------------------- new-resume flow -- */
 
-.new-flow .page-head {
-  margin-bottom: 24px;
-}
 .new-step {
   margin: 0 0 8px;
   font-size: 10.5px;
@@ -4476,13 +4473,43 @@ input[type='range']::-moz-range-thumb {
   text-transform: uppercase;
   color: var(--text-lo);
 }
-.new-back {
-  display: inline-block;
-  margin-bottom: 10px;
+
+/* The creation wizard is a dialog at every step: choose, start, import. */
+.new-dialog {
+  width: min(820px, calc(100vw - 40px));
+  max-height: min(90vh, 860px);
+  display: flex;
+  flex-direction: column;
+  padding: 0 0 16px;
+}
+.new-dialog[data-step='import'] {
+  width: min(1060px, calc(100vw - 40px));
+}
+.new-dialog-head {
+  align-items: flex-start;
+  padding: 16px 18px 0;
+  flex: none;
+}
+.new-dialog-head .hint {
+  margin: 6px 0 0;
+}
+.new-dialog-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.new-dialog-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0;
+}
+.new-import-body {
+  padding: 12px 18px 0;
 }
 
-/* Step 2 is a decision, not another form: two large, equally weighted doors in
-   a dialog over the gallery, so the design the author picked stays in view. */
+/* Step 2 is a decision, not another form: two large, equally weighted doors,
+   with the design's page beside them so the choice stays concrete. */
 .new-choice-sub {
   margin: 0;
   font-size: 12.5px;
@@ -4494,18 +4521,18 @@ input[type='range']::-moz-range-thumb {
   flex-direction: column;
   gap: 12px;
 }
-.new-start {
-  width: min(820px, 96vw);
-  max-height: min(90vh, 760px);
-  overflow: auto;
-  padding: 0 0 18px;
-}
 .new-start-head {
   align-items: center;
   padding: 14px 18px 0;
+  flex: none;
 }
 .new-start-head .new-step {
   margin: 0;
+}
+.new-start-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
 .new-start-copy {
   display: flex;
@@ -4586,21 +4613,12 @@ input[type='range']::-moz-range-thumb {
   color: var(--text-lo);
 }
 
-/* Gallery beside a live preview of the selected design. */
-.new-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 286px;
-  gap: 28px;
-  align-items: start;
-}
+/* The gallery keeps its own grid padding so it aligns with the filter chips. */
 .tpl-gallery {
   display: flex;
   flex-direction: column;
   gap: 14px;
   min-width: 0;
-}
-.tpl-gallery .tp-grid {
-  padding: 0 !important;
 }
 .tpl-grid {
   gap: 12px;
@@ -4622,43 +4640,12 @@ input[type='range']::-moz-range-thumb {
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
-.new-side {
-  position: sticky;
-  top: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
 .new-side-paper {
   border: 1px solid var(--ink-600);
   border-radius: var(--r-md);
   overflow: hidden;
   background: var(--paper);
   box-shadow: var(--shadow-md);
-}
-.new-side-info {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 6px;
-}
-.new-side-name {
-  margin: 0;
-  font-family: var(--font-display);
-  font-size: 17px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-.new-side-note {
-  margin: 0;
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--text-lo);
-}
-.new-side-empty {
-  padding: 22px;
-  border: 1px dashed var(--ink-500);
-  border-radius: var(--r-md);
 }
 
 /* ------------------------------------------------------------ importing -- */
@@ -4869,31 +4856,7 @@ input[type='range']::-moz-range-thumb {
   padding: 10px 16px 0;
 }
 
-@media (max-width: 1080px) {
-  .new-layout {
-    grid-template-columns: minmax(0, 1fr) 250px;
-    gap: 20px;
-  }
-}
 @media (max-width: 960px) {
-  .new-layout {
-    grid-template-columns: 1fr;
-  }
-  /* One column: the chosen design stays above the gallery instead of
-     trailing seventeen cards, shown as a compact summary rather than a
-     full-height sheet. */
-  .new-side {
-    position: static;
-    order: -1;
-    display: grid;
-    grid-template-columns: 200px minmax(0, 1fr);
-    gap: 18px;
-    align-items: start;
-  }
-  /* Nothing to preview yet: keep the cards first rather than an empty box. */
-  .new-side:has(.new-side-empty) {
-    display: none;
-  }
   .imp-columns {
     grid-template-columns: 1fr;
   }
@@ -4915,22 +4878,10 @@ input[type='range']::-moz-range-thumb {
   .imp-link-row {
     grid-template-columns: 1fr;
   }
-  .imp-modal {
+  .imp-modal,
+  .new-dialog {
     border-radius: 0;
     max-height: 100vh;
     width: 100%;
-  }
-  .new-start {
-    border-radius: 0;
-    max-height: 100vh;
-    width: 100%;
-  }
-}
-@media (max-width: 560px) {
-  .new-side {
-    grid-template-columns: 1fr;
-  }
-  .new-side-paper {
-    max-width: 200px;
   }
 }

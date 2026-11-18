@@ -3,7 +3,7 @@
  *
  * It is the first step of starting a resume, so each card is a live
  * miniature of the document that template produces -- never a mock-up. The
- * gallery only chooses a design; what happens next is the page's business.
+ * gallery only chooses a design; what happens next is the dialog's business.
  */
 
 import { useState } from 'react'
