@@ -1113,7 +1113,8 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
           <Contact basics={basics} stacked={template === 'devtech'} icons={headerIcons} />
         </div>
       ) : (
-        <Contact basics={basics} icons={headerIcons} />
+        // Jake prints the telephone number ahead of the mail address.
+        <Contact basics={basics} icons={headerIcons} leadWithPhone={template === 'jake'} />
       )}
     </header>
   )

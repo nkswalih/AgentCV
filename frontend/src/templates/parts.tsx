@@ -234,12 +234,25 @@ export function Contact({
   basics,
   stacked,
   icons = false,
+  leadWithPhone = false,
 }: {
   basics: Basics
   stacked?: boolean
   icons?: boolean
+  /** Print the telephone number first, inside its own row. */
+  leadWithPhone?: boolean
 }) {
-  const { plain, links } = contactGroups(basics)
+  const groups = contactGroups(basics)
+  // The telephone number is pulled to the front of its row. This has to happen
+  // in the DOM, not with flex `order`: the separators are siblings, so a
+  // visual-only move leaves the middot or pipe on the other side of the entry
+  // it belongs to, and a row can end on a dangling mark.
+  const plain = leadWithPhone
+    ? [...groups.plain].sort((a, b) =>
+        a.key === 'phone' ? -1 : b.key === 'phone' ? 1 : 0,
+      )
+    : groups.plain
+  const { links } = groups
   if (plain.length === 0 && links.length === 0) return null
 
   const preview = useContext(PreviewContext)

@@ -1618,10 +1618,11 @@
      sliders keep working; only the rhythm constants belong to this design. */
 }
 
-/* -- Header: \Huge\scshape name over a single pipe-separated line ---------
+/* -- Header: \Huge\scshape name over a pipe-separated contact block -------
    The original prints phone | mail | profiles as one centred run. The app
-   builds two rows (plain, then links), so the rows are laid out side by side
-   here and a pipe bridges their boundary -- the reference's single line. */
+   builds two rows (plain, then links), and the link row always starts on its
+   own line: a row that wraps at a different width would otherwise end on a
+   dangling pipe, which reads as a typo. */
 .tpl-jake .doc-header {
   text-align: center;
   border: none;
@@ -1658,8 +1659,11 @@
 }
 .tpl-jake .doc-contact {
   display: flex;
+  /* One row per line: the entries of a row read as a run, and the links always
+     start on a fresh line rather than bridging onto the tail of the first. */
+  flex-direction: column;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: center;
   margin-top: calc(4.33pt * var(--jake-lead));
   font-size: var(--doc-contact-size, 0.91em);
@@ -1703,14 +1707,11 @@
      takes no propagated decoration, and still sits on the same baseline. */
   display: inline-block;
 }
+/* Every row ends without a mark: the rows are separate lines, so a pipe after
+   the town would dangle at the end of the first line with nothing to bridge. */
 .page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
-  .doc-contact-row:last-child > :last-child::after {
+  .doc-contact-row > :last-child::after {
   content: none;
-}
-/* The reference leads with the phone number; source order puts email first,
-   so the phone entry is pulled to the front of its row. */
-.tpl-jake .doc-contact-row[data-row='plain'] > [data-contact-key='phone'] {
-  order: -1;
 }
 /* The link row normally separates its entries with air, because a middot
    stranded at a line break reads as a stray bullet. In the pipe state that air
@@ -3335,6 +3336,17 @@
 }
 .page[data-header-align='right'] [data-doc-header] .doc-contact {
   justify-content: flex-end;
+}
+/* Jake stacks its contact rows, so each row is placed on the cross axis, where
+   justify-content has no reach. The same three states set align-items. */
+.page.tpl-jake[data-header-align='left'] [data-doc-header] .doc-contact {
+  align-items: flex-start;
+}
+.page.tpl-jake[data-header-align='center'] [data-doc-header] .doc-contact {
+  align-items: center;
+}
+.page.tpl-jake[data-header-align='right'] [data-doc-header] .doc-contact {
+  align-items: flex-end;
 }
 /* With the photo on top the header is a flex column, and a column places its
    children on the cross axis at flex-start -- the text block shrinks to its
