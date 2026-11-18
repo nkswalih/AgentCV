@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard'
 import { Editor } from './pages/Editor'
 import { HomeLayout } from './pages/HomeLayout'
 import { JobTrack } from './pages/JobTrack'
+import { NewResume } from './pages/NewResume'
 import { Print } from './pages/Print'
 
 export function App() {
@@ -13,6 +14,7 @@ export function App() {
       <Routes>
         <Route element={<HomeLayout />}>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/new" element={<NewResume />} />
           <Route path="/cover-letters" element={<CoverLetters />} />
           <Route path="/job-track" element={<JobTrack />} />
         </Route>

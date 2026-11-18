@@ -1850,10 +1850,6 @@ input[type='range']::-moz-range-thumb {
   display: flex;
   flex-direction: column;
 }
-.modal-wide:has(.tp-preview) {
-  max-height: min(92vh, 900px);
-  overflow: hidden;
-}
 .modal-wide .modal-body {
   overflow-y: auto;
 }
@@ -1990,88 +1986,6 @@ input[type='range']::-moz-range-thumb {
   border-radius: inherit;
   font-size: var(--t-sm);
   color: var(--text-hi);
-}
-
-/* ---- Preview mode ---- */
-.tp-preview {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  min-height: 0;
-  padding: 0 16px 16px;
-  overflow: hidden;
-}
-.tp-preview-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 320px;
-  gap: 24px;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
-}
-.tp-preview-thumb {
-  background: var(--bg-300);
-  border-radius: var(--r-md);
-  border: 1px solid var(--ink-600);
-  overflow: hidden;
-  min-height: 0;
-}
-.tp-preview-thumb .thumb-window {
-  border-radius: 0;
-  border: none;
-}
-.tp-preview-info {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  padding: 4px 0;
-  overflow-y: auto;
-}
-.tp-preview-back {
-  font-size: var(--t-xs);
-  margin-bottom: 8px;
-}
-.tp-preview-name {
-  font-family: var(--font-display);
-  font-size: 28px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 8px 0 6px;
-  line-height: 1.1;
-}
-.tp-preview-note {
-  font-size: var(--t-sm);
-  color: var(--text-lo);
-  line-height: 1.6;
-  margin: 0;
-}
-.tp-preview-features {
-  list-style: none;
-  padding: 0;
-  margin: 8px 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.tp-preview-features li {
-  font-size: var(--t-sm);
-  color: var(--text-mid);
-  padding-left: 18px;
-  position: relative;
-}
-.tp-preview-features li::before {
-  content: '•';
-  position: absolute;
-  left: 0;
-  color: var(--cyan);
-  font-weight: 700;
-}
-.tp-preview-apply {
-  margin-top: auto;
-  width: 100%;
-  padding: 12px 20px;
-  font-size: var(--t-base);
-  font-weight: 600;
 }
 
 /* Format cards -- the whole surface is clickable, note explains the tradeoff. */
@@ -2776,7 +2690,8 @@ input[type='range']::-moz-range-thumb {
   border-radius: 12px;
   box-shadow: var(--shadow-md);
 }
-.side-more-menu button {
+.side-more-menu button,
+.side-more-menu a {
   text-align: left;
   border: 0;
   border-radius: 8px;
@@ -2786,8 +2701,10 @@ input[type='range']::-moz-range-thumb {
   font-weight: 500;
   color: var(--text-mid);
   cursor: pointer;
+  text-decoration: none;
 }
-.side-more-menu button:hover {
+.side-more-menu button:hover,
+.side-more-menu a:hover {
   background: var(--ink-800);
   color: var(--text-hi);
 }
@@ -2906,6 +2823,7 @@ input[type='range']::-moz-range-thumb {
   background: transparent;
   color: #777a84;
   cursor: pointer;
+  text-decoration: none;
   transition: border-color 140ms var(--ease), background 140ms var(--ease),
     color 140ms var(--ease);
 }
@@ -4543,4 +4461,452 @@ input[type='range']::-moz-range-thumb {
   color: var(--accent);
   font-weight: 600;
   box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+/* ------------------------------------------------------- new-resume flow -- */
+
+.new-flow .page-head {
+  margin-bottom: 24px;
+}
+.new-step {
+  margin: 0 0 8px;
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--text-lo);
+}
+.new-back {
+  display: inline-block;
+  margin-bottom: 10px;
+}
+
+/* Step 2 is a decision, not another form: two large, equally weighted doors. */
+.new-choices {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  gap: 20px;
+  align-items: center;
+  padding: 18px;
+  margin: 0 0 26px;
+  background: var(--ink-850);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+}
+.new-choice-head .new-step {
+  margin-bottom: 6px;
+}
+.new-choice-title {
+  margin: 0 0 4px;
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.new-choice-sub {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-lo);
+}
+.new-choice-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.new-choice {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 3px 12px;
+  align-items: center;
+  text-align: left;
+  padding: 14px 16px;
+  font: inherit;
+  color: inherit;
+  background: var(--ink-850);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-md);
+  cursor: pointer;
+  transition: border-color 120ms var(--ease), box-shadow 120ms var(--ease),
+    transform 120ms var(--ease);
+}
+.new-choice:hover:not(:disabled) {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+.new-choice:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+.new-choice-icon {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.new-choice-icon svg {
+  width: 17px;
+  height: 17px;
+}
+.new-choice-label {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-hi);
+}
+.new-choice-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-lo);
+}
+
+/* Gallery beside a live preview of the selected design. */
+.new-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 286px;
+  gap: 28px;
+  align-items: start;
+}
+.tpl-gallery {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+.tpl-gallery .tp-grid {
+  padding: 0 !important;
+}
+.tpl-grid {
+  gap: 12px;
+}
+.tp-card[data-selected='true'] {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent), var(--shadow-md);
+}
+.tpl-chosen {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+.new-side {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.new-side-paper {
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--paper);
+  box-shadow: var(--shadow-md);
+}
+.new-side-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+.new-side-name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.new-side-note {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-lo);
+}
+.new-side-empty {
+  padding: 22px;
+  border: 1px dashed var(--ink-500);
+  border-radius: var(--r-md);
+}
+
+/* ------------------------------------------------------------ importing -- */
+
+.imp {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.imp-drop {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 230px;
+  padding: 28px;
+  text-align: center;
+  border: 1.5px dashed var(--ink-500);
+  border-radius: var(--r-lg);
+  background: var(--ink-800);
+  transition: border-color 120ms var(--ease), background 120ms var(--ease);
+}
+.imp-drop[data-dragging='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.imp-drop-icon {
+  font-size: 26px;
+  line-height: 1;
+  color: var(--accent);
+}
+.imp-drop-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text-hi);
+}
+.imp-drop .hint {
+  max-width: 380px;
+  margin: 0;
+}
+.imp-reading {
+  margin: 0;
+  font-size: var(--t-sm);
+  font-weight: 600;
+  color: var(--accent);
+}
+.imp-foot {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.imp-review-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 14px;
+  background: var(--ink-850);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-md);
+}
+.imp-file {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.imp-file-name {
+  font-size: 13.5px;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.imp-file-meta {
+  font-size: 11.5px;
+  color: var(--text-lo);
+}
+.imp-bar-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+.imp-warnings {
+  margin: 0;
+  padding: 10px 14px 10px 30px;
+  border: 1px solid #e6d9b0;
+  border-radius: var(--r-sm);
+  background: #fbf6e6;
+  color: #6a5720;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.imp-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 300px;
+  gap: 22px;
+  align-items: start;
+}
+.imp-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+.imp-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--ink-850);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-md);
+}
+.imp-block-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.imp-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.imp-row-3 {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.imp-item {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  background: var(--ink-800);
+  border: 1px solid var(--ink-700);
+  border-radius: var(--r-sm);
+}
+.imp-links {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.imp-link-row {
+  display: grid;
+  grid-template-columns: 160px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+.imp-remove {
+  align-self: flex-start;
+  color: #a24a3c;
+}
+.imp-remove:hover:not(:disabled) {
+  color: #8a3527;
+}
+.imp-preview {
+  position: sticky;
+  top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.imp-preview-paper {
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-md);
+  overflow: hidden;
+  background: var(--paper);
+  box-shadow: var(--shadow-md);
+}
+.imp-preview-foot {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.imp-preview-foot .hint {
+  margin: 0;
+}
+.imp-confirm {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--text-mid);
+  cursor: pointer;
+}
+.imp-confirm input {
+  margin-top: 2px;
+  flex: none;
+}
+.imp-create {
+  width: 100%;
+}
+
+/* The editor imports into the open document from a wide sheet, because the
+   review is two columns: fields on the left, the page on the right. */
+.imp-modal {
+  width: min(1040px, 96vw);
+  max-height: 92vh;
+  overflow: auto;
+  padding: 4px 0 18px;
+}
+.imp-modal-body {
+  padding: 10px 16px 0;
+}
+
+@media (max-width: 1080px) {
+  .new-layout {
+    grid-template-columns: minmax(0, 1fr) 250px;
+    gap: 20px;
+  }
+  /* Two doors need room for their labels; below this the head stacks above. */
+  .new-choices {
+    grid-template-columns: 1fr;
+    gap: 16px;
+  }
+}
+@media (max-width: 960px) {
+  .new-layout {
+    grid-template-columns: 1fr;
+  }
+  /* One column: the chosen design stays above the gallery instead of
+     trailing seventeen cards, shown as a compact summary rather than a
+     full-height sheet. */
+  .new-side {
+    position: static;
+    order: -1;
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 18px;
+    align-items: start;
+  }
+  /* Nothing to preview yet: keep the cards first rather than an empty box. */
+  .new-side:has(.new-side-empty) {
+    display: none;
+  }
+  .imp-columns {
+    grid-template-columns: 1fr;
+  }
+  .imp-preview {
+    position: static;
+  }
+}
+@media (max-width: 720px) {
+  .new-choices,
+  .new-choice-grid,
+  .imp-row,
+  .imp-row-3,
+  .imp-link-row {
+    grid-template-columns: 1fr;
+  }
+  .new-choices {
+    gap: 14px;
+  }
+  .imp-modal {
+    border-radius: 0;
+    max-height: 100vh;
+    width: 100%;
+  }
+}
+@media (max-width: 560px) {
+  .new-side {
+    grid-template-columns: 1fr;
+  }
+  .new-side-paper {
+    max-width: 200px;
+  }
 }

@@ -6,9 +6,8 @@
  */
 
 import { useEffect, useRef, useState } from 'react'
-import { NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet } from 'react-router-dom'
 
-import { TemplatePickerProvider, useTemplatePicker } from '../components/TemplatePicker'
 import { ChevronDown, LogoMark, UserIcon } from '../editor/icons'
 
 const NAV = [
@@ -18,17 +17,10 @@ const NAV = [
 ]
 
 export function HomeLayout() {
-  // The provider must wrap the shell that reads the picker, so the shell
-  // itself lives one level down.
-  return (
-    <TemplatePickerProvider>
-      <HomeShell />
-    </TemplatePickerProvider>
-  )
+  return <HomeShell />
 }
 
 function HomeShell() {
-  const picker = useTemplatePicker()
   const [moreOpen, setMoreOpen] = useState(false)
   const moreRef = useRef<HTMLDivElement>(null)
 
@@ -86,16 +78,9 @@ function HomeShell() {
           </button>
           {moreOpen && (
             <div className="side-more-menu" role="menu">
-              <button
-                type="button"
-                role="menuitem"
-                onClick={() => {
-                  setMoreOpen(false)
-                  picker.open()
-                }}
-              >
+              <Link role="menuitem" to="/new" onClick={() => setMoreOpen(false)}>
                 Templates
-              </button>
+              </Link>
             </div>
           )}
         </div>

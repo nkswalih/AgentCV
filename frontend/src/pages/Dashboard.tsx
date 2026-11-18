@@ -4,7 +4,6 @@ import { Link } from 'react-router-dom'
 import { api } from '../api'
 import { PageMeta } from '../components/PageMeta'
 import { ResumeThumb } from '../components/ResumeThumb'
-import { useTemplatePicker } from '../components/TemplatePicker'
 import { Kebab, Plus } from '../editor/icons'
 import type { ResumeDocument, ResumeSummary } from '../types'
 
@@ -24,7 +23,6 @@ function relativeDate(iso: string) {
 }
 
 export function Dashboard() {
-  const picker = useTemplatePicker()
   const [resumes, setResumes] = useState<ResumeSummary[] | null>(null)
   /** Documents arrive per resume; a card renders the moment its own arrives. */
   const [docs, setDocs] = useState<Record<string, ResumeDocument>>({})
@@ -104,9 +102,9 @@ export function Dashboard() {
           <h1 className="page-title">My Resumes</h1>
           <p className="page-sub">
             Every change saves as you type. Need another version?{' '}
-            <button type="button" className="link-cta" onClick={picker.open}>
+            <Link className="link-cta" to="/new">
               Start a new resume
-            </button>
+            </Link>
           </p>
         </header>
 
@@ -127,12 +125,12 @@ export function Dashboard() {
         {resumes && (
           <ul className="thumb-grid">
             <li className="new-resume-item">
-              <button type="button" className="new-resume-card" onClick={picker.open}>
+              <Link className="new-resume-card" to="/new">
                 <span className="new-resume-plus" aria-hidden="true">
                   <Plus />
                 </span>
                 <span className="new-resume-label">New resume</span>
-              </button>
+              </Link>
             </li>
 
             {resumes.map((r) => {
