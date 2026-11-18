@@ -4476,13 +4476,19 @@ input[type='range']::-moz-range-thumb {
   color: var(--text-lo);
 }
 
-/* The creation wizard is a dialog at every step: choose, start, import. */
+/* The creation wizard is a dialog at every step: choose, preview, import. */
 .new-dialog {
-  width: min(820px, calc(100vw - 40px));
+  width: min(940px, calc(100vw - 40px));
   max-height: min(90vh, 860px);
   display: flex;
   flex-direction: column;
   padding: 0 0 16px;
+}
+.new-dialog[data-step='preview'] {
+  /* The page is as wide as its column and as tall as its own ratio, so the
+     dialog narrows on short screens before the sheet has to scroll. 380px is
+     the description column plus the dialog's padding and the gap. */
+  width: min(860px, calc(100vw - 40px), calc((90vh - 121px) * 0.7071 + 380px));
 }
 .new-dialog[data-step='import'] {
   width: min(1060px, calc(100vw - 40px));
@@ -4510,60 +4516,99 @@ input[type='range']::-moz-range-thumb {
   padding: 12px 18px 0;
 }
 
-/* Step 2 is a decision, not another form: two large, equally weighted doors,
-   with the design's page beside them so the choice stays concrete. */
-.new-choice-sub {
+/* Preview is the old full-page decision: the design at reading size on the
+   left, what it is and the two doors on the right. */
+.tp-preview {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  padding: 0 18px 0;
+  overflow: hidden;
+}
+.tp-preview-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  grid-auto-rows: max-content;
+  align-content: start;
+  gap: 24px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+/* The page fills the column edge to edge, like the design gallery: no dead
+   margin either side of the sheet. It is tall, so the whole preview scrolls on
+   short screens rather than cropping the foot of the page. */
+.tp-preview-thumb {
+  align-self: start;
+  min-width: 0;
+  background: var(--paper);
+  border: 1px solid var(--ink-600);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+.tp-preview-thumb .thumb-window {
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+}
+.tp-preview-info {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  padding: 2px 0;
+}
+.tp-preview-back {
+  padding-left: 0;
+  margin-bottom: 6px;
+  font-size: var(--t-xs);
+}
+.tp-preview-name {
+  font-family: var(--font-display);
+  font-size: 27px;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.12;
+  margin: 6px 0;
+}
+.tp-preview-note {
   margin: 0;
-  font-size: 12.5px;
-  line-height: 1.5;
+  font-size: var(--t-sm);
+  line-height: 1.6;
   color: var(--text-lo);
+}
+.tp-preview-features {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+.tp-preview-features li {
+  position: relative;
+  padding-left: 16px;
+  font-size: 12.5px;
+  color: var(--text-mid);
+}
+.tp-preview-features li::before {
+  content: '•';
+  position: absolute;
+  left: 0;
+  color: var(--accent);
+  font-weight: 700;
+}
+/* Pushed to the foot of the column so the two doors sit where the eye lands
+   after reading the design. */
+.tp-preview-choices {
+  margin-top: auto;
 }
 .new-choice-stack {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-}
-.new-start-head {
-  align-items: center;
-  padding: 14px 18px 0;
-  flex: none;
-}
-.new-start-head .new-step {
-  margin: 0;
-}
-.new-start-actions {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-.new-start-copy {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-.new-start-copy .new-choice-stack {
-  margin-top: 16px;
-}
-.new-start-title {
-  font-size: 24px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
-.new-start-body {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 230px;
-  gap: 24px;
-  align-items: start;
-  padding: 12px 18px 0;
-}
-.new-start-preview {
-  display: flex;
-  flex-direction: column;
   gap: 10px;
-}
-.new-start-preview .hint {
-  margin: 0;
 }
 .new-choice {
   display: grid;
@@ -4656,13 +4701,6 @@ input[type='range']::-moz-range-thumb {
   font-weight: 700;
   letter-spacing: 0.05em;
   text-transform: uppercase;
-}
-.new-side-paper {
-  border: 1px solid var(--ink-600);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background: var(--paper);
-  box-shadow: var(--shadow-md);
 }
 
 /* ------------------------------------------------------------ importing -- */
@@ -4881,12 +4919,18 @@ input[type='range']::-moz-range-thumb {
     position: static;
   }
 }
-@media (max-width: 860px) {
-  .new-start-body {
+@media (max-width: 820px) {
+  /* One column: the page sits above its description instead of being squeezed
+     until the type is illegible. */
+  .new-dialog[data-step='preview'] {
+    width: min(560px, calc(100vw - 40px));
+  }
+  .tp-preview-layout {
     grid-template-columns: 1fr;
   }
-  .new-start-preview {
-    max-width: 260px;
+  .tp-preview-thumb {
+    width: min(420px, 100%);
+    margin: 0 auto;
   }
 }
 @media (max-width: 720px) {

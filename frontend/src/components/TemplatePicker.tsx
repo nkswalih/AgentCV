@@ -66,8 +66,8 @@ function TemplatePickerDialog({
   onClose: () => void
 }) {
   const navigate = useNavigate()
-  const [step, setStep] = useState<'design' | 'start' | 'import'>(
-    initial ? 'start' : 'design',
+  const [step, setStep] = useState<'design' | 'preview' | 'import'>(
+    initial ? 'preview' : 'design',
   )
   const [template, setTemplate] = useState<TemplateId | null>(initial)
   const [creating, setCreating] = useState(false)
@@ -82,7 +82,7 @@ function TemplatePickerDialog({
       if (event.key !== 'Escape') return
       if (creating) return
       if (step === 'design') onClose()
-      else setStep(step === 'import' ? 'start' : 'design')
+      else setStep(step === 'import' ? 'preview' : 'design')
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
@@ -152,7 +152,7 @@ function TemplatePickerDialog({
                 onSelect={(id) => {
                   setTemplate(id)
                   setError(null)
-                  setStep('start')
+                  setStep('preview')
                 }}
                 busy={creating}
               />
@@ -160,88 +160,101 @@ function TemplatePickerDialog({
           </>
         )}
 
-        {step === 'start' && template && meta && (
+        {step === 'preview' && template && meta && (
           <>
-            <div className="modal-head new-start-head">
-              <p className="new-step">Step 2 of 2 · Start</p>
-              <div className="new-start-actions">
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-sm"
-                  onClick={() => setStep('design')}
-                  disabled={creating}
-                >
-                  ← All designs
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-ghost btn-icon"
-                  aria-label="Close"
-                  onClick={onClose}
-                  disabled={creating}
-                >
-                  ×
-                </button>
+            <div className="modal-head new-dialog-head">
+              <div>
+                <p className="new-step">Step 2 of 2 · Start</p>
+                <h2 className="modal-title new-dialog-title">Start a new resume</h2>
+                <p className="hint">
+                  This is your page in {meta.name}. Import an existing resume into it,
+                  or open it blank and type.
+                </p>
               </div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-icon"
+                aria-label="Close"
+                onClick={onClose}
+                disabled={creating}
+              >
+                ×
+              </button>
             </div>
 
-            <div className="new-start-body">
-              <div className="new-start-copy">
-                <h2 className="modal-title new-start-title">{meta.name}</h2>
-                <p className="new-choice-sub">
-                  This design keeps its own layout, type and colours either way.
-                </p>
-
-                <div className="new-choice-stack">
-                  <button
-                    type="button"
-                    className="new-choice"
-                    onClick={() => setStep('import')}
-                    disabled={creating}
-                  >
-                    <span className="new-choice-icon" aria-hidden="true">
-                      <FileIcon />
-                    </span>
-                    <span className="new-choice-label">Import existing resume</span>
-                    <span className="new-choice-note">
-                      PDF, Word, text or LaTeX. We read it into this template and let you
-                      check every field first.
-                    </span>
-                  </button>
-
-                  <button
-                    type="button"
-                    className="new-choice"
-                    onClick={() => void startFromScratch()}
-                    disabled={creating}
-                  >
-                    <span className="new-choice-icon" aria-hidden="true">
-                      <Pencil />
-                    </span>
-                    <span className="new-choice-label">
-                      {creating ? 'Opening…' : 'Create from scratch'}
-                    </span>
-                    <span className="new-choice-note">
-                      Open {meta.name} with empty sections, ready to type.
-                    </span>
-                  </button>
-                </div>
-
-                {error && (
-                  <div className="banner" role="alert" style={{ marginTop: 14 }}>
-                    {error}
-                  </div>
-                )}
-              </div>
-
-              <div className="new-start-preview">
-                <div className="new-side-paper">
+            <div className="tp-preview">
+              <div className="tp-preview-layout">
+                <div className="tp-preview-thumb">
                   <ResumeThumb doc={demoDocument(template)} fitToHeight />
                 </div>
-                <p className="hint">
-                  The page you will edit, in this design. Nothing is saved until you
-                  confirm in the next step.
-                </p>
+
+                <div className="tp-preview-info">
+                  <div>
+                    <button
+                      type="button"
+                      className="btn btn-ghost tp-preview-back"
+                      onClick={() => setStep('design')}
+                      disabled={creating}
+                    >
+                      ← All designs
+                    </button>
+                    <h3 className="tp-preview-name">{meta.name}</h3>
+                    <span className="tag" data-ats={meta.atsSafe ? 'true' : 'false'}>
+                      {meta.atsSafe ? 'ATS-safe' : 'Design-led'}
+                    </span>
+                  </div>
+
+                  <p className="tp-preview-note">{meta.note}</p>
+
+                  <ul className="tp-preview-features">
+                    <li>A4 / US-Letter size</li>
+                    <li>Editable text</li>
+                    <li>Fully customisable</li>
+                    <li>Print ready</li>
+                    <li>Online copy with a shareable link</li>
+                  </ul>
+
+                  <div className="new-choice-stack tp-preview-choices">
+                    <button
+                      type="button"
+                      className="new-choice"
+                      onClick={() => setStep('import')}
+                      disabled={creating}
+                    >
+                      <span className="new-choice-icon" aria-hidden="true">
+                        <FileIcon />
+                      </span>
+                      <span className="new-choice-label">Import existing resume</span>
+                      <span className="new-choice-note">
+                        PDF, Word, text or LaTeX. We read it into this template and let
+                        you check every field first.
+                      </span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="new-choice"
+                      onClick={() => void startFromScratch()}
+                      disabled={creating}
+                    >
+                      <span className="new-choice-icon" aria-hidden="true">
+                        <Pencil />
+                      </span>
+                      <span className="new-choice-label">
+                        {creating ? 'Opening…' : 'Create from scratch'}
+                      </span>
+                      <span className="new-choice-note">
+                        Open {meta.name} with empty sections, ready to type.
+                      </span>
+                    </button>
+                  </div>
+
+                  {error && (
+                    <div className="banner" role="alert">
+                      {error}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </>
@@ -274,7 +287,7 @@ function TemplatePickerDialog({
                 showName
                 applyLabel="Create resume"
                 onApply={applyImport}
-                onCancel={() => setStep('start')}
+                onCancel={() => setStep('preview')}
               />
             </div>
           </>
