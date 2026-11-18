@@ -156,7 +156,10 @@ def _document_xml(doc: ResumeDocument, paper: PaperSize) -> str:
                 title_line = " · ".join(str(p).strip() for p in head_parts[:1])
                 rest_line = " · ".join(str(p).strip() for p in head_parts[1:])
                 meta = " | ".join(p for p in (rest_line, date) if p)
-                parts.append(_p(meta, None, bold_prefix=title_line if title_line else None))
+                # The bold heading and its description are two runs; without a
+                # separator Word prints them welded together ("EngineerAcme").
+                prefix = f"{title_line} · " if title_line and meta else title_line
+                parts.append(_p(meta, None, bold_prefix=prefix or None))
                 bullets = getattr(item, "bullets", [])
                 if bullets:
                     parts.append(_bullets(bullets))
