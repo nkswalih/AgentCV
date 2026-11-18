@@ -2798,13 +2798,15 @@ input[type='range']::-moz-range-thumb {
   max-width: 1080px;
 }
 
-/* Thumbnail gallery: cards flow edge to edge and wrap as the pane allows. */
+/* Thumbnail gallery: cards fill the pane and wrap as it narrows. Columns are
+   allowed to grow past the minimum -- capping them left a dead strip on wide
+   screens, which read as missing content rather than breathing room. */
 .thumb-grid {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(228px, 266px));
+  grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
   gap: 30px 28px;
   align-items: start;
 }
@@ -2982,7 +2984,7 @@ input[type='range']::-moz-range-thumb {
 /* -- Loading placeholders ------------------------------------------------ */
 .resume-grid-skeleton {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(228px, 266px));
+  grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
   gap: 30px 28px;
 }
 .skeleton-card {
