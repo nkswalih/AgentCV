@@ -357,9 +357,9 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
     // Typography card. A chosen face is the only thing that emits these.
     ...(settings.nameFont && { 'data-name-font': 'true' }),
     ...(settings.titleFont && { 'data-title-font': 'true' }),
-    // Link card. The resolved value is written down, not just the stored one:
-    // a ticked Underline has to describe the sheet, so a design whose own
-    // treatment is partial cannot leave the card claiming more than it does.
+    // Link card. The resolved value is written down, not just the stored one, so
+    // the page always has a decoration to answer with: it rests plain unless the
+    // author ticked Underline (or an Advanced key drew its own rule).
     'data-link-style':
       settings.linkStyle?.decoration ?? restingLinkDecoration(settings.template),
     ...(settings.linkStyle?.color && {
@@ -369,9 +369,14 @@ export function ResumePage({ doc, forExport = false, fit }: Props) {
       'data-link-color':
         settings.linkStyle.color === 'accent' ? 'blue' : settings.linkStyle.color,
     }),
-    // Per-entry emphasis: only the keys the author ticked in Advanced Settings.
+    // Per-entry switches from the Advanced panel. An entry named in neither
+    // list follows the tile, so a document that never opened the panel emits
+    // nothing here and the card's two tiles keep full control.
     ...(settings.linkStyle?.emphasis?.length && {
       'data-link-emphasis': settings.linkStyle.emphasis.join(' '),
+    }),
+    ...(settings.linkStyle?.emphasisOff?.length && {
+      'data-link-emphasis-off': settings.linkStyle.emphasisOff.join(' '),
     }),
     ...(colors && {
       'data-colors': 'on',

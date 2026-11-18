@@ -13,16 +13,26 @@ export const newId = () =>
   // crypto.randomUUID is available in every browser this app targets.
   crypto.randomUUID().replace(/-/g, '').slice(0, 12)
 
-/** Designs whose own sheet underlines its links. */
-const LINK_UNDERLINED_TEMPLATES = new Set<TemplateId>(['jake'])
+/**
+ * Designs that print their own underline before the author asks for one. None
+ * do today. Jake's replica does draw \underline{} on its links, but a rule the
+ * author never chose reads as a bug: enable the Email or Phone key in Advanced
+ * Settings and the underline should appear there, not everywhere already.
+ */
+const DESIGN_UNDERLINED_LINKS = new Set<TemplateId>()
 
 /**
  * The link treatment a design prints before the author touches the Link card.
  * The card and the sheet both read it from here, so the tick next to
  * "Underline" is a statement about the paper rather than a guess about it.
+ *
+ * No design rules its links by default: an ordinary CV prints the contact line
+ * in body ink, and a design that underlined every address out of the box would
+ * force the author to switch it off on every new document. A design that really
+ * wants rules adds its template id to the set above.
  */
 export function restingLinkDecoration(template: TemplateId): 'underline' | 'plain' {
-  return LINK_UNDERLINED_TEMPLATES.has(template) ? 'underline' : 'plain'
+  return DESIGN_UNDERLINED_LINKS.has(template) ? 'underline' : 'plain'
 }
 
 /**

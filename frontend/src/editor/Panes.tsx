@@ -66,6 +66,7 @@ import type {
   HeaderIconStyle,
   HeaderStyle,
   Link,
+  LinkEmphasisKey,
   LinkStyle,
   Section,
   SectionType,
@@ -512,8 +513,8 @@ export function LeftPane() {
 
   // -- Link card state -----------------------------------------------------
   // Same rule as the header: the resting value is whatever the sheet already
-  // shows, so Jake's underlined links light up the Underline tile and every
-  // other design rests on Plain.
+  // shows. Every design rests plain, so the card never opens with a tick that
+  // promises a rule the paper is not drawing.
   const link = currentDoc.settings.linkStyle ?? {}
   const linkDecoration =
     link.decoration ?? restingLinkDecoration(currentDoc.settings.template)
@@ -522,7 +523,16 @@ export function LeftPane() {
   // 'accent' is the legacy value from before link blue was a fixed colour; it
   // now means the same thing as 'blue'.
   const linkBlue = linkColor === 'blue' || linkColor === 'accent'
+  // The Advanced panel is two per-entry switches, not a second decoration. A
+  // key in neither list follows the Underline tile; a key in `emphasis` is ruled
+  // even when the tile is off, and a key in `emphasisOff` is left plain even
+  // when the tile is on. Each entry answers for itself, and the switches never
+  // touch the colour.
   const linkEmphasis = link.emphasis ?? []
+  const linkEmphasisOff = link.emphasisOff ?? []
+  const linkEntryRuled = (key: LinkEmphasisKey) =>
+    linkEmphasis.includes(key) ||
+    (linkUnderline && !linkEmphasisOff.includes(key))
   // The contact icons are owned by the Header card's Details arrangement; the
   // Link card mirrors it so "Link icon" and "Icon" can never disagree.
   const linkIconsOn = headerDetails === 'icon'
@@ -538,11 +548,18 @@ export function LeftPane() {
       },
       'contact icons',
     )
-  const toggleEmphasis = (key: 'email' | 'phone') => {
-    const next = linkEmphasis.includes(key)
-      ? linkEmphasis.filter((k) => k !== key)
-      : [...linkEmphasis, key]
-    setLink({ emphasis: next.length > 0 ? next : undefined })
+  // Only a departure from the tile is stored. An entry that agrees with the
+  // tile names neither list, so flipping the tile later takes every entry with
+  // it instead of leaving stale exceptions behind.
+  const toggleEmphasis = (key: LinkEmphasisKey) => {
+    const want = !linkEntryRuled(key)
+    const on = linkEmphasis.filter((k) => k !== key)
+    const off = linkEmphasisOff.filter((k) => k !== key)
+    if (want !== linkUnderline) (want ? on : off).push(key)
+    setLink({
+      emphasis: on.length > 0 ? on : undefined,
+      emphasisOff: off.length > 0 ? off : undefined,
+    })
   }
 
 
@@ -1169,17 +1186,17 @@ export function LeftPane() {
               <div className="adv-body">
                 <div className="field">
                   <span className="field-label">
-                    Apply underline and blue color to header
+                    Underline individual entries
                   </span>
                   <div className="link-switch-list link-switch-advanced">
                     <Check
                       label="Email"
-                      checked={linkEmphasis.includes('email')}
+                      checked={linkEntryRuled('email')}
                       onChange={() => toggleEmphasis('email')}
                     />
                     <Check
                       label="Phone"
-                      checked={linkEmphasis.includes('phone')}
+                      checked={linkEntryRuled('phone')}
                       onChange={() => toggleEmphasis('phone')}
                     />
                   </div>
@@ -1189,10 +1206,11 @@ export function LeftPane() {
           </div>
 
           <p className="hint link-hint">
-            Underline and Blue color reach every clickable contact entry. Use
-            Advanced Settings to force them on individual header entries even
-            when those switches are off. The sheet shows the same treatment in
-            the PDF.
+            Underline and Blue color reach every clickable contact entry. Under
+            Advanced Settings each header entry has its own switch: it is the
+            only way to rule the mail or the number on its own, and to leave one
+            of them plain while Underline is on. The switches change the rule,
+            never the colour.
           </p>
         </div>
 

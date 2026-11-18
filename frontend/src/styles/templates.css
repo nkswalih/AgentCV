@@ -1722,17 +1722,17 @@
   > :not(.doc-contact-sep):not(:last-child) {
   margin-right: 0;
 }
-/* Underlined links like \underline{}. The reference leaves the telephone number
-   plain, but one card cannot promise "every clickable entry" and exempt one of
-   them, so the phone takes the same rule as the rest of the row. It stays a
-   link so the exported PDF can still dial it. */
+/* Links in the contact band print in body ink, like the reference. The rule
+   itself belongs to the Link card: Jake's paper rested underlined, so a saved
+   document opened with a decoration the author never chose, and the Advanced
+   Email and Phone keys had nothing to add. Tick Underline (or a key) for the
+   measured 1pt rule below. Links stay links either way, so the exported PDF can
+   still dial and mail them. */
 .tpl-jake .doc-link,
 .tpl-jake .doc-contact a,
 .tpl-jake a.doc-link .doc-contact-text,
 .tpl-jake .doc-contact a .doc-contact-text {
   color: #000;
-  text-decoration: underline;
-  text-underline-offset: 1pt;
 }
 
 /* -- Section titles: \large\scshape\raggedright + \titlerule ------------- */
@@ -3505,8 +3505,10 @@
   text-underline-offset: 0.2em;
 }
 /* Jake places its rule at the measured 1pt; the card's shared offset would lift
-   it by half a point, and the replica keeps its own geometry. */
-.page.tpl-jake[data-link-style='underline'] :is(.doc-link, .doc-link .doc-contact-text) {
+   it by half a point, and the replica keeps its own geometry. Pinned entries
+   take the same offset where they are defined, in the emphasis section. */
+.page.tpl-jake[data-link-style='underline']
+  :is(.doc-link, .doc-link .doc-contact-text) {
   text-underline-offset: 1pt;
 }
 
@@ -3543,29 +3545,43 @@
  * 7. Advanced link emphasis and the centred photo
  * ====================================================================== */
 
-/* -- Per-entry link emphasis ---------------------------------------------
-   Advanced Settings can pin the underlined blue treatment to individual header
-   entries. The text span is targeted as well because the contact item is a flex
-   box, and decoration does not cross that boundary. Element-agnostic for the
-   same reason as the card above: a thumbnail renders the entry as a span. */
-.page[data-link-emphasis~='email']
+/* -- Per-entry link switches ---------------------------------------------
+   Advanced Settings rules individual header entries. The keys are underline
+   keys, not colour keys: Blue owns ink for the whole row, so a key must never
+   recolour an entry on its own.
+
+   The two attributes are the two directions of one switch:
+   `data-link-emphasis` pins a rule on an entry the tile left plain, and
+   `data-link-emphasis-off` takes the tile's rule off one entry and leaves the
+   rest of the row ruled. An entry named in neither follows the tile.
+   The text span is targeted as well because the contact item is a flex box, and
+   decoration does not cross that boundary. Element-agnostic because a thumbnail
+   renders the entry as a span. */
+.page[data-link-emphasis-off~='email']
   :is(.doc-link[data-contact-key='email'], .doc-link[data-contact-key='email'] .doc-contact-text),
-.page[data-link-emphasis~='phone']
+.page[data-link-emphasis-off~='phone']
   :is(.doc-link[data-contact-key='phone'], .doc-link[data-contact-key='phone'] .doc-contact-text) {
+  /* Higher specificity than the tile on purpose: the exception has to outrank
+     the row rule without !important, so the entry and its text span are both
+     named here and both carry the entry's key. */
+  text-decoration: none;
+}
+.page[data-link-style='plain'][data-link-emphasis~='email']
+  :is(.doc-link[data-contact-key='email'], .doc-link[data-contact-key='email'] .doc-contact-text),
+.page[data-link-style='plain'][data-link-emphasis~='phone']
+  :is(.doc-link[data-contact-key='phone'], .doc-link[data-contact-key='phone'] .doc-contact-text) {
+  /* With no row rule to copy, the pinned entry takes the plain underline the
+     link card would have drawn for the whole row. */
   text-decoration: underline;
   text-underline-offset: 0.16em;
 }
-.page[data-link-emphasis~='email'] .doc-link[data-contact-key='email'],
-.page[data-link-emphasis~='phone'] .doc-link[data-contact-key='phone'] {
-  color: var(--doc-link-blue) !important;
-}
-.page[data-link-emphasis~='email']
-  .doc-link[data-contact-key='email']
-  *,
-.page[data-link-emphasis~='phone']
-  .doc-link[data-contact-key='phone']
-  * {
-  color: inherit !important;
+/* A pinned entry is the same rule on the same sheet, so Jake keeps its 1pt
+   geometry there as well as under the Underline tile. */
+.page.tpl-jake[data-link-style='plain'][data-link-emphasis~='email']
+  :is(.doc-link[data-contact-key='email'], .doc-link[data-contact-key='email'] .doc-contact-text),
+.page.tpl-jake[data-link-style='plain'][data-link-emphasis~='phone']
+  :is(.doc-link[data-contact-key='phone'], .doc-link[data-contact-key='phone'] .doc-contact-text) {
+  text-underline-offset: 1pt;
 }
 
 /* -- Photo above the identity (full-width headers only) -------------------

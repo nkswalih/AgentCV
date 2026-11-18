@@ -226,6 +226,8 @@ export interface HeaderStyle {
   titlePosition?: 'below' | 'same-line'
 }
 
+export type LinkEmphasisKey = 'email' | 'phone'
+
 /**
  * Link card controls. Both fields are optional; absent means the design's own
  * treatment, so a document that never opened the card keeps its look.
@@ -239,10 +241,17 @@ export interface LinkStyle {
    */
   color?: 'ink' | 'blue' | 'accent'
   /**
-   * Header entries that always get the underlined accent treatment, whatever
-   * the two fields above say. Empty means every entry follows the card.
+   * Header entries the author forced to carry the rule even when the Underline
+   * tile is off. Absent means the entry follows the tile.
    */
-  emphasis?: ('email' | 'phone')[]
+  emphasis?: LinkEmphasisKey[]
+  /**
+   * Header entries the author exempted from the rule while the tile is on. The
+   * two lists are the two directions of the same per-entry switch: an entry
+   * named in neither follows the tile, so a document that never used the
+   * Advanced panel stores nothing and keeps the card's own treatment.
+   */
+  emphasisOff?: LinkEmphasisKey[]
 }
 
 export interface Settings {
