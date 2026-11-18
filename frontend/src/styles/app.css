@@ -4481,39 +4481,60 @@ input[type='range']::-moz-range-thumb {
   margin-bottom: 10px;
 }
 
-/* Step 2 is a decision, not another form: two large, equally weighted doors. */
-.new-choices {
-  display: grid;
-  grid-template-columns: 210px minmax(0, 1fr);
-  gap: 20px;
-  align-items: center;
-  padding: 18px;
-  margin: 0 0 26px;
-  background: var(--ink-850);
-  border: 1px solid var(--ink-600);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-md);
-}
-.new-choice-head .new-step {
-  margin-bottom: 6px;
-}
-.new-choice-title {
-  margin: 0 0 4px;
-  font-family: var(--font-display);
-  font-size: 19px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
-}
+/* Step 2 is a decision, not another form: two large, equally weighted doors in
+   a dialog over the gallery, so the design the author picked stays in view. */
 .new-choice-sub {
   margin: 0;
   font-size: 12.5px;
   line-height: 1.5;
   color: var(--text-lo);
 }
-.new-choice-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+.new-choice-stack {
+  display: flex;
+  flex-direction: column;
   gap: 12px;
+}
+.new-start {
+  width: min(820px, 96vw);
+  max-height: min(90vh, 760px);
+  overflow: auto;
+  padding: 0 0 18px;
+}
+.new-start-head {
+  align-items: center;
+  padding: 14px 18px 0;
+}
+.new-start-head .new-step {
+  margin: 0;
+}
+.new-start-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.new-start-copy .new-choice-stack {
+  margin-top: 16px;
+}
+.new-start-title {
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+.new-start-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 230px;
+  gap: 24px;
+  align-items: start;
+  padding: 12px 18px 0;
+}
+.new-start-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.new-start-preview .hint {
+  margin: 0;
 }
 .new-choice {
   display: grid;
@@ -4521,7 +4542,7 @@ input[type='range']::-moz-range-thumb {
   gap: 3px 12px;
   align-items: center;
   text-align: left;
-  padding: 14px 16px;
+  padding: 16px 18px;
   font: inherit;
   color: inherit;
   background: var(--ink-850);
@@ -4853,11 +4874,6 @@ input[type='range']::-moz-range-thumb {
     grid-template-columns: minmax(0, 1fr) 250px;
     gap: 20px;
   }
-  /* Two doors need room for their labels; below this the head stacks above. */
-  .new-choices {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
 }
 @media (max-width: 960px) {
   .new-layout {
@@ -4885,18 +4901,26 @@ input[type='range']::-moz-range-thumb {
     position: static;
   }
 }
+@media (max-width: 860px) {
+  .new-start-body {
+    grid-template-columns: 1fr;
+  }
+  .new-start-preview {
+    max-width: 260px;
+  }
+}
 @media (max-width: 720px) {
-  .new-choices,
-  .new-choice-grid,
   .imp-row,
   .imp-row-3,
   .imp-link-row {
     grid-template-columns: 1fr;
   }
-  .new-choices {
-    gap: 14px;
-  }
   .imp-modal {
+    border-radius: 0;
+    max-height: 100vh;
+    width: 100%;
+  }
+  .new-start {
     border-radius: 0;
     max-height: 100vh;
     width: 100%;
