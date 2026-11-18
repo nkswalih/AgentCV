@@ -9,6 +9,7 @@ import { ExportDialog } from '../editor/ExportDialog'
 import {
   ChevronDown,
   DownloadIcon,
+  FileIcon,
   Kebab,
   LinkIcon,
   LogoMark,
@@ -20,6 +21,9 @@ import { PagePreview } from '../editor/PagePreview'
 import { LeftPane, RightPane } from '../editor/Panes'
 import { useHistoryKeys } from '../editor/useHistoryKeys'
 import { PageMeta } from '../components/PageMeta'
+import { ResumeImporter } from '../components/ResumeImporter'
+import { buildBasics, buildSections } from '../importDoc'
+import type { ResumeDocument } from '../types'
 
 /** The share sheet is optional, so ask the browser before assuming it. */
 type FileShareNavigator = Navigator & {
@@ -45,6 +49,39 @@ function historyShortcuts() {
   return apple
     ? { undo: '⌘Z', redo: '⇧⌘Z' }
     : { undo: 'Ctrl+Z', redo: 'Ctrl+Shift+Z' }
+}
+
+/**
+ * True when the document holds text an import would destroy.
+ *
+ * Ids and flags are excluded, and bullet lists only count when a bullet has
+ * letters: a starter document is full of empty fields, and warning about them
+ * would make the confirmation meaningless.
+ */
+function hasContent(doc: ResumeDocument): boolean {
+  const basics = doc.basics
+  const fields = [
+    basics.fullName,
+    basics.headline,
+    basics.email,
+    basics.phone,
+    basics.location,
+    basics.website,
+  ]
+  if (fields.some((value) => value.trim())) return true
+  if (basics.links.some((link) => link.url.trim() || link.label.trim())) return true
+  return doc.sections.some((section) =>
+    section.items.some((item) =>
+      Object.entries(item).some(([key, value]) => {
+        if (key === 'id') return false
+        if (typeof value === 'string') return value.trim().length > 0
+        if (Array.isArray(value)) {
+          return value.some((entry) => typeof entry === 'string' && entry.trim().length > 0)
+        }
+        return false
+      }),
+    ),
+  )
 }
 
 /**
@@ -104,7 +141,9 @@ export function Editor() {
   const name = useEditor((s) => s.name)
   const rename = useEditor((s) => s.rename)
   const saveNow = useEditor((s) => s.saveNow)
+  const replaceContent = useEditor((s) => s.replaceContent)
   const [exportOpen, setExportOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   useHistoryKeys()
 
   // The topbar's two popovers share the usual outside-click + Escape contract.
@@ -147,6 +186,17 @@ export function Editor() {
     nameInputRef.current?.focus()
     nameInputRef.current?.select()
   }, [nameOpen])
+
+  // The import dialog is its own surface, so Escape closes it rather than
+  // reaching whichever topbar popover was open last.
+  useEffect(() => {
+    if (!importOpen) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setImportOpen(false)
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [importOpen])
 
   // Status messages are short-lived; a toast should never become furniture.
   useEffect(() => {
@@ -311,6 +361,19 @@ export function Editor() {
 
         <SaveState />
 
+        <button
+          type="button"
+          className="btn btn-outline import-open"
+          onClick={() => {
+            setNameOpen(false)
+            setMenuOpen(false)
+            setImportOpen(true)
+          }}
+        >
+          <FileIcon />
+          Import
+        </button>
+
         <button className="btn btn-primary download-btn" onClick={() => setExportOpen(true)}>
           <DownloadIcon />
           Download
@@ -352,6 +415,51 @@ export function Editor() {
       </header>
 
       {exportOpen && <ExportDialog onClose={() => setExportOpen(false)} />}
+
+      {importOpen && (
+        <div className="modal-overlay" onClick={() => setImportOpen(false)}>
+          <div
+            className="modal imp-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Import a resume"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-head">
+              <div>
+                <h2 className="modal-title">Import a resume</h2>
+                <p className="hint">
+                  Read an existing PDF, Word, text or LaTeX resume into this template.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setImportOpen(false)}
+                aria-label="Close"
+              >
+                ✕
+              </button>
+            </div>
+            <div className="imp-modal-body">
+              <ResumeImporter
+                template={doc.settings.template}
+                replacing={hasContent(doc)}
+                showName={false}
+                applyLabel="Import into this resume"
+                onApply={(draft) => {
+                  // One action, one undo step: the author can step back to the
+                  // content the import replaced.
+                  replaceContent(buildBasics(draft.basics), buildSections(draft))
+                  setImportOpen(false)
+                  setToast('Imported. Undo is available if you want the old content back.')
+                }}
+                onCancel={() => setImportOpen(false)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="panes">
         <LeftPane />
