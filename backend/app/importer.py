@@ -118,6 +118,104 @@ def _decode(data: bytes) -> str:
     return data.decode("utf-8", "replace")
 
 
+def _uri_key(uri: str) -> str:
+    """The part of a link target a reader could also see in the words."""
+    text = uri.strip().lower()
+    text = re.sub(r"^(?:mailto|tel|https?|ftp):", "", text)
+    text = re.sub(r"^//", "", text)
+    text = re.sub(r"^www\.", "", text)
+    return text.rstrip("/")
+
+
+def _page_links(page) -> list[tuple[float, float, str]]:
+    """Clickable http(s) targets on a page, as (centre y, centre x, uri).
+
+    Resumes write "GitHub" or "Live" and hang the address off a link
+    annotation, so the address never appears in the text layer. The rectangle
+    is the only place it can be recovered from.
+    """
+    links: list[tuple[float, float, str]] = []
+    for annotation in page.get("/Annots") or []:
+        obj = annotation.get_object() if hasattr(annotation, "get_object") else annotation
+        if not isinstance(obj, dict) or obj.get("/Subtype") != "/Link":
+            continue
+        action = obj.get("/A")
+        if action is None:
+            continue
+        action = action.get_object() if hasattr(action, "get_object") else action
+        uri = action.get("/URI") if isinstance(action, dict) else None
+        if not uri:
+            continue
+        uri = str(uri).strip()
+        # mailto: and tel: are already in the words, and neither survives an
+        # export as something the reader can open.
+        if not uri.lower().startswith(("http://", "https://")):
+            continue
+        rect = obj.get("/Rect")
+        try:
+            x0, y0, x1, y1 = (float(value) for value in rect)
+        except (TypeError, ValueError):
+            continue
+        links.append(((y0 + y1) / 2, (x0 + x1) / 2, uri))
+    return links
+
+
+def _page_text(page) -> str:
+    """Read a page and put annotation targets back on their visual line.
+
+    Many resumes label a project with "GitHub | Live" and put the address on
+    the label. Attaching the target to the line it covers lets the ordinary
+    parser treat it like any other address written in the words.
+    """
+    baselines: list[float] = []
+
+    def visit(fragment, cm, tm, font_dict, font_size) -> None:
+        if not fragment or not fragment.strip():
+            return
+        try:
+            y = round(float(tm[5]), 1)
+        except (TypeError, ValueError, IndexError):
+            return
+        # Some PDF writers emit stray text markers at the origin; they are not
+        # a line and would shift every later baseline by one.
+        if y <= 1:
+            return
+        # One baseline per visual line: fragments on a line share it, and a
+        # bullet or a heading may sit a point or two off.
+        if not baselines or abs(baselines[-1] - y) > 3:
+            baselines.append(y)
+
+    text = page.extract_text(visitor_text=visit) or ""
+    links = _page_links(page)
+    if not links:
+        return text
+
+    lines = text.splitlines()
+    filled = [index for index, line in enumerate(lines) if line.strip()]
+    if len(baselines) == len(filled):
+        line_y = {index: baselines[order] for order, index in enumerate(filled)}
+    elif len(baselines) == len(lines):
+        line_y = {index: y for index, y in enumerate(baselines)}
+    else:
+        # Text and baselines disagree, so guessing would move an address onto
+        # the wrong entry. Losing the link is better than corrupting the entry.
+        return text
+
+    attached: dict[int, list[tuple[float, str]]] = {}
+    for y, x, uri in links:
+        index = min(line_y, key=lambda candidate: abs(line_y[candidate] - y))
+        if abs(line_y[index] - y) > 6:
+            continue
+        if _uri_key(uri) in lines[index].lower():
+            continue
+        attached.setdefault(index, []).append((x, uri))
+
+    for index, targets in attached.items():
+        joined = " ".join(uri for _, uri in sorted(targets))
+        lines[index] = f"{lines[index].rstrip()} {joined}"
+    return "\n".join(lines)
+
+
 def _pdf_text(data: bytes) -> str:
     try:
         from pypdf import PdfReader
@@ -130,7 +228,7 @@ def _pdf_text(data: bytes) -> str:
             # An empty password covers the common "protected, not secret" case.
             if not reader.decrypt(""):
                 raise UnreadableFile("This PDF is password protected. Remove the password and try again.")
-        pages = [(page.extract_text() or "").strip() for page in reader.pages]
+        pages = [_page_text(page).strip() for page in reader.pages]
     except UnreadableFile:
         raise
     except Exception as exc:  # pypdf raises several different types here
@@ -1180,28 +1278,64 @@ def _parse_skills(lines: list[str]) -> list[dict]:
     return [g for g in groups if g["skills"]]
 
 
+# Words that label a link rather than name a project. They arrive beside the
+# address ("GitHub | Live") or glued to the title when the annotation carried
+# the address alone.
+_URL_LABELS = (
+    "live demo", "live site", "live", "demo", "website", "web site",
+    "github", "gitlab", "bitbucket", "code", "source", "repo",
+    "repository", "play store", "app store", "case study", "documentation",
+)
+_LINK_LABEL_RE = re.compile(
+    r"(?:^|[\s|·/,:–—-]+)(?:" + "|".join(re.escape(word) for word in _URL_LABELS) + r")$",
+    re.IGNORECASE,
+)
+_CODE_HOST_RE = re.compile(
+    r"^(?:https?://)?(?:www\.)?(?:github\.com|gitlab\.com)/", re.IGNORECASE
+)
+
+
+def _strip_link_label(value: str) -> str:
+    text = _clean(value)
+    while text:
+        stripped = _clean(_LINK_LABEL_RE.sub("", text))
+        if stripped == text:
+            break
+        text = stripped
+    return text
+
+
+def _preferred_url(urls: list[str]) -> str:
+    """The address a reader wants first.
+
+    When a project offers both a repository and a running site, the site is
+    what opens in a browser and shows the work, so it wins.
+    """
+    for url in urls:
+        if not _CODE_HOST_RE.match(url):
+            return url
+    return urls[0] if urls else ""
+
+
 def _parse_projects(lines: list[str]) -> list[dict]:
     entries: list[dict] = []
     work: dict | None = None
 
     def start() -> dict:
-        return {"parts": [], "bullets": [], "startDate": "", "endDate": "", "url": ""}
+        return {"parts": [], "bullets": [], "startDate": "", "endDate": "", "urls": []}
 
     def finish(item: dict) -> dict | None:
-        parts = list(item["parts"])
+        # Labels such as "GitHub" and "Live" describe the link, not the
+        # project; the address rides on the same line.
+        parts = [part for part in (_strip_link_label(p) for p in item["parts"]) if part]
         name = parts[0] if parts else ""
         role = parts[1] if len(parts) > 1 else ""
-        url = item["url"]
-        if url:
-            role = role.replace(url, "").strip(" |,–—-")
-        if name and url and url in name:
-            name = name.replace(url, "").strip(" |,–—-")
         if not any([name, role, item["bullets"]]):
             return None
         return {
             "name": name,
             "role": role,
-            "url": url,
+            "url": _preferred_url(item["urls"]),
             "startDate": item["startDate"],
             "endDate": item["endDate"],
             "bullets": [b for b in item["bullets"] if b],
@@ -1217,11 +1351,17 @@ def _parse_projects(lines: list[str]) -> list[dict]:
 
         dates, rest = _dates(line)
         dated = bool(dates["startDate"] or dates["endDate"])
-        url = ""
-        url_match = _URL_RE.search(rest) or _BARE_URL_RE.search(rest)
-        if url_match:
-            url = url_match.group()
-            rest = _clean(rest.replace(url, " "))
+
+        # Annotation links were appended to their line, so one header can
+        # carry two addresses: the repository and the running site.
+        urls = [value.rstrip(".,;:'\"") for value in _URL_RE.findall(rest)]
+        if urls:
+            rest = _URL_RE.sub(" ", rest)
+        urls.extend(value.rstrip(".,;:'\"") for value in _BARE_URL_RE.findall(rest))
+        if urls:
+            rest = _BARE_URL_RE.sub(" ", rest)
+        rest = _clean(rest)
+        unique = [url for index, url in enumerate(urls) if url and url not in urls[:index]]
 
         if bullet:
             if work is None:
@@ -1232,8 +1372,14 @@ def _parse_projects(lines: list[str]) -> list[dict]:
         starts_new = dated or work is None
         if work is not None and not starts_new and work["bullets"]:
             # A short line after bullets opens the next project; a sentence
-            # continues the one before it.
-            starts_new = len(rest) <= 72 and not rest.endswith(".") and not rest[:1].islower()
+            # continues the one before it. Project names can be long, so the
+            # length is generous -- what marks a header is that it is not a
+            # finished sentence.
+            starts_new = (
+                len(rest) <= 140
+                and not rest.endswith((".", "!", "?"))
+                and not rest[:1].islower()
+            )
 
         if starts_new:
             if work is not None:
@@ -1242,13 +1388,12 @@ def _parse_projects(lines: list[str]) -> list[dict]:
                     entries.append(finished)
             work = start()
             work.update({k: v for k, v in dates.items() if v})
-            work["url"] = url
+            work["urls"] = unique
             work["parts"].extend(_split_parts(rest) or ([rest] if rest else []))
         else:
             if rest:
                 work["parts"].extend(_split_parts(rest))
-            if url:
-                work["url"] = url
+            work["urls"].extend(url for url in unique if url not in work["urls"])
 
     if work is not None:
         finished = finish(work)

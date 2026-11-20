@@ -1879,6 +1879,14 @@
   font-style: normal;
   font-weight: 400;
 }
+/* The beside head prints the stack after the name. A link does not belong in
+   that row's grammar, so it takes the line beneath instead of stretching a row
+   that is already long. */
+.tpl-jake .doc-item-head-beside .doc-item-beside-meta {
+  display: block;
+  margin-top: 1pt;
+  font-style: normal;
+}
 
 /* -- Bullets: nested \itemize, \small, 14pt pitch ------------------------
    The marker is out of flow on a hanging-indent first line, so wrapped text

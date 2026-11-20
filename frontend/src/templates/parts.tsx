@@ -352,6 +352,7 @@ function ItemHead({
   title,
   sub,
   meta,
+  href,
   date,
   hideDate,
   inlineSub,
@@ -360,6 +361,8 @@ function ItemHead({
   title: string
   sub?: string
   meta?: string
+  /** Project sites read better as their short address but open as a link. */
+  href?: string
   date?: string
   /** The timeline layout draws the date on its own spine instead. */
   hideDate?: boolean
@@ -368,19 +371,29 @@ function ItemHead({
   inlineSub?: boolean
   head?: HeadKind
 }) {
+  const preview = useContext(PreviewContext)
   const hasSub = !!sub?.trim()
   const hasMeta = !!meta?.trim()
   const showsDate = !hideDate && !!date?.trim()
+  // Inside a thumbnail the page already sits in a link, so the address stays
+  // text; on the real page it opens in a new tab like a contact entry.
+  const metaNode: ReactNode = hasMeta
+    ? href && !preview
+      ? <a className="doc-link" href={normalizeUrl(href)}>{bareUrl(meta!)}</a>
+      : href
+        ? bareUrl(meta!)
+        : meta
+    : null
   if (head === 'swap' || head === 'dual') {
     // The two spread layouts differ only in which field owns the right column
     // of each row. Each cell keeps the class of the field it holds, so a place
     // stays a place and a date stays a date for the typography rules.
-    const cell = (value: string, kind: 'date' | 'meta') => (
+    const cell = (value: ReactNode, kind: 'date' | 'meta') => (
       <div className={kind === 'date' ? 'doc-item-date' : 'doc-item-meta'}>{value}</div>
     )
-    const firstRight = head === 'swap' ? meta : date
+    const firstRight = head === 'swap' ? metaNode : date
     const firstRightKind = head === 'swap' ? 'meta' : 'date'
-    const secondRight = head === 'swap' ? date : meta
+    const secondRight = head === 'swap' ? date : metaNode
     const secondRightKind = head === 'swap' ? 'date' : 'meta'
     const firstRightShown = head === 'swap' ? hasMeta : showsDate
     const secondRightShown = head === 'swap' ? showsDate : hasMeta
@@ -405,6 +418,7 @@ function ItemHead({
         <div className="doc-item-title">
           {title}
           {hasSub && <span className="doc-item-sub doc-item-beside">{sub}</span>}
+          {hasMeta && <span className="doc-item-meta doc-item-beside-meta">{metaNode}</span>}
         </div>
         {showsDate && <div className="doc-item-date">{date}</div>}
       </div>
@@ -427,13 +441,13 @@ function ItemHead({
             {hasMeta && (
               <span className="doc-item-meta">
                 {hasSub ? ' · ' : ''}
-                {meta}
+                {metaNode}
               </span>
             )}
           </div>
         )}
         {inlineSub && hasMeta && (
-          <div className="doc-item-meta">{meta}</div>
+          <div className="doc-item-meta">{metaNode}</div>
         )}
       </div>
       {!hideDate && date?.trim() && <div className="doc-item-date">{date}</div>}
@@ -512,6 +526,7 @@ function Project({ item, bare, head }: { item: ProjectItem; bare?: boolean; head
         title={item.name}
         sub={item.role}
         meta={item.url}
+        href={item.url.trim() ? item.url : undefined}
         date={dateRange(item.startDate, item.endDate)}
         hideDate={bare}
         head={head}
