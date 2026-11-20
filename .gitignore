@@ -76,6 +76,9 @@ ms-playwright/
 tectonic-cache/
 vendor/tectonic/
 
+# Screenshots and JSON dumps written by the manual checks in frontend/e2e.
+frontend/e2e/artifacts/
+
 # ---------------------------------------------------------------------------
 # Editors and OS
 #

@@ -1,4 +1,4 @@
-"""Profile photo uploads.
+"""Image uploads: profile photos and resume background images.
 
 The uploaded filename is never trusted: the extension is chosen from the
 detected content type and the stem is a fresh UUID. That removes path traversal
@@ -26,11 +26,11 @@ ALLOWED_TYPES = {
     "image/webp": ".webp",
 }
 
-MAX_BYTES = 5 * 1024 * 1024
+PHOTO_MAX_BYTES = 5 * 1024 * 1024
+BACKGROUND_MAX_BYTES = 10 * 1024 * 1024
 
 
-@router.post("/photo", status_code=status.HTTP_201_CREATED)
-async def upload_photo(file: UploadFile = File(...)) -> dict[str, str]:
+async def _save(file: UploadFile, max_bytes: int) -> dict[str, str]:
     suffix = ALLOWED_TYPES.get(file.content_type or "")
     if suffix is None:
         raise HTTPException(
@@ -39,11 +39,11 @@ async def upload_photo(file: UploadFile = File(...)) -> dict[str, str]:
         )
 
     # Read with a cap rather than trusting the Content-Length header.
-    data = await file.read(MAX_BYTES + 1)
-    if len(data) > MAX_BYTES:
+    data = await file.read(max_bytes + 1)
+    if len(data) > max_bytes:
         raise HTTPException(
             status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
-            f"Keep the image under {MAX_BYTES // 1024 // 1024}MB.",
+            f"Keep the image under {max_bytes // 1024 // 1024}MB.",
         )
     if not data:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "The file is empty.")
@@ -51,3 +51,14 @@ async def upload_photo(file: UploadFile = File(...)) -> dict[str, str]:
     name = f"{uuid4().hex}{suffix}"
     (UPLOAD_DIR / name).write_bytes(data)
     return {"url": f"/uploads/{name}"}
+
+
+@router.post("/photo", status_code=status.HTTP_201_CREATED)
+async def upload_photo(file: UploadFile = File(...)) -> dict[str, str]:
+    return await _save(file, PHOTO_MAX_BYTES)
+
+
+@router.post("/background", status_code=status.HTTP_201_CREATED)
+async def upload_background(file: UploadFile = File(...)) -> dict[str, str]:
+    """Full-page backdrops: same trust model, a larger cap for print quality."""
+    return await _save(file, BACKGROUND_MAX_BYTES)

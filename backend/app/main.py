@@ -14,10 +14,11 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from .db import init_db
 from .pdf import renderer
-from .routers import export, resumes, uploads
+from .routers import export, imports, resumes, uploads
 from .routers.uploads import UPLOAD_DIR
 
 FRONTEND_DIST = Path(__file__).resolve().parent.parent.parent / "frontend" / "dist"
@@ -48,6 +49,7 @@ app.add_middleware(
 app.include_router(resumes.router)
 app.include_router(export.router)
 app.include_router(uploads.router)
+app.include_router(imports.router)
 
 
 @app.get("/api/health")
@@ -63,4 +65,50 @@ app.mount("/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 # When the frontend has been built, serve it from the same origin so the whole
 # app runs off one process. Mounted last so it never shadows /api routes.
 if FRONTEND_DIST.is_dir():
-    app.mount("/", StaticFiles(directory=FRONTEND_DIST, html=True), name="frontend")
+
+    class SpaFiles(StaticFiles):
+        """Static files with a single-page-app fallback.
+
+        The router owns the URL space: /resume/<id>, /print/<id> and the rest
+        exist only in the browser, so a plain static mount answers them with
+        404 and the app looks broken on this origin (while working fine on the
+        Vite dev server). Anything that is not a real file falls back to
+        index.html and lets the client router take it from there.
+
+        A missed *file* is not a route. Serving index.html for, say, a deleted
+        icon answers an image request with HTML and teaches the browser to cache
+        that HTML under the image URL, so only extensionless paths fall back.
+        """
+
+        async def get_response(self, path: str, scope):  # type: ignore[override]
+            try:
+                response = await super().get_response(path, scope)
+            except StarletteHTTPException as exc:
+                if exc.status_code == 404 and not Path(path).suffix:
+                    response = await super().get_response("index.html", scope)
+                else:
+                    raise
+            response.headers["cache-control"] = self._cache_policy(path)
+            return response
+
+        @staticmethod
+        def _cache_policy(path: str) -> str:
+            """Vite fingerprints bundles; it does not fingerprint the shell.
+
+            Everything under /assets/ carries a content hash in its name and can
+            be cached for as long as the browser likes. index.html names the
+            current bundle, so it has to be revalidated -- otherwise a rebuild
+            lands on disk and the browser keeps loading the previous one, which
+            looks exactly like the fix never shipped. Non-hashed extras
+            (favicon, manifest, offline shell) are revalidated too: a 304 costs
+            nothing on localhost and they do change between builds.
+
+            The mount is rooted at "/" and Starlette hands the path through
+            os.path.normpath, so on Windows the separator is a backslash. Path
+            parts compare the same on either platform.
+            """
+            if Path(path).parts[:1] == ("assets",):
+                return "public, max-age=31536000, immutable"
+            return "no-cache"
+
+    app.mount("/", SpaFiles(directory=FRONTEND_DIST, html=True), name="frontend")

@@ -7,24 +7,52 @@
  *
  * Physical units (mm, pt) are used throughout rather than px, because the output
  * is a real sheet of paper.
+ *
+ * Architecture:
+ *   1. Foundation -- paper, shared entry blocks, the type defaults every skin
+ *      starts from. A skin only declares how it DIFFERS.
+ *   2. The skins -- each one is a composition: its own header architecture,
+ *      heading system, date treatment and rhythm. Palette is part of a skin's
+ *      identity and is fixed; the accent slider steers only the two legacy ATS
+ *      templates and Banner, which predate the system.
+ *
+ * Density contract: every skin is tuned so an ordinary, well-filled resume
+ * occupies one sheet with balanced margins -- never spilling onto page two by
+ * accident, never shrinking type below ~9.5pt equivalent to force a fit.
  */
 
+/* =========================================================================
+ * 1. Foundation
+ * ====================================================================== */
+
+/* The document's own reset. The app already sets this globally via
+   tokens.css, so here it is a no-op in the editor -- but this file is inlined
+   alone into the HTML export, where that global reset is absent. Without it,
+   padded blocks (doc-body, doc-main, doc-rail) overflow the sheet. */
+.page,
+.page *,
+.page *::before,
+.page *::after {
+  box-sizing: border-box;
+}
+
 .page {
-  /* Paper. Overridden to Letter via [data-paper]. */
+  /* Paper. A4 is the stock every design is fitted to; Letter is an explicit
+     user choice and arrives through [data-paper]. */
   width: 210mm;
   min-height: 297mm;
-  background: var(--paper);
-  color: #14181d;
+  /* Fallback matters: this file is inlined alone into the HTML export, where
+     the app's tokens.css (and its --paper) is not present. */
+  background: var(--paper, #ffffff);
+  color: #191e24;
 
   /* Every knob in the style panel arrives as a custom property, so changing a
      setting re-renders nothing -- the browser just recomputes. */
   font-family: var(--doc-font, 'Inter', sans-serif);
   font-size: var(--doc-size, 10.5pt);
-  line-height: var(--doc-leading, 1.4);
+  line-height: var(--doc-leading, 1.42);
 
   position: relative;
-  /* Not clipped: when content runs past one sheet the page grows, and the
-     editor draws the break lines where the PDF will actually split. */
 }
 
 .page[data-paper='Letter'] {
@@ -41,22 +69,31 @@
   break-after: avoid;
 }
 
-.doc-bullets {
-  margin: 3pt 0 0;
-  padding-left: 13pt;
+/* -- Header defaults (skins override individually) ---------------------- */
+.doc-name {
+  margin: 0;
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.01em;
 }
-.doc-bullets li {
-  margin-bottom: 1.5pt;
+.doc-headline {
+  margin: 2.5pt 0 0;
+  font-size: var(--doc-title-size, 11pt);
+  color: #4b5563;
+}
+.doc-contact {
+  margin-top: 5pt;
+  font-size: var(--doc-contact-size, 9pt);
+  color: #374151;
 }
 
+/* Links and contact entries. Anchors keep the surrounding text colour -- a
+   wall of blue underlines reads as spam on a printed page; the tap targets
+   still work in the PDF. */
 .doc-link {
   color: inherit;
   text-decoration: none;
 }
-
-/* Contact line entries. Anchors keep the surrounding text colour -- a wall of
-   blue underlines reads as spam on a printed page; the tap targets still work
-   in the PDF. */
 .doc-contact a {
   color: inherit;
   text-decoration: none;
@@ -66,358 +103,91 @@
   align-items: center;
   gap: 2.5pt;
 }
+/* A long URL or profile path breaks inside the entry instead of pushing the
+   contact block past the page margin. `anywhere` (not just `break-word`) also
+   shrinks the entry's min-content size, which is what a stacked rail needs: the
+   inline-flex item can then fit its column instead of overflowing it. */
+.doc-contact-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 /* Separator between entries on one line; spaced by margin because the entries
    are rendered as an element list with no whitespace between them. */
 .doc-contact-sep {
-  margin: 0 3pt;
+  margin: 0 3.5pt;
+  color: #9aa4af;
 }
-/* Scaled to the text so icons never outgrow their entry at any font size. */
+/* The span is ornament, not content: each design draws its own mark, so the
+   glyph lives here rather than in the markup and never lands in the PDF text
+   layer next to an address. Bar and Bullet restate this at higher specificity. */
+.doc-contact-sep::after {
+  content: '\00b7';
+}
+/* Icon per entry is the arrangement where the marks already separate the ways
+   to reach someone, so those rows separate with air instead of an interpunct.
+   Detected by the icon wrapper: bullet and bar render bare entries. */
+.page [data-doc-header] .doc-contact-row:has(.doc-contact-item) > .doc-contact-sep {
+  display: none;
+}
+.page [data-doc-header]
+  .doc-contact-row:has(.doc-contact-item)
+  > :not(.doc-contact-sep):not(:last-child) {
+  /* After the entry, not before the next one, so a wrapped entry starts flush. */
+  margin-right: 1.1em;
+}
+/* The link row is the one that wraps: five profiles do not fit a line, and a
+   middot carried onto the next line reads as a stray bullet. It separates with
+   air instead, so every wrapped line still starts on an address. Bar mode keeps
+   its printed rule -- that glyph is a deliberate choice, not the default. */
+.page:not([data-header-details='bar']) .doc-contact-row[data-row='links'] > .doc-contact-sep {
+  display: none;
+}
+.page:not([data-header-details='bar'])
+  .doc-contact-row[data-row='links']
+  > :not(.doc-contact-sep):not(:last-child) {
+  /* The air belongs after an entry, not before the next one: a link that wraps
+     then starts on the row's own left edge instead of inheriting the gap as a
+     1.1em indent. */
+  margin-right: 1.1em;
+}
+/* Scaled to the text so icons never outgrow their entry at any font size.
+   The contact line asks for a touch more: solid marks read small at 8-9pt. */
 .doc-icon {
   width: 1em;
   height: 1em;
   flex: none;
 }
-
-/* =========================================================================
- * ATS-safe family
- *
- * Single column, real headings, no layout tables, no icons, no photo. Applicant
- * tracking systems read these top-to-bottom without mangling the order, which
- * matters more than visual flourish when a parser sits between you and a human.
- * ====================================================================== */
-
-/* Page margins come from the two sliders. Every value below carries the default
-   as its var fallback, so a document saved before these settings existed still
-   renders with the margins it was designed for. */
-.tpl-ats-classic,
-.tpl-ats-modern,
-.tpl-compact {
-  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+.doc-contact .doc-icon {
+  width: 1.1em;
+  height: 1.1em;
 }
 
-/* -- shared single-column section rhythm -- */
-.tpl-ats-classic .doc-section,
-.tpl-ats-modern .doc-section,
-.tpl-compact .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 9pt);
+/* -- Shared rhythm ------------------------------------------------------- */
+/* Every skin inherits this section cadence; designs that need more or less
+   air override the multiplier, none of them improvise their own baseline. */
+.doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 10pt);
 }
-.tpl-ats-classic .doc-section:first-of-type,
-.tpl-ats-modern .doc-section:first-of-type,
-.tpl-compact .doc-section:first-of-type {
+.doc-section:first-of-type,
+.doc-body .doc-section:first-child {
   margin-top: calc(var(--doc-gap, 1) * 7pt);
 }
-
-/* -- ATS Classic: serif, centred header, traditional and quietly formal -- */
-.tpl-ats-classic {
-  font-family: var(--doc-font, 'Source Serif 4', serif);
-}
-/* No rule under the header: the summary's own titled section carries the
-   structure here, and stacking two lines read as a stray <hr>. */
-.tpl-ats-classic .doc-header {
-  text-align: center;
-}
-.tpl-ats-classic .doc-name {
-  font-size: var(--doc-name-size, 21pt);
+.doc-section-title {
+  margin: 0 0 5pt;
   font-weight: 700;
-  letter-spacing: 0.01em;
-  margin: 0;
-  line-height: 1.1;
-}
-.tpl-ats-classic .doc-headline {
-  font-size: var(--doc-title-size, 11pt);
-  margin: 2pt 0 0;
-  color: #374151;
-}
-.tpl-ats-classic .doc-contact {
-  margin-top: 5pt;
-  font-size: 9pt;
-  color: #374151;
-}
-.tpl-ats-classic .doc-section-title {
   font-size: var(--doc-heading-size, 11pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin: 0 0 4pt;
-  padding-bottom: 2pt;
-  /* Same ink as the text, not a grey: a parser-plain resume reads best when
-     its rules are as decisive as its type. */
-  border-bottom: 0.5pt solid #14181d;
+  letter-spacing: 0.02em;
 }
 
-/* -- ATS Modern: sans, left-aligned, one accent rule as the only colour -- */
-.tpl-ats-modern .doc-header {
-  padding-bottom: 8pt;
-  border-bottom: 2pt solid var(--doc-accent, #2563eb);
-}
-.tpl-ats-modern .doc-name {
-  font-size: var(--doc-name-size, 23pt);
-  font-weight: 700;
-  letter-spacing: -0.02em;
-  margin: 0;
-  line-height: 1.05;
-}
-.tpl-ats-modern .doc-headline {
-  font-size: var(--doc-title-size, 11pt);
-  font-weight: 500;
-  color: var(--doc-accent, #2563eb);
+.doc-bullets {
   margin: 2pt 0 0;
+  padding-left: 12pt;
 }
-.tpl-ats-modern .doc-contact {
-  margin-top: 6pt;
-  font-size: 9pt;
-  color: #374151;
+.doc-bullets li {
+  margin-bottom: 0.5pt;
 }
-.tpl-ats-modern .doc-section-title {
-  font-size: var(--doc-heading-size, 10pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--doc-accent, #2563eb);
-  margin: 0 0 5pt;
-}
-
-/* -- Compact: same ATS discipline, tightened for people with more history -- */
-.tpl-compact {
-  /* Held at 80% of the set margin rather than pinned to a fixed value: running
-     tighter than the others is the whole reason this template exists, so it has
-     to stay tighter at every slider position, not just the default. */
-  padding: calc(var(--doc-margin-y, 14mm) * 0.8) calc(var(--doc-margin-x, 15mm) * 0.8);
-}
-/* No rule under the header either -- same reason as Classic: the first
-   section title's underline is the anchor, not a second dark line. */
-.tpl-compact .doc-header {
-  padding-bottom: 0;
-}
-.tpl-compact .doc-name {
-  font-size: var(--doc-name-size, 18pt);
-  font-weight: 700;
-  margin: 0;
-  line-height: 1.05;
-}
-.tpl-compact .doc-headline {
-  font-size: var(--doc-title-size, 10pt);
-  margin: 1pt 0 0;
-  color: #374151;
-}
-.tpl-compact .doc-contact {
-  margin-top: 3pt;
-  font-size: 8.5pt;
-  color: #374151;
-}
-.tpl-compact .doc-section-title {
-  font-size: var(--doc-heading-size, 9.5pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin: 0 0 3pt;
-  border-bottom: 0.5pt solid #aab3bd;
-}
-.tpl-compact .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 6pt);
-}
-.tpl-compact .doc-bullets {
-  padding-left: 11pt;
-}
-
-/* =========================================================================
- * Design-forward family
- *
- * Two-column and colour-block layouts, with room for a photo. Stronger on a
- * human desk; riskier through a parser -- the editor labels them as such.
- * ====================================================================== */
-
-/* -- Sidebar: contact, skills and photo in a tinted rail on the left -- */
-.tpl-sidebar {
-  display: grid;
-  grid-template-columns: 62mm 1fr;
-  padding: 0;
-}
-.tpl-sidebar .doc-rail {
-  background: #f1f4f7;
-  border-right: 2pt solid var(--doc-accent, #2563eb);
-  /* The rail is only 62mm wide, so it keeps a tighter horizontal gutter -- a
-     full page margin on both sides would leave almost no room for text. */
-  padding: var(--doc-margin-y, 13mm) calc(var(--doc-margin-x, 15mm) * 0.6);
-}
-.tpl-sidebar .doc-main {
-  padding: var(--doc-margin-y, 13mm) var(--doc-margin-x, 15mm);
-  min-width: 0;
-}
-/* Photo top-right in the main header, level with the name; the text block
-   takes the remaining width and shrinks first. */
-.tpl-sidebar .doc-main .doc-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 5mm;
-}
-.tpl-sidebar .doc-header-text {
-  min-width: 0;
-}
-.tpl-sidebar .doc-photo {
-  width: 26mm;
-  height: 26mm;
-  border-radius: 50%;
-  object-fit: cover;
-  flex: none;
-  margin: 0;
-  border: 2pt solid var(--doc-accent, #2563eb);
-}
-.tpl-sidebar .doc-name {
-  font-size: var(--doc-name-size, 19pt);
-  font-weight: 700;
-  line-height: 1.05;
-  margin: 0;
-  letter-spacing: -0.01em;
-}
-.tpl-sidebar .doc-headline {
-  font-size: var(--doc-title-size, 10pt);
-  color: var(--doc-accent, #2563eb);
-  font-weight: 600;
-  margin: 2pt 0 0;
-}
-.tpl-sidebar .doc-rail .doc-section-title {
-  font-size: var(--doc-heading-size, 9pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--doc-accent, #2563eb);
-  margin: 0 0 4pt;
-}
-.tpl-sidebar .doc-main .doc-section-title {
-  font-size: var(--doc-heading-size, 11pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-  margin: 0 0 5pt;
-  padding-bottom: 2pt;
-  border-bottom: 1pt solid var(--doc-accent, #2563eb);
-}
-.tpl-sidebar .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 9pt);
-}
-.tpl-sidebar .doc-rail .doc-section:first-child,
-.tpl-sidebar .doc-main .doc-section:first-of-type {
-  margin-top: calc(var(--doc-gap, 1) * 8pt);
-}
-.tpl-sidebar .doc-contact {
-  font-size: 8.5pt;
-  color: #374151;
-  display: flex;
-  flex-direction: column;
-  gap: 2.5pt;
-  word-break: break-word;
-}
-
-/* -- Banner: full-bleed accent header, photo inline, confident and graphic -- */
-.tpl-banner {
-  padding: 0;
-}
-.tpl-banner .doc-header {
-  background: var(--doc-accent, #2563eb);
-  color: #fff;
-  /* The band is a header, not a cover page. Its vertical padding stays at 65%
-      of the page margin so raising the margin cannot swell the band into the
-      content area below it. */
-  padding: calc(var(--doc-margin-y, 14mm) * 0.65) var(--doc-margin-x, 15mm);
-  display: flex;
-  align-items: center;
-  gap: 7mm;
-}
-.tpl-banner .doc-photo {
-  width: 23mm;
-  height: 23mm;
-  border-radius: 50%;
-  object-fit: cover;
-  flex: none;
-  border: 2.5pt solid rgba(255, 255, 255, 0.85);
-}
-.tpl-banner .doc-name {
-  font-size: var(--doc-name-size, 21pt);
-  font-weight: 700;
-  letter-spacing: -0.025em;
-  margin: 0;
-  line-height: 1.05;
-}
-.tpl-banner .doc-headline {
-  font-size: var(--doc-title-size, 10.5pt);
-  margin: 2.5pt 0 0;
-  /* Held just back from pure white so the name still leads, but well clear of
-     the 4.5:1 floor against the accent. */
-  color: rgba(255, 255, 255, 0.94);
-}
-.tpl-banner .doc-contact {
-  margin-top: 5pt;
-  font-size: 8.5pt;
-  color: rgba(255, 255, 255, 0.96);
-}
-.tpl-banner .doc-body {
-  /* Less air above than below: the coloured band already separates the body
-     from the top of the sheet. */
-  padding: calc(var(--doc-margin-y, 14mm) * 0.8) var(--doc-margin-x, 15mm)
-    var(--doc-margin-y, 14mm);
-}
-.tpl-banner .doc-section-title {
-  font-size: var(--doc-heading-size, 10.5pt);
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--doc-accent, #2563eb);
-  margin: 0 0 5pt;
-  display: flex;
-  align-items: center;
-  gap: 6pt;
-}
-/* The rule grows out of the title rather than sitting under it. */
-.tpl-banner .doc-section-title::after {
-  content: '';
-  flex: 1;
-  height: 0.75pt;
-  background: #c3cad2;
-}
-.tpl-banner .doc-section {
-  margin-top: calc(var(--doc-gap, 1) * 9pt);
-}
-.tpl-banner .doc-body .doc-section:first-of-type {
-  margin-top: 0;
-}
-
-/* =========================================================================
- * Shared entry blocks
- * ====================================================================== */
-
-.doc-item + .doc-item {
-  margin-top: calc(var(--doc-gap, 1) * 6pt);
-}
-
-.doc-item-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 8pt;
-}
-.doc-item-title {
-  font-weight: 700;
-  /* Relative by default so it tracks the base font size; an explicit entry
-     override arrives in pt and takes over. */
-  font-size: var(--doc-entry-size, 1.02em);
-}
-.doc-item-sub {
-  font-weight: 600;
-  color: #374151;
-}
-/* Dates are tabular data; mono keeps columns of them optically aligned. */
-.doc-item-date {
-  font-size: 0.87em;
-  color: #4b5563;
-  white-space: nowrap;
-  flex: none;
-  font-variant-numeric: tabular-nums;
-}
-.doc-item-meta {
-  font-size: 0.9em;
-  color: #4b5563;
+.doc-bullets li:last-child {
+  margin-bottom: 0;
 }
 
 .doc-summary {
@@ -428,17 +198,55 @@
   margin-top: 3pt;
 }
 
+/* -- Shared entry blocks --------------------------------------------------
+   The hierarchy every skin shares: bold role over quieter employer, tabular
+   dates hard-right, meta small. Skins restyle these slots; none of them
+   flatten the distinction away. */
+.doc-item + .doc-item {
+  margin-top: calc(var(--doc-gap, 1) * 4.5pt);
+}
+.doc-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8pt;
+}
+.doc-item-title {
+  font-weight: 650;
+  /* Relative by default so it tracks the base font size; an explicit entry
+     override arrives in pt and takes over. */
+  font-size: var(--doc-entry-size, 1.02em);
+}
+.doc-item-sub {
+  font-weight: 500;
+  color: #374151;
+}
+/* Dates are tabular data; tabular numerals keep columns of them optically
+   aligned down the page. */
+.doc-item-date {
+  font-size: 0.86em;
+  color: #57606b;
+  white-space: nowrap;
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.doc-item-meta {
+  font-size: 0.9em;
+  color: #57606b;
+}
+/* The inline companion of a single-line head (certification rows). */
+.doc-item-inline {
+  font-weight: 500;
+  font-size: 0.92em;
+}
+
 /* Skills: category label plus its members on one line, which packs far more
    into the same vertical space than one skill per row. */
 .doc-skillgroup + .doc-skillgroup {
-  margin-top: 3pt;
+  margin-top: 2.5pt;
 }
 .doc-skillgroup-label {
-  font-weight: 700;
-}
-
-.tpl-sidebar .doc-rail .doc-skillgroup-label {
-  display: block;
+  font-weight: 650;
 }
 
 .doc-taglist {
@@ -467,7 +275,7 @@
   column-gap: 12pt;
 }
 .doc-skill-bullets li {
-  margin-bottom: 1.5pt;
+  margin-bottom: 1pt;
   /* A long name wraps inside its column instead of widening it. */
   overflow-wrap: break-word;
   break-inside: avoid;
@@ -482,6 +290,26 @@
   padding-left: 0;
 }
 
+/* Contact rows: the plain ways to reach someone on the first line, the links
+   on the second. Each row is a block so a skin's flex context cannot lay the
+   two rows out side by side; the entries inside stay inline and wrap. */
+.doc-contact-row {
+  display: block;
+}
+.doc-contact-row + .doc-contact-row {
+  margin-top: 2pt;
+}
+
+/* Skill lines: one skill per line, used in sidebar rails instead of the
+   pill-tag grid. Matches how reference resumes render narrow-column skills. */
+.doc-skilllines {
+  margin: 0;
+  padding-left: 12pt;
+}
+.doc-skilllines li {
+  margin-bottom: 1pt;
+}
+
 .doc-langrow {
   display: flex;
   justify-content: space-between;
@@ -489,4 +317,3367 @@
 }
 .doc-langrow + .doc-langrow {
   margin-top: 2pt;
+}
+
+/* =========================================================================
+ * 1b. Layout overrides (columns, header position, column width)
+ *
+ * These rules respond to the Layout controls in the left sidebar. They
+ * apply generically across single-column templates; grid-based templates
+ * (sidebar, two-col, portal-pro, modern-deep) intentionally ignore them.
+ * ====================================================================== */
+
+/* -- Header position ----------------------------------------------------- */
+/* Left/right header: two regions side by side using inline grid columns
+   (widths set via --doc-col-width in JSX). No new visual styles — the
+   template's own renderer styles each region identically to the original. */
+
+/* -- Column layout ------------------------------------------------------- */
+/* Two columns: explicit left/right containers with configurable width ratio.
+   The gutter between the columns is the page margin itself, not a fixed
+   number, so the sheet reads as one measured block: the same inset at the
+   left edge, between the columns, and at the right edge. Dragging the margin
+   slider moves the outer and inner insets together. */
+.page[data-columns='two'] > .doc-columns {
+  display: grid;
+  grid-template-columns: var(--doc-col-width, 40%) 1fr;
+  column-gap: var(--doc-margin-x, 15mm);
+}
+/* Header left/right also lays the page out as a two-track grid. Designs that
+   paint their own rails keep their construction; every other family takes the
+   same margin-sized gutter as the header-top split. */
+.page[data-columns='two']:is([data-header='left'], [data-header='right']):not(
+    :is(.tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  ) {
+  column-gap: var(--doc-margin-x, 15mm);
+}
+.page[data-columns='two'] > .doc-columns > .doc-col > * {
+  break-inside: avoid;
+}
+/* A grid item's default min-width is its intrinsic size, so one long
+   unbreakable line plus the column's padding can push a track wider than the
+   sheet. Columns are meant to shrink and wrap -- the panel has to keep
+   reaching the page edge no matter what the copy does. */
+.page[data-columns='two'] > .doc-col-left,
+.page[data-columns='two'] > .doc-col-right {
+  min-width: 0;
+}
+
+/* =========================================================================
+ * 2. Single-column rhythm shared by the ATS family
+ *
+ * Real margins, real headings, normal reading order. These are the designs a
+ * parser reads cleanly -- and, deliberately, the best-looking pages in the
+ * library, because ATS-safe was never supposed to mean plain.
+ * ====================================================================== */
+
+.tpl-ats-classic,
+.tpl-ats-modern,
+.tpl-compact,
+.tpl-classic-pro,
+.tpl-modern-min,
+.tpl-executive,
+.tpl-editorial,
+.tpl-devtech,
+.tpl-academic,
+.tpl-timeline,
+.tpl-photo-pro,
+.tpl-serif-ats,
+.tpl-jake,
+/* Retired colour-study ids: kept renderable through the neutral path so old
+   documents still open; they are no longer offered in the picker. */
+.tpl-atlantic-blue,
+.tpl-true-blue,
+.tpl-editorial-rule,
+.tpl-refined,
+.tpl-classic-sans,
+.tpl-clean-slate,
+.tpl-quiet-focus,
+.tpl-clear {
+  /* The page margin, named once. Layout rules that have to line up with the
+     sheet edge (a painted side header, for one) read these instead of
+     restating the margin -- compact scales them and stays correct. */
+  --doc-pad-y: var(--doc-margin-y, 14mm);
+  --doc-pad-x: var(--doc-margin-x, 15mm);
+  padding: var(--doc-pad-y) var(--doc-pad-x);
+}
+
+/* -- ATS Classic: centred serif, quietly formal -------------------------- */
+.tpl-ats-classic {
+  font-family: var(--doc-font, 'Source Serif 4', Georgia, serif);
+}
+.tpl-ats-classic .doc-header {
+  text-align: center;
+}
+.tpl-ats-classic .doc-name {
+  font-size: var(--doc-name-size, 21pt);
+  line-height: 1.1;
+}
+.tpl-ats-classic .doc-headline {
+  color: #3f4854;
+}
+.tpl-ats-classic .doc-contact {
+  margin-top: 5pt;
+  font-size: var(--doc-contact-size, 9pt);
+  color: #3f4854;
+}
+.tpl-ats-classic .doc-section-title {
+  font-size: var(--doc-heading-size, 10.5pt);
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  margin-bottom: 4pt;
+  padding-bottom: 2pt;
+  /* Same ink as the text: a parser-plain resume reads best when its rules are
+     as decisive as its type. */
+  border-bottom: 0.75pt solid #23282e;
+}
+.tpl-ats-classic .doc-item-sub {
+  font-style: italic;
+}
+.tpl-ats-classic .doc-item-date {
+  font-style: italic;
+}
+
+/* -- ATS Modern: left-aligned sans, one decisive accent rule ------------- */
+.tpl-ats-modern .doc-header {
+  padding-bottom: 8pt;
+}
+.tpl-ats-modern .doc-name {
+  font-size: var(--doc-name-size, 23pt);
+  letter-spacing: -0.02em;
+}
+.tpl-ats-modern .doc-headline {
+  font-weight: 550;
+  color: var(--doc-accent, #374151);
+}
+.tpl-ats-modern .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--doc-accent, #374151);
+  margin-bottom: 4.5pt;
+  padding-bottom: 2pt;
+  border-bottom: 0.5pt solid #e3e7eb;
+}
+
+/* -- Compact: the same discipline, tightened for long histories ---------- */
+.tpl-compact {
+  /* Held at 80% of the set margin rather than pinned to a fixed value: running
+     tighter than the others is the whole reason this template exists, so it has
+     to stay tighter at every slider position, not just the default. */
+  --doc-pad-y: calc(var(--doc-margin-y, 14mm) * 0.78);
+  --doc-pad-x: calc(var(--doc-margin-x, 15mm) * 0.8);
+  padding: var(--doc-pad-y) var(--doc-pad-x);
+}
+.tpl-compact .doc-name {
+  font-size: var(--doc-name-size, 24pt);
+  line-height: 1.05;
+}
+.tpl-compact .doc-headline {
+  margin-top: 2pt;
+  font-size: var(--doc-title-size, 13pt);
+}
+.tpl-compact .doc-contact {
+  margin-top: 3pt;
+  font-size: var(--doc-contact-size, 10pt);
+}
+.tpl-compact .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 14pt);
+}
+.tpl-compact .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 19pt);
+}
+.tpl-compact .doc-section-title {
+  font-size: var(--doc-heading-size, 12pt);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 3pt;
+  padding-bottom: 1.5pt;
+  border-bottom: 0.5pt solid #b6bec7;
+}
+.tpl-compact .doc-bullets {
+  padding-left: 11pt;
+}
+.tpl-compact .doc-item + .doc-item {
+  margin-top: calc(var(--doc-gap, 1) * 10pt);
+}
+
+/* -- Classic Professional: serif authority, double-rule signature --------- */
+.tpl-classic-pro {
+  font-family: var(--doc-font, Georgia, 'Times New Roman', serif);
+}
+.tpl-classic-pro .doc-name {
+  font-size: var(--doc-name-size, 26pt);
+  letter-spacing: 0.005em;
+}
+.tpl-classic-pro .doc-headline {
+  font-size: var(--doc-title-size, 10.5pt);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #454e59;
+  margin-top: 3pt;
+}
+.tpl-classic-pro .doc-contact {
+  font-size: var(--doc-contact-size, 11pt);
+}
+.tpl-classic-pro .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 13pt);
+}
+.tpl-classic-pro .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 18pt);
+}
+.tpl-classic-pro .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  text-transform: uppercase;
+  letter-spacing: 0.13em;
+  margin-bottom: 4.5pt;
+  padding-bottom: 2pt;
+  border-bottom: 0.5pt solid #c3cad2;
+}
+.tpl-classic-pro .doc-item-sub {
+  font-style: italic;
+}
+
+/* -- Modern Minimal: scale and air instead of rules ----------------------- */
+.tpl-modern-min {
+  font-family: var(--doc-font, 'Inter', system-ui, sans-serif);
+}
+.tpl-modern-min .doc-name {
+  font-size: var(--doc-name-size, 24pt);
+  font-weight: 750;
+  letter-spacing: -0.032em;
+  line-height: 1.02;
+  color: #10151b;
+}
+.tpl-modern-min .doc-headline {
+  font-weight: 500;
+  color: #5b6570;
+  margin-top: 3pt;
+}
+.tpl-modern-min .doc-contact {
+  margin-top: 3.5pt;
+  color: #5b6570;
+}
+.tpl-modern-min .doc-contact-sep {
+  margin: 0 6pt;
+}
+.tpl-modern-min .doc-header {
+  padding-bottom: 5pt;
+}
+.tpl-modern-min .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 6pt);
+}
+.tpl-modern-min .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 5pt);
+}
+/* No rule anywhere: the whitespace under a tiny tracked label IS the divider. */
+.tpl-modern-min .doc-section-title {
+  font-size: var(--doc-heading-size, 9pt);
+  font-weight: 650;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: #8a94a0;
+  margin-bottom: 3.5pt;
+}
+.tpl-modern-min .doc-item-title {
+  font-weight: 600;
+}
+.tpl-modern-min .doc-item-date,
+.tpl-modern-min .doc-item-meta {
+  color: #6b7480;
+}
+
+/* -- Executive: centred formality inside a ruled frame -------------------- */
+.tpl-executive {
+  font-family: var(--doc-font, Garamond, 'Cormorant Garamond', Georgia, serif);
+}
+.tpl-executive .doc-header {
+  text-align: center;
+  padding: 7pt 0 7pt;
+  position: relative;
+}
+/* The heavier partner rules sit just outside the hairlines -- a frame, not a
+   pair of stray bars. */
+.tpl-executive .doc-name {
+  font-size: var(--doc-name-size, 20pt);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  line-height: 1.15;
+  color: #21262d;
+}
+.tpl-executive .doc-headline {
+  font-style: italic;
+  color: #4c545e;
+  margin-top: 3pt;
+}
+.tpl-executive .doc-contact {
+  justify-content: center;
+  text-align: center;
+  margin-top: 5pt;
+}
+.tpl-executive .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 7.5pt);
+}
+.tpl-executive .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 6.5pt);
+}
+.tpl-executive .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  text-align: center;
+  color: #272c33;
+  margin-bottom: 5pt;
+  position: relative;
+  padding-bottom: 3pt;
+}
+/* A short centred tick under each heading -- the section marker of formal
+   reports, and the only ornament on the page. */
+.tpl-executive .doc-section-title::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 22pt;
+  transform: translateX(-50%);
+  border-bottom: 1pt solid #33383f;
+}
+.tpl-executive .doc-item-sub {
+  font-style: italic;
+}
+.tpl-executive .doc-item-date {
+  font-style: italic;
+}
+
+/* -- Editorial: magazine masthead and typographic sections ---------------- */
+.tpl-editorial {
+  font-family: var(--doc-font, Georgia, 'Noto Serif', serif);
+}
+.tpl-editorial .doc-masthead {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18pt;
+  padding-bottom: 7pt;
+  position: relative;
+}
+/* The newspaper finish: one fat rule with a hairline riding beneath it. */
+.tpl-editorial .doc-masthead::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 4pt;
+  border-bottom: 2.25pt solid #171b21;
+}
+.tpl-editorial .doc-masthead::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-bottom: 0.5pt solid #171b21;
+}
+.tpl-editorial .doc-name {
+  font-size: var(--doc-name-size, 29pt);
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  line-height: 0.98;
+  color: #14181d;
+}
+.tpl-editorial .doc-headline {
+  font-size: var(--doc-title-size, 12pt);
+  font-style: italic;
+  color: #3f4854;
+  margin-top: 4pt;
+}
+.tpl-editorial .doc-masthead .doc-contact {
+  text-align: right;
+  font-size: var(--doc-contact-size, 8.5pt);
+  color: #3f4854;
+  flex: none;
+  line-height: 1.5;
+}
+.tpl-editorial .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-editorial .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-editorial .doc-section-title {
+  font-size: var(--doc-heading-size, 10.5pt);
+  font-weight: 400;
+  font-variant: small-caps;
+  letter-spacing: 0.12em;
+  color: #14181d;
+  margin-bottom: 4.5pt;
+  /* Heading, then a hairline running to the right edge -- the running heads
+     of a broadsheet section. */
+  display: flex;
+  align-items: baseline;
+  gap: 8pt;
+}
+.tpl-editorial .doc-section-title::after {
+  content: '';
+  flex: 1;
+  border-bottom: 0.5pt solid #99a1ab;
+}
+.tpl-editorial .doc-item-sub {
+  font-style: italic;
+}
+
+/* -- Academic: centred Times, education leads, zero ornament -------------- */
+.tpl-academic {
+  font-family: var(--doc-font, 'Times New Roman', Tinos, Times, serif);
+}
+.tpl-academic .doc-header {
+  text-align: center;
+  padding-bottom: 8pt;
+}
+.tpl-academic .doc-name {
+  font-size: var(--doc-name-size, 19pt);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  line-height: 1.15;
+}
+.tpl-academic .doc-headline {
+  font-style: italic;
+  color: #3f4854;
+  margin-top: 3pt;
+}
+.tpl-academic .doc-contact {
+  text-align: center;
+  margin-top: 5pt;
+}
+.tpl-academic .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  text-align: center;
+  margin-bottom: 5pt;
+  /* Centred heading held between two hairlines -- the catalogue style of
+     journal front matter. */
+  display: flex;
+  align-items: center;
+  gap: 10pt;
+}
+.tpl-academic .doc-section-title::before,
+.tpl-academic .doc-section-title::after {
+  content: '';
+  flex: 1;
+  border-top: 0.5pt solid #a7aeb7;
+}
+.tpl-academic .doc-item-sub {
+  font-style: italic;
+}
+
+/* -- Technical: identity left, reach right, proof before chronology ------- */
+.tpl-devtech {
+  font-family: var(--doc-font, 'IBM Plex Sans', system-ui, sans-serif);
+  line-height: calc(var(--doc-leading, 1.42) * 0.96);
+}
+.tpl-devtech .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 6.5pt);
+}
+.tpl-devtech .doc-header-split {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16pt;
+  padding-bottom: 12pt;
+}
+.tpl-devtech .doc-header-side .doc-contact {
+  display: block;
+  margin-top: 0;
+  font-size: var(--doc-contact-size, 9.5pt);
+  text-align: right;
+  color: #4b5563;
+}
+.tpl-devtech .doc-header-side .doc-contact-sep {
+  display: none;
+}
+.tpl-devtech .doc-name {
+  font-size: var(--doc-name-size, 24pt);
+  letter-spacing: -0.02em;
+  color: #17272b;
+}
+.tpl-devtech .doc-headline {
+  font-size: var(--doc-title-size, 13pt);
+  font-weight: 600;
+  color: #0f766e;
+}
+.tpl-devtech .doc-section-title {
+  font-size: var(--doc-heading-size, 9.5pt);
+  font-weight: 650;
+  color: #0f766e;
+  margin-bottom: 4pt;
+  /* A short teal bar under the heading: the single colour decision on the
+     page, repeated into a system. */
+  position: relative;
+  padding-bottom: 2.5pt;
+}
+.tpl-devtech .doc-section-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 18pt;
+  height: 2pt;
+  background: #0f766e;
+}
+.tpl-devtech .doc-skillgroup-label {
+  color: #273038;
+}
+
+/* -- Timeline: the chronology drawn as a spine ---------------------------- */
+.tpl-timeline {
+  font-family: var(--doc-font, 'IBM Plex Sans', system-ui, sans-serif);
+  line-height: calc(var(--doc-leading, 1.42) * 0.95);
+}
+.tpl-timeline .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 6pt);
+}
+.tpl-timeline .doc-header-split {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16pt;
+  padding-bottom: 5pt;
+}
+.tpl-timeline .doc-header-side {
+  text-align: right;
+  padding-bottom: 1pt;
+}
+.tpl-timeline .doc-header-side .doc-contact {
+  margin-top: 0;
+  font-size: var(--doc-contact-size, 8.5pt);
+  color: #57606b;
+}
+.tpl-timeline .doc-name {
+  font-size: var(--doc-name-size, 20pt);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: #12171d;
+}
+.tpl-timeline .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #454e59;
+  margin-bottom: 4pt;
+}
+.tl-list {
+  position: relative;
+}
+.tl-list::before {
+  content: '';
+  position: absolute;
+  top: 2pt;
+  bottom: 2pt;
+  left: 30mm;
+  border-left: 0.75pt solid #d3dae1;
+}
+.tpl-timeline .tl-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 26mm minmax(0, 1fr);
+  gap: 0 10pt;
+  padding-bottom: calc(var(--doc-gap, 1) * 2.5pt + 2pt);
+}
+.tpl-timeline .tl-item:last-child {
+  padding-bottom: 0;
+}
+.tpl-timeline .tl-item::before {
+  content: '';
+  position: absolute;
+  left: 27.5mm;
+  top: 3.5pt;
+  width: 7px;
+  height: 7px;
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: #454e59;
+  box-shadow: 0 0 0 2px var(--paper, #fff);
+  z-index: 1;
+}
+.tpl-timeline .tl-when {
+  /* 8.5pt of the 10.5pt body -- tracks the Base font size slider. */
+  font-size: calc(var(--doc-size, 10.5pt) * 0.809524);
+  font-weight: 650;
+  color: #39424c;
+  white-space: nowrap;
+  padding-top: 0.5pt;
+  font-variant-numeric: tabular-nums;
+}
+.tpl-timeline .tl-body .doc-item {
+  margin: 0;
+}
+.tpl-timeline .tl-body .doc-bullets {
+  margin-top: 2pt;
+}
+
+/* -- Photo Pro: the portrait composed INTO the masthead -------------------- */
+.tpl-photo-pro {
+  font-family: var(--doc-font, Georgia, 'Times New Roman', serif);
+  line-height: calc(var(--doc-leading, 1.42) * 0.97);
+}
+.tpl-photo-pro .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-photo-pro .doc-photohead {
+  display: flex;
+  align-items: center;
+  gap: 7mm;
+  border-bottom: 1.75pt solid #23282e;
+  padding-bottom: 6pt;
+}
+.tpl-photo-pro .doc-portrait {
+  width: 24mm;
+  height: 24mm;
+  border-radius: 3mm;
+  object-fit: cover;
+  border: 0.75pt solid #c9cfd6;
+  flex: none;
+}
+/* Without a photo the text block simply takes the whole line -- no hole. */
+.tpl-photo-pro .doc-name {
+  font-size: var(--doc-name-size, 23pt);
+}
+.tpl-photo-pro .doc-headline {
+  letter-spacing: 0.04em;
+  color: #4b5563;
+  margin-top: 3pt;
+}
+.tpl-photo-pro .doc-contact {
+  margin-top: 5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
+}
+.tpl-photo-pro .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: #33383f;
+  margin-bottom: 4.5pt;
+  padding-bottom: 2pt;
+  border-bottom: 0.5pt solid #ccd2d9;
+}
+
+/* =========================================================================
+ * 3. Columnar designs
+ *    Two deliberate grids -- a light credentials rail on the RIGHT, and a
+ *    dark identity rail on the LEFT. Different problems, different answers;
+ *    neither exists to make another template look different.
+ * ====================================================================== */
+
+/* -- Two Column: the story earns the wide column -------------------------- */
+.tpl-two-col {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 56mm;
+  padding: 0;
+  font-family: var(--doc-font, 'Inter', system-ui, sans-serif);
+}
+.tpl-two-col .doc-main {
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+  min-width: 0;
+}
+/* The rail tints to the sheet edges -- a panel, not a floating box. */
+.tpl-two-col .doc-rail {
+  background: #f2f4f7;
+  border-left: 0.5pt solid #dde2e8;
+  padding: var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.55);
+}
+.tpl-two-col .doc-name {
+  font-size: var(--doc-name-size, 21pt);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: #1b2430;
+}
+.tpl-two-col .doc-headline {
+  font-weight: 550;
+  color: #46505c;
+}
+.tpl-two-col .doc-main > .doc-header {
+  padding-bottom: 7pt;
+  border-bottom: 1pt solid #23282e;
+  margin-bottom: 2pt;
+}
+.tpl-two-col .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 8pt);
+}
+.tpl-two-col .doc-main > .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 7pt);
+}
+.tpl-two-col .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #273038;
+  margin-bottom: 4pt;
+  padding-bottom: 1.5pt;
+  border-bottom: 0.5pt solid #ccd3da;
+}
+.tpl-two-col .doc-rail .doc-section-title {
+  font-size: var(--doc-heading-size, 9pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #3d4956;
+  margin-bottom: 3.5pt;
+}
+.tpl-two-col .doc-rail .doc-contact {
+  font-size: var(--doc-contact-size, 8.5pt);
+  color: #37404b;
+}
+.tpl-two-col .doc-item-date {
+  color: #4b5563;
+}
+
+/* -- Sidebar: identity in a dark rail, story on white ---------------------- */
+.tpl-sidebar {
+  display: grid;
+  grid-template-columns: 62mm minmax(0, 1fr);
+  padding: 0;
+  line-height: calc(var(--doc-leading, 1.42) * 0.97);
+}
+.tpl-sidebar .doc-rail {
+  background: #242e39;
+  color: #dbe3ea;
+  padding: var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.58);
+}
+.tpl-sidebar .doc-main {
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+/* Photo leads the rail -- the portrait introduces the person before their
+   contact details do. Absent a photo, contact simply moves up. */
+.tpl-sidebar .doc-photo {
+  width: 30mm;
+  height: 30mm;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  border: 2.5pt solid rgba(255, 255, 255, 0.28);
+  margin: 0 0 7pt;
+}
+.tpl-sidebar .doc-rail .doc-section-title {
+  font-size: var(--doc-heading-size, 13pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #9fb0bf;
+  margin: 0 0 4pt;
+}
+.tpl-sidebar .doc-rail .doc-contact {
+  font-size: var(--doc-contact-size, 12pt);
+  color: #dbe3ea;
+  word-break: break-word;
+}
+.tpl-sidebar .doc-rail .doc-link {
+  color: #eef2f6;
+}
+.tpl-sidebar .doc-rail .doc-tag {
+  border-color: rgba(255, 255, 255, 0.32);
+  color: #edf1f5;
+}
+.tpl-sidebar .doc-rail .doc-skillgroup-label {
+  display: block;
+  color: #eef2f6;
+}
+.tpl-sidebar .doc-rail .doc-item-meta,
+.tpl-sidebar .doc-rail .doc-langrow .doc-item-meta {
+  color: #a9b7c3;
+}
+.tpl-sidebar .doc-name {
+  font-size: var(--doc-name-size, 20pt);
+  font-weight: 750;
+  letter-spacing: -0.015em;
+  color: #e1e1e1;
+}
+.tpl-sidebar .doc-headline {
+  font-size: var(--doc-title-size, 13pt);
+  font-weight: 550;
+  color: #6f7781;
+}
+.tpl-sidebar .doc-main .doc-header {
+  padding-bottom: 5pt;
+  border-bottom: 1pt solid #23282e;
+  margin-bottom: 0;
+}
+.tpl-sidebar .doc-main .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 8.5pt);
+}
+.tpl-sidebar .doc-main .doc-section:first-of-type {
+  margin-top: calc(var(--doc-gap, 1) * 8.5pt);
+}
+.tpl-sidebar .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 12pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #273038;
+  margin-bottom: 3pt;
+  padding-bottom: 0.75pt;
+  border-bottom: 0.5pt solid #ccd3da;
+}
+
+/* -- Banner: a solid band carries the identity; the body stays disciplined - */
+.tpl-banner {
+  padding: 0;
+}
+.tpl-banner .doc-band,
+.tpl-banner .doc-header {
+  background: var(--doc-accent, #374151);
+  color: #fff;
+  /* The band is a header, not a cover page: vertical padding held to 60% of
+     the page margin so raising the margin cannot swell the band. */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.6) var(--doc-margin-x, 15mm);
+  display: flex;
+  align-items: center;
+  gap: 7mm;
+}
+.tpl-banner .doc-photo {
+  width: 23mm;
+  height: 23mm;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+  border: 2.5pt solid rgba(255, 255, 255, 0.85);
+}
+.tpl-banner .doc-name {
+  font-size: var(--doc-name-size, 21pt);
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+.tpl-banner .doc-headline {
+  margin-top: 2pt;
+  color: rgba(255, 255, 255, 0.92);
+}
+.tpl-banner .doc-contact {
+  margin-top: 5pt;
+  font-size: var(--doc-contact-size, 8.5pt);
+  color: rgba(255, 255, 255, 0.94);
+}
+.tpl-banner .doc-contact-sep {
+  color: rgba(255, 255, 255, 0.55);
+}
+.tpl-banner .doc-body {
+  padding: calc(var(--doc-margin-y, 14mm) * 0.8) var(--doc-margin-x, 15mm)
+    var(--doc-margin-y, 14mm);
+}
+.tpl-banner .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 8pt);
+}
+.tpl-banner .doc-body .doc-section:first-of-type {
+  margin-top: 0;
+}
+.tpl-banner .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--doc-accent, #374151);
+  margin-bottom: 4pt;
+  display: flex;
+  align-items: center;
+  gap: 6pt;
+}
+/* The rule grows out of the title rather than sitting under it. */
+.tpl-banner .doc-section-title::after {
+  content: '';
+  flex: 1;
+  height: 0.75pt;
+  background: #c3cad2;
+}
+
+/* -- Creative: identity in a deep flat band, disciplined serif-free body --- */
+.tpl-creative {
+  padding: 0;
+  font-family: var(--doc-font, 'Lato', sans-serif);
+  /* Lato's tall x-height reads larger than its metrics; a slightly closer
+     leading keeps the page composed without shrinking type. */
+  line-height: calc(var(--doc-leading, 1.42) * 0.94);
+}
+.tpl-creative .doc-band {
+  /* One flat, deep indigo. No gradients, no second hue: the restraint is what
+     keeps a coloured header looking composed rather than decorated. */
+  background: #2e3a80;
+  color: #eef1fc;
+  /* 6.5mm at the 14mm default, so the band follows Top & bottom margin. */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.464286) var(--doc-margin-x, 15mm);
+  display: flex;
+  align-items: center;
+  gap: 7mm;
+}
+.tpl-creative .doc-photo {
+  width: 21mm;
+  height: 21mm;
+  border-radius: 3mm;
+  object-fit: cover;
+  flex: none;
+  border: 2pt solid rgba(238, 241, 252, 0.45);
+}
+.tpl-creative .doc-band .doc-name {
+  font-size: var(--doc-name-size, 23pt);
+  letter-spacing: -0.015em;
+  color: #ffffff;
+}
+.tpl-creative .doc-band .doc-headline {
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: var(--doc-title-size, 10pt);
+  color: #c9d2f2;
+  margin-top: 2pt;
+}
+.tpl-creative .doc-band .doc-contact {
+  margin-top: 4pt;
+  font-size: var(--doc-contact-size, 8.5pt);
+  color: #c9d2f2;
+}
+.tpl-creative .doc-band .doc-contact-sep {
+  color: rgba(201, 210, 242, 0.6);
+}
+.tpl-creative .doc-body {
+  padding: calc(var(--doc-margin-y, 14mm) * 0.72) var(--doc-margin-x, 15mm)
+    var(--doc-margin-y, 14mm);
+}
+.tpl-creative .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 6.5pt);
+}
+.tpl-creative .doc-body .doc-section:first-of-type {
+  margin-top: 0;
+}
+.tpl-creative .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.11em;
+  color: #2e3a80;
+  margin-bottom: 3.5pt;
+  position: relative;
+  padding-bottom: 2.5pt;
+}
+.tpl-creative .doc-section-title::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 18pt;
+  height: 2pt;
+  background: #2e3a80;
+}
+
+.tpl-modern-min .doc-item + .doc-item {
+  margin-top: calc(var(--doc-gap, 1) * 3pt);
+}
+
+/* -- Professional (portal-pro): dark left rail, pill/badge headers -------- */
+.tpl-portal-pro {
+  display: grid;
+  grid-template-columns: 45fr 65fr;
+  font-family: var(--doc-font, 'Inter', system-ui, sans-serif);
+}
+.tpl-portal-pro .doc-rail {
+  background: #193242;
+  color: #e2e8f0;
+  /* The rail's inset tracks the page margins: 8mm / 10mm at the 15mm default. */
+  padding: var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.533333)
+    var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.666667);
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.tpl-portal-pro .doc-rail .doc-name {
+  font-family: var(--doc-font, Georgia, 'Times New Roman', serif);
+  font-size: var(--doc-name-size, 24pt);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: 2pt;
+  line-height: 2.25;
+}
+.tpl-portal-pro .doc-rail .doc-headline {
+  font-size: var(--doc-title-size, 14pt);
+  color: #b0bec5;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  margin-top: 0;
+  font-weight: 400;
+}
+.tpl-portal-pro .doc-rail .doc-photo {
+  width: 32mm;
+  height: 32mm;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 10pt 0;
+  border: 2pt solid rgba(255,255,255,0.2);
+}
+.tpl-portal-pro .doc-rail .doc-contact {
+  font-size: var(--doc-contact-size, 14pt);
+  color: #cfd8dc;
+  margin-top: 6pt;
+  display: flex;
+  flex-direction: column;
+  gap: 4pt;
+}
+.tpl-portal-pro .doc-rail .doc-contact-item {
+  gap: 8pt;
+}
+.tpl-portal-pro .doc-rail .doc-icon {
+  width: 1.1em;
+  height: 1.1em;
+  opacity: 0.85;
+}
+.tpl-portal-pro .doc-rail .doc-section {
+  /* 17pt at the preset's 0.85 spacing multiplier. */
+  margin-top: calc(var(--doc-gap, 0.85) * 20pt);
+}
+.tpl-portal-pro .doc-rail .doc-section-title {
+  font-size: var(--doc-heading-size, 12pt);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 6pt;
+  padding: 5pt 10pt;
+  background: rgba(255,255,255,0.12);
+  border-radius: 3pt;
+  text-align: center;
+  border-bottom: none;
+}
+.tpl-portal-pro .doc-rail .doc-skillgroup-label {
+  color: #e2e8f0;
+  /* 13pt of the 10.5pt body -- tracks the Base font size slider. */
+  font-size: calc(var(--doc-size, 10.5pt) * 1.238095);
+}
+.tpl-portal-pro .doc-rail .doc-skilllines {
+  padding-left: 10pt;
+  color: #cfd8dc;
+  font-size: calc(var(--doc-size, 10.5pt) * 1.333333);
+}
+.tpl-portal-pro .doc-rail .doc-langrow {
+  font-size: calc(var(--doc-size, 10.5pt) * 1.333333);
+  color: #cfd8dc;
+}
+.tpl-portal-pro .doc-rail .doc-summary {
+  font-size: calc(var(--doc-size, 10.5pt) * 1.333333);
+  line-height: max(1.05, calc(var(--doc-leading, 1.45) * 1.034483));
+  color: #d1d5db;
+  text-align: justify;
+}
+.tpl-portal-pro .doc-rail .doc-lang-dots {
+  display: inline-flex;
+  gap: 2pt;
+  margin-left: 4pt;
+}
+.tpl-portal-pro .doc-rail .doc-lang-dot {
+  width: 6pt;
+  height: 6pt;
+  border-radius: 50%;
+  background: #546e7a;
+}
+.tpl-portal-pro .doc-rail .doc-lang-dot.filled {
+  background: #60a5fa;
+}
+.tpl-portal-pro .doc-main {
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+.tpl-portal-pro .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 12pt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1a2235;
+  font-weight: 700;
+  margin-bottom: 12pt;
+  padding: 5pt 12pt;
+  background: #efefef;
+  border-radius: 3pt;
+  text-align: center;
+  display: inline-block;
+  width: 100%;
+  border-bottom: none;
+}
+.tpl-portal-pro .doc-main .doc-summary {
+  text-align: justify;
+  line-height: max(1.05, calc(var(--doc-leading, 1.45) * 0.862069));
+}
+
+/* -- Modern Deep: dark rail with square photo and underline-bar headers -- */
+.tpl-modern-deep {
+  display: grid;
+  grid-template-columns: 66mm 1fr;
+  font-family: var(--doc-font, 'Merriweather', Georgia, serif);
+}
+.tpl-modern-deep .doc-rail {
+  background: #2b3a55;
+  color: #d1d5db;
+  /* 7mm / 10mm at the 15mm default, so the rail follows the page margins. */
+  padding: var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.466667)
+    var(--doc-margin-y, 14mm) calc(var(--doc-margin-x, 15mm) * 0.666667);
+  display: flex;
+  flex-direction: column;
+}
+.tpl-modern-deep .doc-rail .doc-photo {
+  width: 28mm;
+  height: 28mm;
+  border-radius: 3mm;
+  object-fit: cover;
+  margin: 0 0 8pt;
+  border: 2pt solid rgba(255,255,255,0.15);
+}
+.tpl-modern-deep .doc-rail .doc-contact {
+  font-size: var(--doc-contact-size, 13pt);
+  color: #e2e8f0;
+  margin-top: 12pt;
+  display: flex;
+  flex-direction: column;
+  gap: 5pt;
+}
+.tpl-modern-deep .doc-rail .doc-contact-item {
+  gap: 4pt;
+}
+.tpl-modern-deep .doc-rail .doc-icon {
+  width: 1.05em;
+  height: 1.05em;
+  opacity: 0.85;
+}
+.tpl-modern-deep .doc-rail .doc-section {
+  /* 10pt at the preset's 0.85 spacing multiplier. */
+  margin-top: calc(var(--doc-gap, 0.85) * 11.764706pt);
+}
+.tpl-modern-deep .doc-rail .doc-section-title {
+  font-size: var(--doc-heading-size, 13pt);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #ffffff;
+  font-weight: 700;
+  margin-bottom: 4pt;
+  padding: 0 0 3pt;
+  border-bottom: none;
+  position: relative;
+}
+.tpl-modern-deep .doc-rail .doc-section-title::after {
+  content: '';
+  display: block;
+  width: 15mm;
+  height: 1.5pt;
+  background: rgba(255,255,255,0.5);
+  margin-top: 3pt;
+  border-radius: 1pt;
+}
+.tpl-modern-deep .doc-rail .doc-skillgroup-label {
+  color: #e2e8f0;
+}
+.tpl-modern-deep .doc-rail .doc-skilllines {
+  padding-left: 10pt;
+  color: #cbd5e1;
+  font-size: calc(var(--doc-size, 10.5pt) * 1.142857);
+}
+.tpl-modern-deep .doc-rail .doc-langrow {
+  font-size: calc(var(--doc-size, 10.5pt) * 1.238095);
+  color: #cbd5e1;
+}
+.tpl-modern-deep .doc-rail .doc-lang-dots {
+  display: inline-flex;
+  gap: 2pt;
+  margin-left: 4pt;
+}
+.tpl-modern-deep .doc-rail .doc-lang-dot {
+  width: 5pt;
+  height: 5pt;
+  border-radius: 50%;
+  background: #4b5563;
+}
+.tpl-modern-deep .doc-rail .doc-lang-dot.filled {
+  background: #60a5fa;
+}
+.tpl-modern-deep .doc-main {
+  padding: var(--doc-margin-y, 14mm) var(--doc-margin-x, 15mm);
+}
+.tpl-modern-deep .doc-main .doc-header {
+  padding-bottom: 6pt;
+  border-bottom: 1.5pt solid #d1d5db;
+  margin-bottom: 6pt;
+}
+.tpl-modern-deep .doc-main .doc-name {
+  font-size: var(--doc-name-size, 24pt);
+  color: #1a2235;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
+}
+.tpl-modern-deep .doc-main .doc-headline {
+  font-size: var(--doc-title-size, 14pt);
+  color: #64748b;
+  margin-top: 2pt;
+  font-weight: 400;
+}
+.tpl-modern-deep .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 13pt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1a2235;
+  font-weight: 700;
+  margin-bottom: 4pt;
+  padding: 0 0 3pt;
+  border-bottom: none;
+  position: relative;
+}
+.tpl-modern-deep .doc-main .doc-section-title::after {
+  content: '';
+  display: block;
+  width: 15mm;
+  height: 1.5pt;
+  background: #2b3a55;
+  margin-top: 3pt;
+  border-radius: 1pt;
+}
+
+/* -- Serif Classic (serif-ats): Times, centred, ruled title-case headers --- */
+.tpl-serif-ats {
+  font-family: var(--doc-font, 'Times New Roman', Times, serif);
+}
+.tpl-serif-ats .doc-header {
+  text-align: center;
+  padding-bottom: 6pt;
+}
+.tpl-serif-ats .doc-name {
+  font-size: var(--doc-name-size, 22pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #111;
+}
+.tpl-serif-ats .doc-headline {
+  font-size: var(--doc-title-size, 11pt);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #374151;
+  font-weight: 600;
+  margin-top: 2pt;
+}
+.tpl-serif-ats .doc-contact {
+  margin-top: 5pt;
+  font-size: var(--doc-contact-size, 10pt);
+  color: #374151;
+}
+.tpl-serif-ats .doc-contact-item {
+  gap: 3pt;
+}
+.tpl-serif-ats .doc-icon {
+  width: 1.05em;
+  height: 1.05em;
+  opacity: 0.85;
+}
+.tpl-serif-ats .doc-section-title {
+  font-size: var(--doc-heading-size, 12pt);
+  font-weight: 700;
+  text-transform: capitalize;
+  color: #111;
+  margin-bottom: 5pt;
+  padding-bottom: 3pt;
+  border-bottom: 0.5pt solid #9ca3af;
+}
+.tpl-serif-ats .doc-skillgroup {
+  margin-bottom: 2pt;
+}
+.tpl-serif-ats .doc-skillgroup-label {
+  font-weight: 700;
+}
+
+/* -- Jake's Resume: measured replica of the LaTeX original ----------------
+   Source: https://github.com/jakegut/resume (sb2nov-derived class).
+
+   Reproduced to the point: 12.7mm margins (36pt), 11pt Times,
+   a \Huge small-caps name, one centred pipe-separated contact line, a 0.4pt
+   \titlerule under small-caps section titles, tabular two-row entry heads and
+   a nested itemize for bullets.
+
+   Vertical rhythm follows the panel, not a private scale: the line height
+   slider is the same multiplier of the body size every other design uses
+   (14pt on 11pt = 1.2727 at the reference), and the spacing slider is a plain
+   multiplier of this design's measured section gaps. Pitches are written in em
+   of their own text, so the body-size slider moves type and leading together.
+   The shipped preset (leading 1.2727, spacing 1) reproduces the measured
+   baseline table exactly. */
+.tpl-jake {
+  --jake-lead: calc(var(--doc-leading, 1.2727) / 1.2727);
+  --jake-gap: var(--doc-gap, 1);
+  font-family: var(--doc-font, 'Times New Roman', Times, serif);
+  font-size: var(--doc-size, 11pt);
+  line-height: var(--doc-leading, 1.2727);
+  color: #000;
+  /* Padding stays with the shared skin rule (Section 2), so both margin
+     sliders keep working; only the rhythm constants belong to this design. */
+}
+
+/* -- Header: \Huge\scshape name over a pipe-separated contact block -------
+   The original prints phone | mail | profiles as one centred run. The app
+   builds two rows (plain, then links), and the link row always starts on its
+   own line: a row that wraps at a different width would otherwise end on a
+   dangling pipe, which reads as a typo. */
+.tpl-jake .doc-header {
+  text-align: center;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+/* The shared header is a flex column with a 12pt gap between the identity
+   block and the contact line. The reference stacks them 4.33pt apart, so the
+   distance belongs to the contact's own margin here. */
+.page.tpl-jake [data-doc-header] {
+  gap: 0;
+}
+.tpl-jake .doc-name {
+  /* 2.25em of an 11pt body = 24.75pt, \Huge set solid: the cap height, not a
+     generous line box, decides where the name sits. */
+  font-size: var(--doc-name-size, 2.25em);
+  font-weight: 700;
+  font-variant: small-caps;
+  line-height: 0.72;
+  letter-spacing: 0;
+  color: #000;
+}
+/* The reference has no professional title, so the sheet says nothing under the
+   name -- but that is the data being empty, not the design refusing to print
+   one. A title the author writes keeps the page's own ink and face, in the
+   design's secondary voice (the italic its entry rows already use), and still
+   answers the header card's Italic/Upright and size controls: no font-size is
+   set here, so --doc-title-size keeps working. */
+.tpl-jake .doc-headline {
+  display: block;
+  margin-top: calc(1.5pt * var(--jake-lead));
+  font-style: italic;
+  color: #000;
+}
+.tpl-jake .doc-contact {
+  display: flex;
+  /* One row per line: the entries of a row read as a run, and the links always
+     start on a fresh line rather than bridging onto the tail of the first. */
+  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  margin-top: calc(4.33pt * var(--jake-lead));
+  font-size: var(--doc-contact-size, 0.91em);
+  line-height: calc(1.199em * var(--jake-lead));
+  color: #000;
+  text-align: center;
+}
+.tpl-jake .doc-contact-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: center;
+}
+.tpl-jake .doc-contact-row + .doc-contact-row {
+  margin-top: 0;
+}
+/* One pipe after each entry, so a wrapped line starts flush on an address
+   rather than on a dangling mark. The app's own separator spans are switched
+   off: this design's pipe is its ornament, and keeping both would double the
+   mark at the row boundary.
+
+   The pipe is this design's Bar arrangement -- it is the mark the Bar tile
+   draws -- so every rule in the group below is written as "the pipe state" and
+   steps aside the moment the header card asks for Bullet or Icon. `:not()` on
+   two values, not a list of the state we know about: a document saved before
+   the card existed has no arrangement at all and must still print the
+   reference's own line. */
+.page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
+  .doc-contact-sep {
+  display: none;
+}
+.page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
+  .doc-contact-row > *::after {
+  content: '|';
+  /* The reference separates entries with one interword space on each side of
+     the bar, not with the bar's own side bearings. */
+  margin: 0 3.3pt;
+  color: #000;
+  /* The bar is ornament, and a generated text box on the entry inherits that
+     entry's link rule, printing a 2pt dash under every pipe. An atomic inline
+     takes no propagated decoration, and still sits on the same baseline. */
+  display: inline-block;
+}
+/* Every row ends without a mark: the rows are separate lines, so a pipe after
+   the town would dangle at the end of the first line with nothing to bridge. */
+.page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
+  .doc-contact-row > :last-child::after {
+  content: none;
+}
+/* The link row normally separates its entries with air, because a middot
+   stranded at a line break reads as a stray bullet. In the pipe state that air
+   would land as a hole between the last pipe and the final link, so it goes.
+   Bullet and Icon keep it: there the marks do the work, and a wrapped link must
+   still start on an address. */
+.page.tpl-jake:not([data-header-details='bullet']):not([data-header-details='icon'])
+  .doc-contact-row[data-row='links']
+  > :not(.doc-contact-sep):not(:last-child) {
+  margin-right: 0;
+}
+/* Links in the contact band print in body ink, like the reference. The rule
+   itself belongs to the Link card: Jake's paper rested underlined, so a saved
+   document opened with a decoration the author never chose, and the Advanced
+   Email and Phone keys had nothing to add. Tick Underline (or a key) for the
+   measured 1pt rule below. Links stay links either way, so the exported PDF can
+   still dial and mail them. */
+.tpl-jake .doc-link,
+.tpl-jake .doc-contact a,
+.tpl-jake a.doc-link .doc-contact-text,
+.tpl-jake .doc-contact a .doc-contact-text {
+  color: #000;
+}
+
+/* -- Section titles: \large\scshape\raggedright + \titlerule ------------- */
+.tpl-jake .doc-section {
+  margin-top: calc(6.03pt * var(--jake-gap));
+}
+/* 14.07pt measured from the last contact baseline -- the shared header-to-body
+   join is a different distance, and it is zeroed below, so this margin is the
+   whole gap. Page-scoped because the shared rule is not. */
+.tpl-jake .doc-section:first-of-type,
+.page.tpl-jake .doc-body > .doc-section:first-child {
+  margin-top: calc(14.77pt * var(--jake-gap));
+}
+.page.page[data-columns='one'].tpl-jake [data-doc-header] + .doc-body {
+  margin-top: 0;
+}
+.tpl-jake .doc-section-title {
+  font-size: var(--doc-heading-size, 1.087em); /* 11.96pt = \large of 11pt */
+  font-variant: small-caps;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: #000;
+  line-height: calc(1.171em * var(--jake-lead));
+  margin: 0 0 calc(1.83pt * var(--jake-gap));
+  padding: 0 0 calc(1.42pt * var(--jake-lead));
+  border-bottom: 0.4pt solid currentColor;
+}
+/* Underline is this design's resting treatment, and \titlerule is its honest
+   measure: a 0.4pt hairline 1.42pt under the words. The generic Underline
+   style draws 1pt in the accent, 2pt lower -- the same idea at the wrong
+   weight for a LaTeX page. Any other chosen treatment still wins. */
+.page.page.tpl-jake[data-heading-visual='underline'] .doc-section-title {
+  line-height: calc(1.171em * var(--jake-lead)) !important;
+  margin-bottom: calc(1.83pt * var(--jake-gap)) !important;
+  padding-bottom: calc(1.42pt * var(--jake-lead)) !important;
+  border-bottom: 0.4pt solid currentColor !important;
+}
+
+/* -- Entries: \resumeSubheading, tabular rows ----------------------------
+   The entry list is indented 0.15in (10.8pt) from the text block -- the
+   \leftmargin of \resumeSubHeadingListStart -- and stops 5.4pt short of the
+   right edge, which is the width the original's tabular* fills. */
+.tpl-jake .doc-item {
+  break-inside: avoid;
+  margin-left: 10.8pt;
+  margin-right: 5.4pt;
+}
+.tpl-jake .doc-item + .doc-item {
+  /* The gap between records is paid by the bullet list's own bottom padding;
+     what is left here only settles the rounding so consecutive heads land on
+     the reference's 18.1pt pitch. */
+  margin-top: calc(0.11pt * var(--jake-gap));
+}
+/* A record with no bullets ends on its second row, which the original pads
+   with a larger \vspace: 4.46pt instead of 0.11. */
+.tpl-jake .doc-item:not(:has(.doc-bullets)) + .doc-item {
+  margin-top: calc(4.46pt * var(--jake-gap));
+}
+.tpl-jake .doc-item-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6pt;
+  line-height: calc(1.227em * var(--jake-lead));
+}
+.tpl-jake .doc-item-head-swap,
+.tpl-jake .doc-item-head-dual {
+  display: flex;
+  flex-direction: column;
+  /* Stretch, not the shared baseline: in a column, baseline alignment makes
+     each row shrink to its text, so the date would sit beside the title
+     instead of on the right edge. */
+  align-items: stretch;
+  /* 0.75pt is one device pixel in the exported page. The reference sets its two
+     tabular rows 13.5pt apart; the italic row carries a slightly lower
+     baseline, so the box gap supplies the remainder. A smaller gap rounds to
+     zero in some heads and to a whole pixel in others, which produced two
+     different row pitches on the same page. */
+  gap: calc(0.75pt * var(--jake-lead));
+}
+.tpl-jake .doc-item-head-swap .doc-item-row,
+.tpl-jake .doc-item-head-dual .doc-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 6pt;
+}
+.tpl-jake .doc-item-title {
+  font-weight: 700;
+  font-size: var(--doc-entry-size, 1em);
+  color: #000;
+}
+.tpl-jake .doc-item-date {
+  font-weight: 400;
+  font-size: 1em;
+  font-style: normal;
+  color: #000;
+  white-space: nowrap;
+  flex: none;
+}
+/* The two secondary slots -- the degree under a school, the employer under a
+   role, a project's stack beside its name -- are all \small italics. Which of
+   them a record shows is the head kind's business, not the type's. */
+.tpl-jake .doc-item-sub,
+.tpl-jake .doc-item-meta {
+  font-style: italic;
+  font-weight: 400;
+  font-size: 0.91em;
+  color: #000;
+}
+/* Row one carries the plain fields at body size, row two the \small italics.
+   Education therefore leads with the school and its town, the degree and its
+   dates beneath; Experience leads with the dates, the employer and town
+   beneath. Which fields land on which row is the data's choice (the head
+   kind); how each row is set is this design's. */
+.tpl-jake .doc-item-head-swap .doc-item-row:first-child > :last-child {
+  font-size: 1em;
+  font-style: normal;
+  font-weight: 400;
+}
+.tpl-jake .doc-item-head-swap .doc-item-row:last-child > * {
+  font-size: 0.91em;
+  font-style: italic;
+  font-weight: 400;
+}
+/* Projects print one row: \textbf{Name} | \emph{stack} on the left at \small,
+   the dates at body size on the right, the whole row sitting 2pt lower than an
+   experience head because the original opens it with its own \vspace. */
+.tpl-jake .doc-item-head-beside {
+  padding-top: calc(2.05pt * var(--jake-lead));
+}
+.tpl-jake .doc-item-head-beside .doc-item-title {
+  font-size: 0.91em;
+  font-weight: 700;
+}
+.tpl-jake .doc-item-head-beside .doc-item-beside {
+  font-size: 1em;
+  font-weight: 400;
+  font-style: italic;
+}
+.tpl-jake .doc-item-head-beside .doc-item-beside::before {
+  content: ' | ';
+  font-style: normal;
+  font-weight: 400;
+}
+/* The beside head prints the stack after the name. A link does not belong in
+   that row's grammar, so it takes the line beneath instead of stretching a row
+   that is already long. */
+.tpl-jake .doc-item-head-beside .doc-item-beside-meta {
+  display: block;
+  margin-top: 1pt;
+  font-style: normal;
+}
+
+/* -- Bullets: nested \itemize, \small, 14pt pitch ------------------------
+   The marker is out of flow on a hanging-indent first line, so wrapped text
+   returns to the item's left edge. The list's bottom padding is what separates
+   one record's last bullet from the next record's head. */
+.tpl-jake .doc-bullets {
+  list-style: none;
+  margin: calc(0.6pt * var(--jake-lead)) 0 0;
+  padding: 0 0 calc(3.16pt * var(--jake-gap)) 24pt;
+}
+.tpl-jake .doc-bullets li {
+  position: relative;
+  font-size: 0.91em;
+  /* A 14pt line measures 18.67px, and the export can only place it on whole
+     pixels, so the pitch alternates 18/19px and averages 13.875pt. 1.389em
+     (13.9pt of this 0.91em text) is that mean: the same alternation, without
+     overshooting it on every line. */
+  line-height: calc(1.389em * var(--jake-lead));
+  margin: 0;
+  color: #000;
+}
+/* Out of flow, so the marker cannot grow the line box the way a raised
+   inline-block does -- that added 0.2pt to every bullet's pitch.
+
+   Sized by its ink, not by its type size: the reference's marker is Computer
+   Modern's \textbullet at 5.98pt, whose dot fills most of the em and prints
+   ~2.6pt across. Times' bullet is a much smaller part of its em, so the same
+   5.98pt type prints a dot half that size. Setting the marker at body size
+   gives the Times glyph the reference's dot without redrawing it. */
+.tpl-jake .doc-bullets li::before {
+  content: '\2022';
+  position: absolute;
+  left: -9.3pt;
+  top: 0;
+  font-size: 1.1em;
+  line-height: inherit;
+}
+
+/* -- Skills: bold label, colon, one comma-run per line ------------------- */
+.tpl-jake .doc-skillgroup {
+  margin-left: 10.8pt;
+  font-size: 0.91em;
+  line-height: calc(1.189em * var(--jake-lead));
+}
+/* The first line follows a \titlerule: 1.4pt of \vspace, the rest of the
+   13.5pt gap being the line's own half-leading. `:first-of-type`, not
+   `:first-child`: the section title is the section's first child, so the group
+   never is one. */
+.tpl-jake .doc-skillgroup:first-of-type {
+  padding-top: calc(1.4pt * var(--jake-gap));
+}
+/* The reference breaks each skill line with `\\` inside one \small paragraph, so
+   the category lines are separated by the leading alone -- no paragraph gap. */
+.tpl-jake .doc-skillgroup + .doc-skillgroup {
+  margin-top: 0;
+}
+.tpl-jake .doc-skillgroup-label {
+  font-weight: 700;
+  color: #000;
+}
+/* A colon belongs to an inline list. Pill tags are a set, not a sentence, and
+   read wrong with punctuation in front of them. */
+.tpl-jake .doc-skillgroup-label:has(+ .doc-skilllines)::after {
+  content: ': ';
+}
+.tpl-jake .doc-skilllines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: inline;
+  color: #000;
+}
+.tpl-jake .doc-skilllines li {
+  display: inline;
+  margin: 0;
+}
+.tpl-jake .doc-skilllines li:not(:last-child)::after {
+  content: ', ';
+}
+
+/* -- Languages row ------------------------------------------------------- */
+.tpl-jake .doc-langrow {
+  margin-left: 10.8pt;
+  font-size: 0.91em;
+  line-height: calc(1.189em * var(--jake-lead));
+  color: #000;
+}
+
+/* -- Summary ------------------------------------------------------------ */
+.tpl-jake .doc-summary {
+  margin-left: 10.8pt;
+  font-size: 1em;
+  line-height: calc(1.2727em * var(--jake-lead));
+  color: #000;
+}
+
+/* =====================================================================
+   ONE-COLUMN & TOP-HEADER OVERRIDES FOR SIDEBAR TEMPLATES
+   When [data-columns="one"], collapse the sidebar grid to block layout
+   and render the rail as a full-width top header band.
+   When [data-header="top"] in two-column mode, same override applies.
+   ===================================================================== */
+
+/* -- Shared: override grid for all sidebar templates in one-column mode -- */
+[data-columns="one"].tpl-portal-pro,
+[data-columns="one"].tpl-modern-deep,
+[data-columns="one"].tpl-sidebar,
+[data-columns="one"].tpl-two-col {
+  display: block;
+}
+
+/* -- Also override grid when header=top in two-column mode --------------- */
+[data-columns="two"][data-header="top"].tpl-portal-pro,
+[data-columns="two"][data-header="top"].tpl-modern-deep,
+[data-columns="two"][data-header="top"].tpl-sidebar,
+[data-columns="two"][data-header="top"].tpl-two-col {
+  display: block;
+}
+
+/* -- doc-columns in top-header mode: horizontal page padding ------------- */
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-columns,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-columns,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-columns,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-columns,
+[data-columns="two"][data-header="top"].tpl-creative .doc-columns {
+  padding: 0 var(--doc-margin-x, 15mm);
+}
+
+/* -- Creative top-header: compact the band -------------------------------- */
+[data-columns="one"].tpl-creative .doc-band,
+[data-columns="two"][data-header="top"].tpl-creative .doc-band {
+  /* 3.9mm at the 14mm default (6.5mm band * 0.6). */
+  padding: calc(var(--doc-margin-y, 14mm) * 0.278571) var(--doc-margin-x, 15mm);
+}
+[data-columns="one"].tpl-creative .doc-band .doc-contact,
+[data-columns="two"][data-header="top"].tpl-creative .doc-band .doc-contact {
+  display: block;
+  font-size: var(--doc-contact-size, 8pt);
+}
+[data-columns="one"].tpl-creative .doc-band .doc-contact .doc-contact-sep,
+[data-columns="two"][data-header="top"].tpl-creative .doc-band .doc-contact .doc-contact-sep {
+  margin: 0 4pt;
+}
+
+/* -- doc-rail-top: full-width header band -------------------------------- */
+.tpl-portal-pro .doc-rail-top,
+.tpl-modern-deep .doc-rail-top,
+.tpl-sidebar .doc-rail-top {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12pt;
+  padding: calc(var(--doc-margin-y, 14mm) * 0.5) var(--doc-margin-x, 15mm);
+}
+
+/* -- doc-rail-top-text: profile info fills remaining width --------------- */
+.doc-rail-top-text {
+  flex: 1;
+  min-width: 0;
+}
+
+/* -- doc-rail-top-text contact: two rows under the name ------------------ */
+.doc-rail-top-text .doc-contact {
+  display: block;
+  font-size: var(--doc-contact-size, 8pt);
+}
+.doc-rail-top-text .doc-contact .doc-contact-sep {
+  margin: 0 4pt;
+}
+
+/* -- doc-header-top: full-width header for two-col template -------------- */
+.doc-header-top {
+  width: 100%;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 12pt;
+  padding: calc(var(--doc-margin-y, 14mm) * 0.5) var(--doc-margin-x, 15mm);
+}
+.doc-header-top .doc-rail-top-text {
+  flex: 1;
+  min-width: 0;
+}
+.doc-header-top .doc-contact {
+  display: block;
+  font-size: var(--doc-contact-size, 8pt);
+}
+.doc-header-top .doc-contact .doc-contact-sep {
+  margin: 0 4pt;
+}
+/* Photo sizing in two-col top header */
+[data-columns="one"].tpl-two-col .doc-header-top .doc-photo,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top .doc-photo {
+  width: 24mm;
+  height: 24mm;
+  border-radius: 50%;
+  object-fit: cover;
+  flex: none;
+}
+/* Photo sizing in creative top header */
+[data-columns="one"].tpl-creative .doc-band .doc-photo,
+[data-columns="two"][data-header="top"].tpl-creative .doc-band .doc-photo {
+  width: 21mm;
+  height: 21mm;
+  border-radius: 3mm;
+  object-fit: cover;
+  flex: none;
+}
+
+/* -- Portal Pro one-column / top-header: dark header band ---------------- */
+[data-columns="one"].tpl-portal-pro .doc-rail-top,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top {
+  background: #193242;
+  color: #e2e8f0;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-name,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-name {
+  font-size: var(--doc-name-size, 24pt);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: 2pt;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-headline,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-headline {
+  font-size: var(--doc-title-size, 12pt);
+  color: #b0bec5;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  margin-top: 0;
+  font-weight: 400;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-photo,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-photo {
+  width: 28mm;
+  height: 28mm;
+  border-radius: 50%;
+  object-fit: cover;
+  margin: 0;
+  border: 2pt solid rgba(255,255,255,0.2);
+  flex: none;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-contact,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-contact {
+  font-size: var(--doc-contact-size, 10pt);
+  color: #cfd8dc;
+}
+[data-columns="one"].tpl-portal-pro .doc-rail-top .doc-icon,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-rail-top .doc-icon {
+  width: 1.05em;
+  height: 1.05em;
+  opacity: 0.85;
+}
+[data-columns="one"].tpl-portal-pro .doc-main .doc-section-title,
+[data-columns="two"][data-header="top"].tpl-portal-pro .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 11pt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1a2235;
+  font-weight: 700;
+  margin-bottom: 6pt;
+  padding: 5pt 12pt;
+  background: #efefef;
+  border-radius: 3pt;
+  text-align: center;
+  display: inline-block;
+  width: 100%;
+  border-bottom: none;
+}
+
+/* -- Modern Deep one-column / top-header: dark header band --------------- */
+[data-columns="one"].tpl-modern-deep .doc-rail-top,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top {
+  background: #2b3a55;
+  color: #d1d5db;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-name,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-name {
+  font-size: var(--doc-name-size, 24pt);
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  margin-bottom: 2pt;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-headline,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-headline {
+  font-size: var(--doc-title-size, 11pt);
+  color: #94a3b8;
+  margin-top: 0;
+  font-weight: 400;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-photo,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-photo {
+  width: 28mm;
+  height: 28mm;
+  border-radius: 3mm;
+  object-fit: cover;
+  margin: 0;
+  border: 2pt solid rgba(255,255,255,0.15);
+  flex: none;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-contact,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-contact {
+  font-size: var(--doc-contact-size, 8.5pt);
+  color: #cbd5e1;
+}
+[data-columns="one"].tpl-modern-deep .doc-rail-top .doc-icon,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-rail-top .doc-icon {
+  width: 1.05em;
+  height: 1.05em;
+  opacity: 0.85;
+}
+[data-columns="one"].tpl-modern-deep .doc-main .doc-section-title,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 11pt);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #1a2235;
+  font-weight: 700;
+  margin-bottom: 4pt;
+  padding: 0 0 3pt;
+  border-bottom: none;
+  position: relative;
+}
+[data-columns="one"].tpl-modern-deep .doc-main .doc-section-title::after,
+[data-columns="two"][data-header="top"].tpl-modern-deep .doc-main .doc-section-title::after {
+  content: '';
+  display: block;
+  width: 15mm;
+  height: 1.5pt;
+  background: #2b3a55;
+  margin-top: 3pt;
+  border-radius: 1pt;
+}
+
+/* -- Sidebar one-column / top-header: dark header band ------------------- */
+[data-columns="one"].tpl-sidebar .doc-rail-top,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top {
+  background: #242e39;
+  color: #dbe3ea;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-name,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-name {
+  font-size: var(--doc-name-size, 20pt);
+  font-weight: 750;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-headline,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-headline {
+  font-size: var(--doc-title-size, 9pt);
+  font-weight: 550;
+  color: #9fb0bf;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-photo,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-photo {
+  width: 30mm;
+  height: 30mm;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2.5pt solid rgba(255, 255, 255, 0.28);
+  flex: none;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-contact,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-contact {
+  font-size: var(--doc-contact-size, 8.5pt);
+  color: #dbe3ea;
+  word-break: break-word;
+}
+[data-columns="one"].tpl-sidebar .doc-rail-top .doc-icon,
+[data-columns="two"][data-header="top"].tpl-sidebar .doc-rail-top .doc-icon {
+  width: 1.05em;
+  height: 1.05em;
+  opacity: 0.85;
+}
+[data-columns="one"].tpl-sidebar .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #0d78d6;
+  margin-bottom: 3pt;
+  padding-bottom: 0.75pt;
+  border-bottom: 0.5pt solid #ccd3da;
+}
+
+/* -- Two Column: light header with border -------------------------------- */
+[data-columns="one"].tpl-two-col .doc-header-top,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top {
+  background: #f2f4f7;
+  border-bottom: 1pt solid #23282e;
+  margin-bottom: 2pt;
+}
+[data-columns="one"].tpl-two-col .doc-header-top .doc-name,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top .doc-name {
+  font-size: var(--doc-name-size, 21pt);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: #1b2430;
+}
+[data-columns="one"].tpl-two-col .doc-header-top .doc-headline,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top .doc-headline {
+  font-weight: 550;
+  color: #46505c;
+}
+[data-columns="one"].tpl-two-col .doc-header-top .doc-contact,
+[data-columns="two"][data-header="top"].tpl-two-col .doc-header-top .doc-contact {
+  font-size: var(--doc-contact-size, 8.5pt);
+  color: #37404b;
+}
+[data-columns="one"].tpl-two-col .doc-main .doc-section-title {
+  font-size: var(--doc-heading-size, 10pt);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: #273038;
+  margin-bottom: 4pt;
+  padding-bottom: 1.5pt;
+  border-bottom: 0.5pt solid #ccd3da;
+}
+
+/* ======================================================================
+   Photo Layout — independent of columns/sections
+   Controls: size, shape, grayscale, position (order in rail/header)
+   ====================================================================== */
+
+/* -- Size presets -------------------------------------------------------- */
+[data-photo-size="sm"] .doc-photo {
+  width: 18mm;
+  height: 18mm;
+}
+[data-photo-size="md"] .doc-photo {
+  width: 24mm;
+  height: 24mm;
+}
+[data-photo-size="lg"] .doc-photo {
+  width: 30mm;
+  height: 30mm;
+}
+[data-photo-size="xl"] .doc-photo {
+  width: 36mm;
+  height: 36mm;
+}
+
+/* -- Shape presets ------------------------------------------------------- */
+[data-photo-shape="circle"] .doc-photo {
+  border-radius: 50%;
+}
+[data-photo-shape="rounded"] .doc-photo {
+  border-radius: 4pt;
+}
+[data-photo-shape="square"] .doc-photo {
+  border-radius: 0;
+}
+[data-photo-shape="none"] .doc-photo {
+  border-radius: 0;
+  width: 100%;
+  height: auto;
+}
+
+/* -- Grayscale ----------------------------------------------------------- */
+[data-photo-grayscale="true"] .doc-photo {
+  filter: grayscale(1);
+}
+
+/* -- Position in top header (row layout) ---------------------------------
+   'left'  → default flex order (appears first)
+   'right' → order: 1 (appears after text)
+   'top'   → flex-direction: column on parent                            */
+[data-photo-position="right"] .doc-rail-top .doc-photo,
+[data-photo-position="right"] .doc-header-top .doc-photo {
+  order: 1;
+}
+[data-photo-position="top"] .doc-rail-top,
+[data-photo-position="top"] .doc-header-top {
+  flex-direction: column;
+  align-items: flex-start;
+}
+[data-photo-position="top"] .doc-rail-top .doc-photo,
+[data-photo-position="top"] .doc-header-top .doc-photo {
+  order: -1;
+  margin-bottom: 6pt;
+}
+
+/* ======================================================================
+   Section Headings — visual style, capitalisation, icons
+   ====================================================================== */
+
+/* -- Capitalisation ------------------------------------------------------
+   The control owns case in every template. The doubled .page lifts these
+   rules above the most specific skin selectors (four classes), so a rail
+   heading obeys the control exactly like a body heading. */
+.page.page[data-heading-cap="uppercase"] .doc-section-title {
+  text-transform: uppercase;
+}
+.page.page[data-heading-cap="lowercase"] .doc-section-title {
+  text-transform: lowercase;
+}
+.page.page[data-heading-cap="capitalize"] .doc-section-title {
+  text-transform: capitalize;
+}
+
+/* -- Visual styles -------------------------------------------------------
+   A chosen style owns the heading's ornament and rhythm on every paper: the
+   same choice has to read the same way whatever the skin drew before.
+   Typography still belongs to the design -- face, size, casing and colour are
+   untouched -- while the rule, band, bar or wave and the space around it are
+   set here.
+
+   !important is deliberate. Several skins draw their own ornament with
+   selectors up to five classes deep (a two-column painted rail is the worst
+   case), and an author's explicit choice has to win over all of them. The
+   base rule strips whatever was there; each style then builds the chosen
+   treatment back up. */
+.page.page[data-heading-visual] .doc-section-title {
+  position: relative;
+  display: block;
+  width: auto !important;
+  margin-bottom: 5pt !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  background: none !important;
+  line-height: 1.22 !important;
+}
+.page.page[data-heading-visual] .doc-section-title::before,
+.page.page[data-heading-visual] .doc-section-title::after {
+  content: none !important;
+  border: 0 !important;
+  background: none !important;
+}
+
+/* Underline: a full-width rule in the document's accent ink, set close under
+   the words. The ornament is part of the identity, so it takes the accent
+   colour rather than a grey mix of the text ink. */
+.page.page[data-heading-visual="underline"] .doc-section-title {
+  padding-bottom: 2pt !important;
+  border-bottom: 1pt solid var(--doc-accent, currentColor) !important;
+}
+
+/* Short underline: the rule hugs the words, so it reads as an underline
+   rather than a divider. Table display is the shrink-to-fit that still lets
+   a centred skin centre the block. */
+.page.page[data-heading-visual="inline"] .doc-section-title {
+  display: table !important;
+  padding-bottom: 2.5pt !important;
+  border-bottom: 1pt solid currentColor !important;
+}
+
+/* Rules above and below: the heading is held between two hairlines and
+   centred, like a catalogue entry. */
+.page.page[data-heading-visual="double"] .doc-section-title {
+  padding: 3.5pt 0 4pt !important;
+  border-top: 0.75pt solid color-mix(in srgb, currentColor 50%, transparent) !important;
+  border-bottom: 0.75pt solid color-mix(in srgb, currentColor 50%, transparent) !important;
+  text-align: center !important;
+}
+
+/* Filled band: a soft tint of the heading's own ink. Built from currentColor
+   so it is a pale grey on white paper and a pale wash on a dark rail. */
+.page.page[data-heading-visual="band"] .doc-section-title {
+  padding: 4pt 8pt !important;
+  border-radius: 2.5pt !important;
+  background: color-mix(in srgb, currentColor 9%, transparent) !important;
+  text-align: center !important;
+}
+
+/* Accent bar: a short, thick bar under the first words. */
+.page.page[data-heading-visual="bar"] .doc-section-title {
+  display: table !important;
+  padding-bottom: 7pt !important;
+}
+.page.page[data-heading-visual="bar"] .doc-section-title::after {
+  content: '' !important;
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  /* Skins that draw their own tick also set width, a border and sometimes a
+     centring transform on this pseudo-element. Reset all three, then state
+     the bar's own geometry: without the width reset a 22pt skin tick wins and
+     the bar never spans its share of the heading. */
+  width: 22pt !important;
+  height: 2.5pt;
+  margin: 0 !important;
+  border: 0 !important;
+  border-radius: 1pt;
+  transform: none;
+  background: currentColor !important;
+}
+
+/* Plain: no ornament at all; weight alone carries the heading. */
+.page.page[data-heading-visual="plain"] .doc-section-title {
+  font-weight: 700 !important;
+}
+
+/* Rule below: a quiet hairline dropped below the heading with air between,
+   so the rule separates sections instead of decorating the title. */
+.page.page[data-heading-visual="rule"] .doc-section-title {
+  padding-bottom: 7pt !important;
+  border-bottom: 0.75pt solid color-mix(in srgb, currentColor 42%, transparent) !important;
+}
+
+/* Wavy: a sharp zigzag ruled along the full measure, in the accent ink,
+   sitting close under the words. Masked rather than drawn as a border so it
+   stays a hairline at any width and survives print rasterisation. */
+.page.page[data-heading-visual="wavy"] .doc-section-title {
+  padding-bottom: 6pt !important;
+}
+.page.page[data-heading-visual="wavy"] .doc-section-title::after {
+  content: '' !important;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  /* Same reset as the accent bar: a skin's 22pt tick, its own border and its
+     centring transform would otherwise clip the wave to a stub at the edge. */
+  width: auto !important;
+  height: 4pt;
+  margin: 0 !important;
+  border: 0 !important;
+  transform: none !important;
+  background: var(--doc-accent, currentColor) !important;
+  -webkit-mask-image: var(--wave-line);
+  -webkit-mask-size: 8pt 4pt;
+  -webkit-mask-repeat: repeat-x;
+  -webkit-mask-position: left bottom;
+  mask-image: var(--wave-line);
+  mask-size: 8pt 4pt;
+  mask-repeat: repeat-x;
+  mask-position: left bottom;
+}
+
+/* Painted rails keep their own ink: the accent is chosen against paper, and a
+   dark rail needs the heading's white to stay visible. */
+.page.page:is(.tpl-portal-pro, .tpl-modern-deep)
+  :is(.doc-rail, .doc-rail-top)
+  .doc-section-title {
+  border-bottom-color: currentColor !important;
+}
+.page.page:is(.tpl-portal-pro, .tpl-modern-deep)
+  :is(.doc-rail, .doc-rail-top)
+  .doc-section-title::after {
+  background-color: currentColor !important;
+}
+
+/* Two skins centre their headings. The three shrink-to-fit treatments are
+   centred on those too, and the accent bar follows the words instead of
+   hanging at the page edge. */
+.page.page:is(.tpl-executive, .tpl-academic)[data-heading-visual="inline"] .doc-section-title,
+.page.page:is(.tpl-executive, .tpl-academic)[data-heading-visual="bar"] .doc-section-title {
+  margin-inline: auto !important;
+}
+.page.page:is(.tpl-executive, .tpl-academic)[data-heading-visual="bar"] .doc-section-title::after {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+/* -- Icons ----------------------------------------------------------------
+   Both drawings (outline + fill) are rendered into every heading; these
+   attribute rules pick which one shows. Filled is the default. Sized in em
+   so the icon tracks the heading's own point size in every template. */
+.doc-section-title .doc-section-icon {
+  display: none;
+  width: 1.05em;
+  height: 1.05em;
+  flex: none;
+}
+[data-heading-icons='true'] .doc-section-title .doc-section-icon.icon-fill {
+  display: inline;
+  margin-right: 4pt;
+  vertical-align: -0.08em;
+}
+[data-heading-icon-style='outlined'] .doc-section-title .doc-section-icon.icon-fill {
+  display: none;
+}
+[data-heading-icons='true'][data-heading-icon-style='outlined'] .doc-section-title .doc-section-icon.icon-outline {
+  display: inline;
+  margin-right: 4pt;
+  vertical-align: -0.08em;
+}
+
+/* ======================================================================
+   Colors card rendering
+   Everything here is opt-in: the rules only bite when the document root
+   carries data-colors="on", i.e. the author touched the Colors card.
+
+   Full Page has three treatments:
+     single -> ink only; the template keeps its own paper.
+     multi  -> the scheme owns background, body ink and accent.
+     image  -> a photograph covers the sheet; every ink turns white.
+   ====================================================================== */
+
+/* -- Full Page: Single ---------------------------------------------------
+   Deliberately empty. Choosing an accent must never repaint the sheet. */
+.page[data-colors='on'][data-bg='single'] {
+  background: var(--paper, #ffffff);
+}
+
+/* -- Full Page: Multi ----------------------------------------------------
+   One scheme paints the whole page. Template surface fills are neutralised so
+   bands and rails do not fight the chosen background. */
+.page[data-colors='on'][data-bg='multi'] {
+  background: var(--doc-page-bg, #f8fafc);
+  color: var(--doc-text-color, #0f172a);
+}
+.page[data-bg='multi'] .doc-rail,
+.page[data-bg='multi'] .doc-rail-top,
+.page[data-bg='multi'] .doc-header-top,
+.page[data-bg='multi'] .doc-header,
+.page[data-bg='multi'] .doc-band,
+.page[data-bg='multi'] .doc-masthead {
+  background: transparent;
+}
+
+/* -- Full Page: Image ----------------------------------------------------
+   The tint is a second background layer, not an overlay element, so template
+   stacking (rails, bands, photos) is untouched. */
+.page[data-colors='on'][data-bg='image'] {
+  background-color: #0b1220;
+  background-image:
+    linear-gradient(
+      rgba(4, 8, 16, var(--doc-img-tint, 0.38)),
+      rgba(4, 8, 16, var(--doc-img-tint, 0.38))
+    ),
+    var(--doc-bg-image, none);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+  color: #ffffff;
+}
+.page[data-bg='image'] .doc-rail,
+.page[data-bg='image'] .doc-rail-top,
+.page[data-bg='image'] .doc-header-top,
+.page[data-bg='image'] .doc-band {
+  background: rgba(3, 7, 18, 0.18);
+}
+.page[data-bg='image'] .doc-masthead::before,
+.page[data-bg='image'] .doc-masthead::after {
+  border-color: rgba(255, 255, 255, 0.55);
+}
+
+/* -- Text ink for Multi and Image ----------------------------------------
+   Template skins hardcode their inks in dozens of places, often with selectors
+   as specific as the accent rules. A !important reset is the only way to make
+   one chosen ink win across every template; the accent rules below are equally
+   forceful, so switched-on elements still take the accent. */
+.page[data-bg='multi'] *,
+.page[data-bg='image'] * {
+  color: inherit !important;
+}
+
+/* -- Rules and borders ----------------------------------------------------
+   The border colour slots in ahead of the accent in the existing fallback
+   chains, so with no border chosen these resolve exactly as before. */
+.page[data-colors='on'] .doc-section-title {
+  border-color: var(--doc-border-color, var(--doc-accent, currentColor));
+}
+.page[data-colors='on'] .tl-list::before,
+.page[data-colors='on'] .tpl-timeline .tl-item::before {
+  border-color: var(--doc-border-color, var(--doc-accent, currentColor));
+  background: var(--doc-border-color, var(--doc-accent, currentColor));
+}
+
+/* -- Where the accent may reach ------------------------------------------ */
+.page[data-colors='on'][data-accent-name='true'] .doc-name {
+  color: var(--doc-accent) !important;
+}
+.page[data-colors='on'][data-accent-jobtitle='true'] .doc-item-title {
+  color: var(--doc-accent) !important;
+}
+.page[data-colors='on'][data-accent-dates='true'] .doc-item-date,
+.page[data-colors='on'][data-accent-dates='true'] .tl-when {
+  color: var(--doc-accent) !important;
+}
+.page[data-colors='on'][data-accent-headings='true'] .doc-section-title {
+  color: var(--doc-accent) !important;
+}
+.page[data-colors='on'][data-accent-subtitle='true'] .doc-item-sub {
+  color: var(--doc-accent) !important;
+}
+.page[data-colors='on'][data-accent-dots='true'] .doc-bullets li::marker,
+.page[data-colors='on'][data-accent-dots='true'] .doc-skill-bullets li::marker,
+.page[data-colors='on'][data-accent-dots='true'] .doc-skilllines li {
+  color: var(--doc-accent) !important;
+}
+.page[data-colors='on'][data-accent-hicons='true'] .doc-contact-item .doc-icon,
+.page[data-colors='on'][data-accent-hicons='true'] .doc-contact-row .doc-icon {
+  color: var(--doc-accent) !important;
+}
+.page[data-colors='on'][data-accent-linkicons='true'] a.doc-link .doc-icon {
+  color: var(--doc-accent) !important;
+}
+
+/* ======================================================================
+   Header card rendering
+   The Header tab mirrors Full Page's three treatments, but every rule here
+   stops at the identity surface: the body keeps the template's own paper.
+   ====================================================================== */
+
+/* -- Single and Multi: a painted band -----------------------------------
+   The paint is a user treatment, so it outranks the template's own header
+   chrome (e.g. two-col's .doc-header-top fill) no matter how specific that
+   template rule is. */
+.page[data-header-paint='single'] [data-doc-header],
+.page[data-header-paint='multi'] [data-doc-header] {
+  background: var(--doc-header-bg, transparent) !important;
+  color: var(--doc-header-text, currentColor);
+}
+
+/* -- Image: photograph and tint over the header only -------------------- */
+.page[data-header-paint='image'] [data-doc-header] {
+  background-color: #0b1220 !important;
+  background-image:
+    linear-gradient(
+      rgba(4, 8, 16, var(--doc-header-tint, 0.38)),
+      rgba(4, 8, 16, var(--doc-header-tint, 0.38))
+    ),
+    var(--doc-header-image, none) !important;
+  background-size: cover, cover !important;
+  background-position: center, center !important;
+  background-repeat: no-repeat, no-repeat !important;
+  color: var(--doc-header-text, #ffffff);
+}
+
+/* A top header band is flush with the sheet: Single, Multi and Image share the
+   same geometry, so switching treatment never shifts the band by a margin.
+   Padded designs put their page padding on the root, so the band reaches the
+   sheet edges by cancelling that padding and paying it back as padding. The
+   base is --doc-pad-*, not the margin itself: a design like Compact scales its
+   own padding down, and cancelling the raw margin would push its band past the
+   sheet edge instead of up to it. */
+.page[data-header-paint][data-header-side='full'] .doc-main > [data-doc-header] {
+  margin: calc(var(--doc-pad-y, 14mm) * -1) calc(var(--doc-pad-x, 15mm) * -1) 0;
+  padding: calc(var(--doc-pad-y, 14mm) * 0.62) var(--doc-pad-x, 15mm)
+    calc(var(--doc-pad-y, 14mm) * 0.42);
+}
+.page[data-header-paint][data-header-side='full'] .doc-rail > [data-doc-header] {
+  margin: calc(var(--doc-pad-y, 14mm) * -1) calc(var(--doc-pad-x, 15mm) * -0.58) 0;
+  padding: calc(var(--doc-pad-y, 14mm) * 0.62) calc(var(--doc-pad-x, 15mm) * 0.58)
+    calc(var(--doc-pad-y, 14mm) * 0.42);
+}
+
+/* Grid designs own their own padding and are left alone. */
+.page[data-header-paint][data-header-side='full']:not(:is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)) > [data-doc-header] {
+  margin: calc(var(--doc-pad-y, 14mm) * -1) calc(var(--doc-pad-x, 15mm) * -1) 0;
+  padding: calc(var(--doc-pad-y, 14mm) * 0.62) var(--doc-pad-x, 15mm)
+    calc(var(--doc-pad-y, 14mm) * 0.42);
+}
+
+/* -- Image · side header: the photograph fills the whole column ----------
+   A side header is a panel, not a wide masthead. Single and Multi already
+   paint the column that owns the header; Image has to do the same, or the
+   photo only covers the header's own box and leaves the rest of the rail on
+   the template's paper. */
+.page[data-header-paint='image']:is([data-header-side='left'], [data-header-side='right'])
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) {
+  --doc-accent: var(--doc-header-text, currentColor);
+  background-color: #0b1220 !important;
+  background-image:
+    linear-gradient(
+      rgba(4, 8, 16, var(--doc-header-tint, 0.38)),
+      rgba(4, 8, 16, var(--doc-header-tint, 0.38))
+    ),
+    var(--doc-header-image, none) !important;
+  background-size: cover, cover !important;
+  background-position: center, center !important;
+  background-repeat: no-repeat, no-repeat !important;
+  color: var(--doc-header-text, #ffffff);
+}
+/* The column owns the photograph now, so the header inside it must not paint
+   a second, smaller copy of the same image. */
+.page[data-header-paint='image']:is([data-header-side='left'], [data-header-side='right'])
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
+  > [data-doc-header] {
+  background: transparent !important;
+}
+/* Keep the panel's own ink legible over the photograph, matching the
+   Single/Multi panels. Document links keep their author-chosen colour. */
+.page[data-header-paint='image']:is([data-header-side='left'], [data-header-side='right'])
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
+  :not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *) {
+  color: inherit !important;
+  border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 38%, transparent) !important;
+}
+
+/* -- Two-column layouts: the header's side becomes the surface ----------
+   A side header is a panel, not a wide masthead: the column that holds it is
+   painted edge to edge, while the facing column keeps its own paper. */
+.page[data-header-paint='single']
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]),
+.page[data-header-paint='multi']
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header]) {
+  /* Decorations inside a painted panel (markers, rules, dates) belong to the
+     panel, not to the page accent below it. */
+  --doc-accent: var(--doc-header-text, currentColor);
+  background: var(--doc-header-bg, transparent);
+  color: var(--doc-header-text, currentColor);
+}
+/* Template inks are hardcoded per slot; on a painted panel they all yield to
+   the header's own ink so every line stays legible. Document links are the one
+   exception: Blue is an explicit author choice (see the Link Styling rules), so
+   the anchor and the glyph/text inside it are left to that rule instead of
+   being flattened to the panel ink. */
+.page[data-header-paint='single']
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
+  :not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *),
+.page[data-header-paint='multi']
+  :is(.doc-col-left, .doc-col-right, .doc-main, .doc-rail):has(> [data-doc-header])
+  :not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *) {
+  color: inherit !important;
+  border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 38%, transparent) !important;
+}
+
+/* -- Side panels meet the sheet edge ------------------------------------
+   A side header is a panel that belongs to the paper, not a card floating in
+   the margin: it has to reach the edge exactly like the top band does.
+   Padded designs keep the page margin on the root, so the painted column
+   pulls itself out over that margin and pays it straight back as padding --
+   the fill grows to the edge while every line inside keeps its position.
+   The grid designs (banner, creative, two-col, sidebar, portal-pro,
+   modern-deep) pad their own panels and are left alone. */
+.page[data-header-paint]:is([data-header-side='left'], [data-header-side='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > :is(.doc-col-left, .doc-col-right):has(> [data-doc-header]) {
+  margin-top: calc(var(--doc-pad-y, 14mm) * -1);
+  margin-bottom: calc(var(--doc-pad-y, 14mm) * -1);
+  padding-top: var(--doc-pad-y, 14mm);
+  padding-bottom: var(--doc-pad-y, 14mm);
+}
+.page[data-header-paint][data-header-side='left']:not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > .doc-col-left:has(> [data-doc-header]) {
+  margin-left: calc(var(--doc-pad-x, 15mm) * -1);
+  padding-left: var(--doc-pad-x, 15mm);
+}
+.page[data-header-paint][data-header-side='right']:not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > .doc-col-right:has(> [data-doc-header]) {
+  margin-right: calc(var(--doc-pad-x, 15mm) * -1);
+  padding-right: var(--doc-pad-x, 15mm);
+}
+
+/* -- The split is a gutter, not a seam ----------------------------------
+   Two columns used to meet with no space at all, which only becomes visible
+   once one side is painted: the facing text sits straight on the colour's
+   edge, and long lines look clipped by it.
+   The gutter is exactly the page margin -- not a fixed number -- so the page
+   reads as one measured block: a margin at the sheet edge, and the same
+   margin either side of the split. Dragging the margin slider moves both
+   together, and padded designs (compact) keep their scaled proportion.
+   This is padding on the columns, never a column gap: the tracks keep their
+   exact widths, so the panel still reaches the sheet edge and its paint is
+   never disturbed. The header takes the same padding as the sections, which
+   is what keeps it centred inside the painted panel instead of drifting
+   toward the split. */
+.page[data-header-paint]:is([data-header-side='left'], [data-header-side='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > :is(.doc-col-left, .doc-col-right) {
+  --doc-split-gap: var(--doc-pad-x, 15mm);
+}
+.page[data-header-paint]:is([data-header-side='left'], [data-header-side='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > .doc-col-left {
+  padding-right: var(--doc-split-gap);
+}
+.page[data-header-paint]:is([data-header-side='left'], [data-header-side='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  )
+  > .doc-col-right {
+  padding-left: var(--doc-split-gap);
+}
+
+/* One gutter, not two. The padding above is the split gap, and the paint of a
+   side panel runs through it, so the gap the eye sees is exactly one page
+   margin. The grid's own column gap would stack on top of that padding and
+   push the facing text a double margin away from the panel, which reads as a
+   hole rather than a gutter. */
+.page[data-header-paint][data-columns='two']:is([data-header='left'], [data-header='right']):not(
+    :is(.tpl-banner, .tpl-creative, .tpl-two-col, .tpl-sidebar, .tpl-portal-pro, .tpl-modern-deep)
+  ) {
+  column-gap: 0;
+}
+
+/* -- Header ink wins over the accent switches and the Multi/Image reset --
+   Links are excluded: Blue is an explicit author choice, and an anchor with no
+   explicit colour simply inherits, which is the header ink anyway. */
+.page[data-header-paint][data-header-side] [data-doc-header]
+  :is(
+    .doc-name,
+    .doc-headline,
+    .doc-contact,
+    .doc-contact-item,
+    .doc-contact-item .doc-icon,
+    .doc-contact-row,
+    .doc-contact-sep,
+    .doc-header-text,
+    .doc-rail-top-text,
+    a.doc-link,
+    .doc-icon
+  ):not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *) {
+  color: var(--doc-header-text, currentColor) !important;
+}
+.page[data-header-paint] [data-doc-header],
+.page[data-header-paint] [data-doc-header] * {
+  color: var(--doc-header-text, currentColor) !important;
+}
+/* Keep a header rule legible against the fill. */
+.page[data-header-paint] [data-doc-header] {
+  border-color: color-mix(in srgb, var(--doc-header-text, currentColor) 35%, transparent);
+}
+.page[data-header-paint] [data-doc-header] .doc-contact-sep {
+  color: color-mix(in srgb, var(--doc-header-text, currentColor) 55%, transparent) !important;
+}
+
+/* -- Header · Multi · Custom: the optional page row --------------------- */
+.page[data-header-paint][data-page-paint='true'] {
+  background: var(--doc-header-page-bg, transparent);
+  color: var(--doc-header-page-text, #0f172a);
+}
+/* The page fill flattens decorative template ink; an explicit link colour is
+   still the author's call, so anchors keep it. */
+.page[data-header-paint][data-page-paint='true']
+  :not(a.doc-link, a.doc-link *, .doc-contact a, .doc-contact a *) {
+  color: inherit !important;
+}
+/* The header band still owns its own ink above. */
+.page[data-header-paint][data-page-paint='true'] [data-doc-header],
+.page[data-header-paint][data-page-paint='true'] [data-doc-header] * {
+  color: var(--doc-header-text, currentColor) !important;
+}
+
+/* ======================================================================
+   Border card rendering
+   The frame is a real border on the sheet. Border-box sizing keeps the
+   paper exactly A4/Letter while each template's own padding insets the
+   content automatically. A partial frame simply sets the missing edge to
+   0mm, and the Image treatment lays its photograph into the same box.
+   ====================================================================== */
+
+.page[data-border-paint] {
+  border-style: solid;
+  border-width: var(--doc-frame-top, 5mm) var(--doc-frame-right, 5mm)
+    var(--doc-frame-bottom, 5mm) var(--doc-frame-left, 5mm);
+}
+
+/* -- Single: one accent paints the frame -------------------------------- */
+.page[data-border-paint='single'] {
+  border-color: var(--doc-frame-color, var(--doc-accent, currentColor));
+}
+
+/* -- Image: the photograph becomes the frame ----------------------------
+   border-image draws only inside the border widths, so an unchecked side
+   stays absent and the full-page treatment remains visible beneath. */
+.page[data-border-paint='image'] {
+  border-color: transparent;
+  border-image-source: var(--doc-frame-image);
+  border-image-slice: 33.333%;
+  border-image-width: 1;
+  border-image-repeat: stretch;
+}
+
+/* ======================================================================
+   One-page fit
+   Shrinks the whole document so it stays on a single sheet. zoom rather
+   than transform: it scales the pt and mm values the skins hardcode, and
+   the text reflows into the smaller measure instead of being photographed
+   at a smaller size. The compensating width and min-height keep the sheet
+   box itself exactly one page, so Chromium still paginates correctly.
+   ====================================================================== */
+.page[data-fit='on'] {
+  zoom: var(--doc-fit, 1);
+  width: calc(210mm / var(--doc-fit, 1));
+  min-height: calc(297mm / var(--doc-fit, 1));
+}
+.page[data-fit='on'][data-paper='Letter'] {
+  width: calc(216mm / var(--doc-fit, 1));
+  min-height: calc(279mm / var(--doc-fit, 1));
+}
+
+/* ======================================================================
+   Unified photo layout
+   This final layer intentionally outranks the old per-skin photo dimensions.
+   Skins may keep their borders and margins, but size, crop, shape and position
+   have one user-controlled source of truth in every template and layout mode.
+   ====================================================================== */
+
+.page .doc-photo-frame {
+  display: block;
+  width: min(var(--doc-photo-size, 24mm), 100%);
+  max-width: 100%;
+  aspect-ratio: 1;
+  flex: none;
+  overflow: hidden;
+  box-sizing: border-box;
+  order: -1;
+  border: var(--photo-border-width, 0) solid var(--photo-border-color, transparent);
+}
+
+.page[data-photo-size][data-photo-shape] .doc-photo-frame .doc-photo {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  object-fit: cover;
+  object-position: var(--photo-focus-x, 50%) var(--photo-focus-y, 50%);
+  transform: scale(var(--photo-zoom, 1));
+  transform-origin: var(--photo-focus-x, 50%) var(--photo-focus-y, 50%);
+}
+
+.page[data-photo-shape='circle'] .doc-photo-frame {
+  border-radius: 50%;
+}
+.page[data-photo-shape='rounded'] .doc-photo-frame {
+  border-radius: 12%;
+}
+.page[data-photo-shape='square'] .doc-photo-frame {
+  border-radius: 0;
+}
+.page[data-photo-grayscale='true'] .doc-photo {
+  filter: grayscale(1);
+}
+
+/* Horizontal identity regions: Left/Right flank the text; Top stacks above. */
+.page .doc-photo-layout {
+  display: flex;
+  align-items: center;
+  gap: 12pt;
+}
+.page .doc-rail-top-text,
+.page .doc-header-text {
+  flex: 1;
+  min-width: 0;
+}
+.page[data-photo-position='left'] .doc-photo-layout > .doc-photo-frame {
+  order: -1;
+}
+.page[data-photo-position='right'] .doc-photo-layout > .doc-photo-frame {
+  order: 1;
+}
+.page[data-photo-position='top'] .doc-photo-layout {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.page[data-photo-position='top'] .doc-photo-layout > .doc-photo-frame {
+  order: -1;
+  margin-bottom: 6pt;
+}
+/* When photo is hidden, header-position (left/right/center) must still work.
+   Keep flex-direction: column so the contact sits below the name. Only
+   override align-items so data-header controls the horizontal position. */
+.page[data-photo-position='top'] .doc-photo-layout:not(:has(.doc-photo-frame)) {
+  flex-direction: column;
+  align-items: flex-start;
+}
+.page[data-photo-position='top'][data-header='left'] .doc-photo-layout:not(:has(.doc-photo-frame)) {
+  align-items: flex-start;
+}
+.page[data-photo-position='top'][data-header='right'] .doc-photo-layout:not(:has(.doc-photo-frame)) {
+  align-items: flex-end;
+}
+.page[data-photo-position='top'][data-header='center'] .doc-photo-layout:not(:has(.doc-photo-frame)) {
+  align-items: center;
+}
+
+/* A header placed inside a two-column side region behaves like a rail, not a
+   wide masthead: Top goes above the identity, Bottom sits underneath. Both
+   follow an explicitly chosen rail alignment; with none, the rail's own left
+   edge leads, which is how these designs are drawn. */
+.page[data-columns='two'][data-header='left'] .doc-photo-layout,
+.page[data-columns='two'][data-header='right'] .doc-photo-layout {
+  flex-direction: column;
+  align-items: stretch;
+}
+.page[data-columns='two'][data-header='left'] .doc-photo-layout > .doc-header-text,
+.page[data-columns='two'][data-header='right'] .doc-photo-layout > .doc-header-text {
+  order: 0;
+}
+.page[data-columns='two'][data-header='left'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header='right'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame {
+  order: -1;
+  align-self: flex-start;
+  margin-block: 0 6pt;
+}
+.page[data-columns='two'][data-header='left'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header='right'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame {
+  order: 1;
+  align-self: flex-start;
+  margin-block: 6pt 0;
+}
+.page[data-columns='two'][data-header-align='left'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header-align='left'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame {
+  align-self: flex-start;
+}
+.page[data-columns='two'][data-header-align='center'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header-align='center'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame {
+  align-self: center;
+}
+.page[data-columns='two'][data-header-align='right'][data-photo-position='top'] .doc-photo-layout > .doc-photo-frame,
+.page[data-columns='two'][data-header-align='right'][data-photo-position='bottom'] .doc-photo-layout > .doc-photo-frame {
+  align-self: flex-end;
+}
+
+/* Narrow two-column rails: the portrait stands above or below the identity,
+   aligned to the same edge the rail's text uses. */
+.page .doc-profile-stack {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.page .doc-profile-stack .doc-header-text {
+  order: 0;
+}
+.page[data-photo-position='top'] .doc-profile-stack .doc-photo-frame {
+  order: -1;
+  align-self: flex-start;
+  margin-block: 0 6pt;
+}
+.page[data-photo-position='bottom'] .doc-profile-stack .doc-photo-frame {
+  order: 1;
+  align-self: flex-start;
+  margin-block: 6pt 0;
+}
+.page[data-header-align='left'] .doc-profile-stack .doc-photo-frame {
+  align-self: flex-start;
+}
+.page[data-header-align='center'] .doc-profile-stack .doc-photo-frame {
+  align-self: center;
+}
+.page[data-header-align='right'] .doc-profile-stack .doc-photo-frame {
+  align-self: flex-end;
+}
+
+/* -- Flanking portrait: contact moves under the identity ------------------ */
+/* A header whose contact is a direct sibling is laid out as one row by every
+   flex skin, so a Left/Right portrait leaves the contact sitting beside the
+   name and the name wraps at whatever width is left over. Only the headers
+   that expose contact as a sibling are addressed; designs that already nest
+   it inside .doc-header-text keep their own composition. Photo spans both
+   rows, identity takes the whole remaining width, contact sits beneath it.
+   The frame guard keeps a hidden portrait from reserving an empty column. */
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame),
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) {
+  display: grid;
+  /* Identity and contact are one block; centring the rows as a group keeps
+     that block optically level with the portrait instead of stretching the
+     name to the top of the frame and the contact to the bottom. */
+  align-content: center;
+  align-items: center;
+  justify-content: normal;
+  column-gap: 14pt;
+  row-gap: 3pt;
+}
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) {
+  grid-template-columns: min(var(--doc-photo-size, 24mm), 40%) minmax(0, 1fr);
+  grid-template-areas:
+    'photo identity'
+    'photo contact';
+}
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) {
+  grid-template-columns: minmax(0, 1fr) min(var(--doc-photo-size, 24mm), 40%);
+  grid-template-areas:
+    'identity photo'
+    'contact photo';
+}
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-photo-frame,
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-photo-frame {
+  grid-area: photo;
+  align-self: center;
+  margin: 0;
+}
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-header-text,
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-header-text {
+  grid-area: identity;
+  min-width: 0;
+  max-width: 100%;
+}
+.page[data-photo-position='left'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-contact,
+.page[data-photo-position='right'] :is(.doc-header, .doc-masthead).doc-photo-layout:has(> .doc-contact):has(> .doc-photo-frame) > .doc-contact {
+  grid-area: contact;
+  justify-self: stretch;
+  min-width: 0;
+  max-width: 100%;
+  margin-top: 0;
+}
+
+/* Retain each design's frame treatment without reintroducing fixed geometry. */
+.page.tpl-sidebar .doc-photo-frame {
+  border: 2.5pt solid rgba(255, 255, 255, 0.28);
+}
+.page.tpl-portal-pro .doc-photo-frame {
+  border: 2pt solid rgba(255, 255, 255, 0.2);
+}
+.page.tpl-modern-deep .doc-photo-frame {
+  border: 2pt solid rgba(255, 255, 255, 0.15);
+  border-radius: 3mm;
+}
+.page.tpl-creative .doc-photo-frame {
+  border: 2pt solid rgba(238, 241, 252, 0.45);
+}
+.page.tpl-photo-pro .doc-photo-frame {
+  border: 0.75pt solid #c9cfd6;
+}
+
+/* -- Header alignment -----------------------------------------------------
+   The identity is one block: the name, the headline, the contact line and
+   each of its rows share a single horizontal edge. A skin that centres its
+   masthead is only right while the header itself is centred, so the chosen
+   position re-aligns every part of it -- otherwise a left header leaves the
+   reach block floating on the page axis. Placement in a two-column side
+   region counts as the same choice; the header card's explicit alignment
+   still wins, because these defaults are skipped once one is set. */
+:is(
+    .page[data-columns='one'][data-header='left'],
+    .page[data-columns='two'][data-header='left']:not([data-header-align]) .doc-col-left
+  )
+  [data-doc-header],
+:is(
+    .page[data-columns='one'][data-header='left'],
+    .page[data-columns='two'][data-header='left']:not([data-header-align]) .doc-col-left
+  )
+  [data-doc-header]
+  :is(.doc-header-text, .doc-rail-top-text, .doc-contact, .doc-contact-row) {
+  text-align: left;
+}
+:is(.page[data-columns='one'][data-header='center']) [data-doc-header],
+:is(.page[data-columns='one'][data-header='center'])
+  [data-doc-header]
+  :is(.doc-header-text, .doc-rail-top-text, .doc-contact, .doc-contact-row) {
+  text-align: center;
+}
+:is(
+    .page[data-columns='one'][data-header='right'],
+    .page[data-columns='two'][data-header='right']:not([data-header-align]) .doc-col-right
+  )
+  [data-doc-header],
+:is(
+    .page[data-columns='one'][data-header='right'],
+    .page[data-columns='two'][data-header='right']:not([data-header-align]) .doc-col-right
+  )
+  [data-doc-header]
+  :is(.doc-header-text, .doc-rail-top-text, .doc-contact, .doc-contact-row) {
+  text-align: right;
+}
+/* When the header is not full-width (left / right / center), the text block
+   must NOT grow to fill the row, otherwise justify-content has nowhere to
+   push the group. Override the default flex:1 so items size to content. */
+[data-columns="one"][data-header="left"] .doc-header .doc-header-text,
+[data-columns="one"][data-header="right"] .doc-header .doc-header-text,
+[data-columns="one"][data-header="center"] .doc-header .doc-header-text {
+  flex: 0 1 auto;
+}
+/* Contact should not be wider than the name text so everything aligns to
+   the same horizontal axis. */
+[data-columns="one"][data-header="left"] .doc-header .doc-contact,
+[data-columns="one"][data-header="right"] .doc-header .doc-contact,
+[data-columns="one"][data-header="center"] .doc-header .doc-contact {
+  width: auto;
+}
+/* doc-photo-layout makes .doc-header a flex container. When flex-direction
+   is column (photo on top), justify-content controls the vertical axis —
+   use align-items for horizontal position instead. When flex-direction is
+   row (photo left/right), justify-content controls horizontal position.
+   A chosen alignment is explicit, so every identity container follows it --
+   not just .doc-header, which left the band and rail headers behind. */
+[data-columns="one"][data-header="center"] .doc-header.doc-photo-layout,
+[data-columns="one"][data-header="center"] .doc-band.doc-photo-layout,
+[data-columns="one"][data-header="center"] .doc-rail-top.doc-photo-layout,
+[data-columns="one"][data-header="center"] .doc-masthead.doc-photo-layout,
+[data-columns="one"][data-header="center"] .doc-photohead.doc-photo-layout,
+[data-columns="one"][data-header="top"] .doc-header.doc-photo-layout {
+  align-items: center;
+}
+[data-columns="one"][data-header="left"] .doc-header.doc-photo-layout {
+  align-items: flex-start;
+}
+[data-columns="one"][data-header="right"] .doc-header.doc-photo-layout {
+  align-items: flex-end;
+}
+/* A stored Left/Right portrait position outlives the portrait being hidden,
+   and with it the row flex that expects a picture to hold one end of the
+   line. With no frame the identity and the reach block share that row
+   instead, so a left header still pushes its contact to the far edge.
+   A header with no picture is a single column again: stack the parts and
+   let the alignment already in force -- the header position, or the skin's
+   own axis -- own the horizontal edge. Held to headers that expose the
+   contact as a sibling, so split compsitions keep their own shape. */
+.page[data-columns='one'][data-photo-position='left']
+  :is(.doc-header, .doc-band, .doc-masthead, .doc-photohead, .doc-rail-top).doc-photo-layout:not(
+    :has(.doc-photo-frame)
+  ):has(> .doc-contact),
+.page[data-columns='one'][data-photo-position='right']
+  :is(.doc-header, .doc-band, .doc-masthead, .doc-photohead, .doc-rail-top).doc-photo-layout:not(
+    :has(.doc-photo-frame)
+  ):has(> .doc-contact) {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+/* =========================================================================
+ * 5. Header card
+ *
+ * Everything here is an optional override. A document that never opened the
+ * card carries none of these attributes, so all nineteen designs keep the
+ * exact treatment they were drawn with. Every rule stops at the identity
+ * surface: choosing a header look never reflows the body.
+ * ====================================================================== */
+
+/* -- Text alignment -------------------------------------------------------
+   Emitted for split layouts only. In one column the header position already
+   owns this axis, and two controls must never fight over it. The header is
+   the whole painted panel, so aligning it is aligning the panel's ink.
+   The identity children are addressed too: several skins pin their contact
+   line's alignment themselves, and a control that works in eighteen designs
+   but not the nineteenth is a bug, not a design. */
+.page[data-header-align='left'] [data-doc-header] {
+  text-align: left;
+}
+.page[data-header-align='center'] [data-doc-header] {
+  text-align: center;
+}
+.page[data-header-align='right'] [data-doc-header] {
+  text-align: right;
+}
+.page[data-header-align='left']
+  [data-doc-header]
+  :is(.doc-name, .doc-headline, .doc-contact, .doc-contact-row) {
+  text-align: left;
+}
+.page[data-header-align='center']
+  [data-doc-header]
+  :is(.doc-name, .doc-headline, .doc-contact, .doc-contact-row) {
+  text-align: center;
+}
+.page[data-header-align='right']
+  [data-doc-header]
+  :is(.doc-name, .doc-headline, .doc-contact, .doc-contact-row) {
+  text-align: right;
+}
+/* A contact line that is a flex row (Executive) aligns its entries with
+   justify-content, which text-align cannot move. */
+.page[data-header-align='left'] [data-doc-header] .doc-contact {
+  justify-content: flex-start;
+}
+.page[data-header-align='center'] [data-doc-header] .doc-contact {
+  justify-content: center;
+}
+.page[data-header-align='right'] [data-doc-header] .doc-contact {
+  justify-content: flex-end;
+}
+/* Jake stacks its contact rows, so each row is placed on the cross axis, where
+   justify-content has no reach. The same three states set align-items. */
+.page.tpl-jake[data-header-align='left'] [data-doc-header] .doc-contact {
+  align-items: flex-start;
+}
+.page.tpl-jake[data-header-align='center'] [data-doc-header] .doc-contact {
+  align-items: center;
+}
+.page.tpl-jake[data-header-align='right'] [data-doc-header] .doc-contact {
+  align-items: flex-end;
+}
+/* With the photo on top the header is a flex column, and a column places its
+   children on the cross axis at flex-start -- the text block shrinks to its
+   longest line, leaving text-align nothing to act on. Stretching the block is
+   what makes the alignment control mean anything in that arrangement. */
+.page[data-header-align][data-photo-position='top']
+  [data-doc-header]
+  :is(.doc-header-text, .doc-rail-top-text, .doc-contact) {
+  align-self: stretch;
+}
+/* ...and the portrait above it sits on the same axis as the text, rather than
+   pinning to the left edge of a centred or right-aligned band. */
+.page[data-header-align='left'][data-photo-position='top']
+  [data-doc-header].doc-photo-layout {
+  align-items: flex-start;
+}
+.page[data-header-align='center'][data-photo-position='top']
+  [data-doc-header].doc-photo-layout {
+  align-items: center;
+}
+.page[data-header-align='right'][data-photo-position='top']
+  [data-doc-header].doc-photo-layout {
+  align-items: flex-end;
+}
+
+/* -- Details arrangement --------------------------------------------------
+   Icon per entry, a bullet between entries, or a printed rule between them.
+   The interpunct is the designed default; Bullet chooses nothing new, which
+   is exactly why it is the resting state of a document that never asked. */
+.page[data-header-details='bar'] [data-doc-header] .doc-contact-sep {
+  font-size: 0;
+  margin: 0 6.5pt;
+}
+.page[data-header-details='bar'] [data-doc-header] .doc-contact-sep::after {
+  content: '|';
+  font-size: var(--doc-contact-size, 9pt);
+  font-weight: 300;
+}
+/* Bullet is the interpunct the contact line already draws -- restated only to
+   strip a skin's own separator glyph (Jake prints a pipe by default). */
+.page[data-header-details='bullet'] [data-doc-header] .doc-contact-sep {
+  font-size: 0;
+  margin: 0 3.5pt;
+}
+.page[data-header-details='bullet'] [data-doc-header] .doc-contact-sep::after {
+  content: '\00b7';
+  font-size: var(--doc-contact-size, 9pt);
+  font-weight: 400;
+}
+
+/* -- Icon style -----------------------------------------------------------
+   Seven frames around the same contact icon: none, three solid, three
+   outlined. The frame is a real box on the glyph, so the text beside it keeps
+   its own size and the entry stays on one baseline. */
+.page[data-header-icon]:not([data-header-icon='plain'])
+  [data-doc-header]
+  .doc-contact-item
+  .doc-icon {
+  width: 1.6em;
+  height: 1.6em;
+  padding: 0.37em;
+  border: 0.6pt solid transparent;
+  border-radius: 28%;
+  background: #8f98a3;
+  color: #ffffff;
+}
+.page[data-header-icon]:not([data-header-icon='plain'])
+  [data-doc-header]
+  .doc-contact-item {
+  gap: 4pt;
+}
+.page[data-header-icon$='-line'][data-header-icon]
+  [data-doc-header]
+  .doc-contact-item
+  .doc-icon {
+  background: transparent;
+  border-color: color-mix(in srgb, currentColor 42%, transparent);
+  color: color-mix(in srgb, currentColor 72%, transparent);
+}
+.page[data-header-icon][data-header-icon^='circle']
+  [data-doc-header]
+  .doc-contact-item
+  .doc-icon {
+  border-radius: 50%;
+}
+.page[data-header-icon][data-header-icon^='square']
+  [data-doc-header]
+  .doc-contact-item
+  .doc-icon {
+  border-radius: 1.5pt;
+}
+/* A solid frame is the border, so it must not gain the faint recoloured
+   outline that painted panels put on every child. */
+.page[data-header-icon$='-fill'] [data-doc-header] .doc-contact-item .doc-icon {
+  border-color: transparent !important;
+}
+/* Plain: the glyph alone, on its native 1em box. */
+.page[data-header-icon='plain'] [data-doc-header] .doc-contact-item {
+  gap: 3pt;
+}
+
+/* -- Name and title treatment ---------------------------------------------
+   Both directions are spelled out, not just the change, so a template that
+   italicises by design can still be brought back to upright. */
+.page[data-name-style='normal'] [data-doc-header] .doc-name {
+  font-style: normal;
+}
+.page[data-name-style='italic'] [data-doc-header] .doc-name {
+  font-style: italic;
+}
+.page[data-title-style='normal'] [data-doc-header] .doc-headline {
+  font-style: normal;
+}
+.page[data-title-style='italic'] [data-doc-header] .doc-headline {
+  font-style: italic;
+}
+
+/* -- Title position -------------------------------------------------------
+   "Same line" sets the title running after the name on one baseline. Both
+   stay inline boxes so the contact line below still starts its own row. */
+.page[data-title-position='same-line'] [data-doc-header] .doc-name,
+.page[data-title-position='same-line'] [data-doc-header] .doc-headline {
+  display: inline;
+}
+.page[data-title-position='same-line'] [data-doc-header] .doc-headline {
+  margin: 0 0 0 0.55em;
+  font-weight: 400;
+}
+
+/* =========================================================================
+ * 6. Typography and link cards
+ *
+ * Both cards are opt-in in exactly the same way: a document that never chose
+ * a face or a link treatment carries none of these attributes, so every design
+ * keeps the treatment it was drawn with. A chosen face or link look wins over
+ * the template rule that owns the slot by being more specific, not by force.
+ * ====================================================================== */
+
+/* -- Name and title faces -------------------------------------------------
+   "Same as body" is the absence of these attributes, which is why the default
+   needs no rule: the slot already inherits --doc-font through the template. */
+.page[data-name-font] [data-doc-header] .doc-name {
+  font-family: var(--doc-name-font);
+}
+.page[data-title-font] [data-doc-header] .doc-headline {
+  font-family: var(--doc-title-font);
+}
+
+/* -- Link styling --------------------------------------------------------
+   Links are the clickable contact entries (email, phone, site, extra links).
+   Underline draws a rule the width of the text; dotted keeps it lighter for
+   designs where a solid rule reads as a typo. The text span is listed because
+   the contact item is a flex box and decoration stops at that boundary.
+
+   Selectors key off the link class, never the element: the sheet renders a real
+   anchor, but a thumbnail cannot let a click navigate and renders the same
+   entry as a span. Both have to answer to the card. Only `.doc-link` is named,
+   so a plain contact entry such as the town stays out of it. */
+.page[data-link-style='plain'] :is(.doc-link, .doc-link .doc-contact-text) {
+  text-decoration: none;
+}
+.page[data-link-style='underline'] :is(.doc-link, .doc-link .doc-contact-text) {
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+.page[data-link-style='dotted'] :is(.doc-link, .doc-link .doc-contact-text) {
+  text-decoration: underline dotted;
+  text-underline-offset: 0.2em;
+}
+/* Jake places its rule at the measured 1pt; the card's shared offset would lift
+   it by half a point, and the replica keeps its own geometry. Pinned entries
+   take the same offset where they are defined, in the emphasis section. */
+.page.tpl-jake[data-link-style='underline']
+  :is(.doc-link, .doc-link .doc-contact-text) {
+  text-underline-offset: 1pt;
+}
+
+/* -- Link blue ------------------------------------------------------------
+   Blue is a real hyperlink blue, not the document accent: a recruiter should
+   read the entry as a link at a glance. The mix leans on the entry's inherited
+   ink so the same blue stays legible on paper (dark blue on white) and on a
+   dark header band or photographic page (a lighter blue), instead of vanishing
+   into the background. */
+.page {
+  --doc-link-blue: #0b57d0;
+  --doc-link-blue: color-mix(in srgb, #0b57d0 68%, currentColor);
+}
+
+.page[data-link-color='ink'] .doc-link {
+  color: inherit;
+}
+/* !important is deliberate: template skins and the page/header ink resets both
+   hardcode link colours, and Blue is an explicit author choice that has to win.
+   Only the entry takes the mix; descendants inherit the resolved blue so the
+   text span and glyph do not get a second, darker application of it. */
+.page:is([data-link-color='blue'], [data-link-color='accent']) .doc-link {
+  color: var(--doc-link-blue) !important;
+}
+/* The whole subtree follows the entry's resolved blue: contact entries wrap
+   their label in an extra span, and the header-ink reset targets that span
+   directly, so naming only one wrapper class leaves white text under a blue
+   entry. */
+.page:is([data-link-color='blue'], [data-link-color='accent']) .doc-link * {
+  color: inherit !important;
+}
+
+/* =========================================================================
+ * 7. Advanced link emphasis and the centred photo
+ * ====================================================================== */
+
+/* -- Per-entry link switches ---------------------------------------------
+   Advanced Settings rules individual header entries. The keys are underline
+   keys, not colour keys: Blue owns ink for the whole row, so a key must never
+   recolour an entry on its own.
+
+   The two attributes are the two directions of one switch:
+   `data-link-emphasis` pins a rule on an entry the tile left plain, and
+   `data-link-emphasis-off` takes the tile's rule off one entry and leaves the
+   rest of the row ruled. An entry named in neither follows the tile.
+   The text span is targeted as well because the contact item is a flex box, and
+   decoration does not cross that boundary. Element-agnostic because a thumbnail
+   renders the entry as a span. */
+.page[data-link-emphasis-off~='email']
+  :is(.doc-link[data-contact-key='email'], .doc-link[data-contact-key='email'] .doc-contact-text),
+.page[data-link-emphasis-off~='phone']
+  :is(.doc-link[data-contact-key='phone'], .doc-link[data-contact-key='phone'] .doc-contact-text) {
+  /* Higher specificity than the tile on purpose: the exception has to outrank
+     the row rule without !important, so the entry and its text span are both
+     named here and both carry the entry's key. */
+  text-decoration: none;
+}
+.page[data-link-style='plain'][data-link-emphasis~='email']
+  :is(.doc-link[data-contact-key='email'], .doc-link[data-contact-key='email'] .doc-contact-text),
+.page[data-link-style='plain'][data-link-emphasis~='phone']
+  :is(.doc-link[data-contact-key='phone'], .doc-link[data-contact-key='phone'] .doc-contact-text) {
+  /* With no row rule to copy, the pinned entry takes the plain underline the
+     link card would have drawn for the whole row. */
+  text-decoration: underline;
+  text-underline-offset: 0.16em;
+}
+/* A pinned entry is the same rule on the same sheet, so Jake keeps its 1pt
+   geometry there as well as under the Underline tile. */
+.page.tpl-jake[data-link-style='plain'][data-link-emphasis~='email']
+  :is(.doc-link[data-contact-key='email'], .doc-link[data-contact-key='email'] .doc-contact-text),
+.page.tpl-jake[data-link-style='plain'][data-link-emphasis~='phone']
+  :is(.doc-link[data-contact-key='phone'], .doc-link[data-contact-key='phone'] .doc-contact-text) {
+  text-underline-offset: 1pt;
+}
+
+/* -- Photo above the identity (full-width headers only) -------------------
+   The text block still stretches full width, so the header's own alignment
+   keeps deciding where the name and contact sit. */
+:is(.page[data-columns='one'], .page[data-columns='two'][data-header='top'])[data-photo-position='top'] .doc-photo-layout {
+  flex-direction: column;
+}
+:is(.page[data-columns='one'], .page[data-columns='two'][data-header='top'])[data-photo-position='top'] .doc-photo-layout > .doc-photo-frame {
+  order: -1;
+  margin-block: 0 6pt;
+}
+:is(.page[data-columns='one'], .page[data-columns='two'][data-header='top'])[data-photo-position='top'] .doc-photo-layout > .doc-rail-top-text,
+:is(.page[data-columns='one'], .page[data-columns='two'][data-header='top'])[data-photo-position='top'] .doc-photo-layout > .doc-header-text {
+  align-self: stretch;
+}
+/* The other half of that axis: the reach block and the split header's side
+   region are flex children too, so on their own they shrink-wrap and the
+   header's align-items places that little box instead of letting its text
+   alignment act. A shrink-wrapped contact under a full-width name is the
+   "name left, contact floating in the middle" header: both boxes are on the
+   page axis, but the name's block is the wider of the two. Stretching hands
+   the axis back to the text-align every skin, header position and header card
+   already sets, so a stacked header can no longer contradict itself. */
+.page[data-columns='one'][data-photo-position='top']
+  [data-doc-header].doc-photo-layout
+  > :is(.doc-contact, .doc-header-side) {
+  align-self: stretch;
+}
+
+/* An explicit centred alignment in a split header centres the portrait too,
+   instead of leaving it on the text block's starting edge. */
+.page[data-columns='two'][data-header='top'][data-header-align='center'][data-photo-position='top'] .doc-photo-layout {
+  align-items: center;
+}
+
+/* =========================================================================
+ * Header-to-body air
+ * -------------------------------------------------------------------------
+ * The identity block needs one clear breath before the first section title,
+ * but that breath is part of the page's rhythm, not a separate rule: it runs
+ * wider than the section cadence so the header still reads as the top of the
+ * page, while staying tighter than a blank block would. Expressed through
+ * --doc-gap, the spacing slider scales it with everything else.
+ *
+ * The margin sits on whatever region follows the header rather than on the
+ * skin itself, so no template adds its own top padding and the page margin
+ * stays the only horizontal inset.
+ *
+ * A painted band is the exception: it already carries its own bottom padding
+ * as part of the band, so the join below it takes a slightly smaller breath.
+ * Without that the air under a filled header measured roughly double the air
+ * between sections.
+ *
+ * Banner and Creative are excluded: their identity sits in a solid band and
+ * the padded .doc-body underneath already supplies the inset.
+ * ====================================================================== */
+.page:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-body,
+.page:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-columns,
+.page:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 19pt);
+}
+.page[data-header-paint]:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-body,
+.page[data-header-paint]:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-columns,
+.page[data-header-paint]:not(.tpl-banner):not(.tpl-creative) [data-doc-header] + .doc-section {
+  margin-top: calc(var(--doc-gap, 1) * 18pt);
+}
+
+/* A flanking portrait makes the header a row: align-items is the vertical
+   axis there, so the header-position rules that tip the text block to the top
+   or bottom edge must not drag the portrait off centre with it. Horizontal
+   placement in this arrangement comes from justify-content, not from
+   align-items, and the portrait stays level with the identity block. */
+[data-columns='one'][data-photo-position='left'] .doc-header.doc-photo-layout,
+[data-columns='one'][data-photo-position='right'] .doc-header.doc-photo-layout,
+[data-columns='one'][data-photo-position='left'] .doc-photohead.doc-photo-layout,
+[data-columns='one'][data-photo-position='right'] .doc-photohead.doc-photo-layout {
+  align-items: center;
 }

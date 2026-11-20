@@ -1,65 +1,96 @@
 /*
  * AgentCV design tokens.
  *
- * The palette comes from the product's own world: this is a typesetting tool,
- * so the shell is ink-dark and the accents are process colours -- cyan for
- * live/active state, magenta for overflow, ochre for a warning. The resume
- * page itself is true paper white in every theme, because it is paper, not UI.
+ * The shell is a warm, paper-toned workspace: an off-white canvas, floating
+ * white cards, and a single near-black ink for type. The resume page itself
+ * stays true paper white -- it is paper, not UI.
+ *
+ * Legacy note: several variables keep their old names (--ink-*, --cyan) so the
+ * many existing component rules keep working. Their values are now the light
+ * palette below rather than the original dark shell.
  */
 
 :root {
-  /* Ink -- the shell. Blue-shifted rather than neutral black, so the white
-     page reads as warm paper against it. */
-  --ink-900: #0e1116;
-  --ink-850: #11161c;
-  --ink-800: #151a21;
-  --ink-750: #1a2028;
-  --ink-700: #1d242d;
-  --ink-600: #2a3340;
-  --ink-500: #3a4655;
+  /* Canvas + surfaces. Lower number = more ink, higher number = more light. */
+  --ink-900: #f6f3ee; /* app canvas */
+  --ink-850: #ffffff; /* panels, cards, toolbars */
+  --ink-800: #f8f6f1; /* sunken inputs and rows */
+  --ink-750: #f2efe8;
+  --ink-700: #ece8df; /* hairlines inside a panel */
+  --ink-600: #e2ddd2; /* default border */
+  --ink-500: #cdc7b9; /* hover / strong border */
+  --ink-400: #b8b1a2;
+  --ink-300: #a29a8b;
 
   /* Text */
-  --text-hi: #dce3ea;
-  --text-mid: #9aa8b8;
-  --text-lo: #6d7d8f;
+  --text-hi: #1b1f30; /* near-black ink */
+  --text-mid: #585c6b;
+  --text-lo: #8d8f99;
+  --text-dim: #9c9ea8;
+  --text-bright: #2b3040;
 
-  /* Process inks */
-  --cyan: #35bee0;
-  --cyan-dim: #1d7f99;
-  --cyan-glow: rgba(53, 190, 224, 0.14);
-  --magenta: #e0459a;
-  --ochre: #e8a33d;
+  /* Accents. The action colour is the same deep ink as headings; rose is the
+     warm highlight borrowed from the logomark. */
+  --accent: #1f2544;
+  --accent-soft: rgba(31, 37, 68, 0.06);
+  --cyan: #1f2544;
+  --cyan-dim: #c3c6d3;
+  --cyan-glow: rgba(31, 37, 68, 0.06);
+  --magenta: #d94b63;
+  --magenta-soft: rgba(217, 75, 99, 0.08);
+  --ochre: #c98a2e;
+  --rose: #ee5c93;
 
   --paper: #ffffff;
 
-  /* Type: three roles -- display, UI, and measurements. */
-  --font-display: 'Space Grotesk', system-ui, sans-serif;
-  --font-ui: 'Inter', system-ui, -apple-system, sans-serif;
+  /* The heading ornament's wave: a sharp zigzag, one wavelength per 4 units,
+     stretched to the mask box. A single drawing keeps the card miniature and
+     the sheet in step. */
+  --wave-line: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='8' height='5' viewBox='0 0 8 5' preserveAspectRatio='none'%3E%3Cpath d='M0 4 L2 1 L4 4 L6 1 L8 4' fill='none' stroke='%23000' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  /* Home sidebar: the one card that is warmer than the canvas. */
+  --panel-soft: #e9e6de;
+  --panel-softer: #efede7;
+
+  /* Type: a geometric sans for the product, serifs stay inside the resume. */
+  --font-display: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-ui: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
   /* Compact scale, tuned for a dense tool rather than a marketing page. */
   --t-xs: 11px;
-  --t-sm: 12px;
-  --t-base: 13px;
+  --t-sm: 12.5px;
+  --t-base: 13.5px;
   --t-md: 15px;
   --t-lg: 18px;
-  --t-xl: 24px;
+  --t-xl: 28px;
 
-  --r-sm: 5px;
-  --r-md: 8px;
-  --r-lg: 12px;
+  --r-xs: 6px;
+  --r-sm: 9px;
+  --r-md: 12px;
+  --r-lg: 16px;
+  --r-xl: 18px;
+
+  /* Soft, warm-tinted elevation. Shadows should read as daylight, not glow. */
+  --shadow-xs: 0 1px 2px rgba(40, 36, 28, 0.06);
+  --shadow-sm: 0 1px 2px rgba(40, 36, 28, 0.05), 0 4px 10px rgba(40, 36, 28, 0.04);
+  --shadow-md: 0 2px 6px rgba(40, 36, 28, 0.06), 0 12px 28px rgba(40, 36, 28, 0.08);
+  --shadow-lg: 0 4px 10px rgba(40, 36, 28, 0.07), 0 24px 56px rgba(40, 36, 28, 0.14);
 
   /* One height for every real form control, and a smaller one for the inputs
-     that sit inline in a row (the resume name, section titles). Two sizes, used
-     consistently, is what keeps the panels from looking assembled by accident. */
-  --ctl-h: 34px;
-  --ctl-h-sm: 32px;
+     that sit inline in a row (the resume name, section titles). */
+  --ctl-h: 38px;
+  --ctl-h-sm: 34px;
 
   /* Wide enough for the section forms to live inline in the list, so editing
      content never requires switching panes. */
-  --pane-left: 396px;
-  --pane-right: 300px;
-  --topbar-h: 54px;
+  --pane-left: 380px;
+  --pane-right: 312px;
+  --topbar-h: 62px;
+
+  /* Compatibility aliases still referenced by a few component rules. */
+  --bg-300: #efece5;
+  --c-text-muted: var(--text-lo);
 
   --ease: cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -97,11 +128,16 @@ textarea {
   color: inherit;
 }
 
-/* One visible focus treatment everywhere, in the live/active process colour. */
+::selection {
+  background: #f9d3e0;
+  color: #1b1f30;
+}
+
+/* One visible focus treatment everywhere, in the action ink. */
 :focus-visible {
-  outline: 2px solid var(--cyan);
+  outline: 2px solid var(--accent);
   outline-offset: 2px;
-  border-radius: 3px;
+  border-radius: 4px;
 }
 
 @media (prefers-reduced-motion: reduce) {

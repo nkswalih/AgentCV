@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 1200" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#1c0f2e"/>
+      <stop offset="0.5" stop-color="#3a1b58"/>
+      <stop offset="1" stop-color="#160a25"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.75" cy="0.2" r="0.8">
+      <stop offset="0" stop-color="#c084fc" stop-opacity="0.32"/>
+      <stop offset="1" stop-color="#c084fc" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="bokeh" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#e9d5ff" stop-opacity="0.2"/>
+      <stop offset="1" stop-color="#e9d5ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="900" height="1200" fill="url(#bg)"/>
+  <rect width="900" height="1200" fill="url(#glow)"/>
+  <g>
+    <circle cx="700" cy="210" r="150" fill="url(#bokeh)"/>
+    <circle cx="480" cy="430" r="90" fill="url(#bokeh)"/>
+    <circle cx="820" cy="520" r="120" fill="url(#bokeh)"/>
+    <circle cx="180" cy="950" r="170" fill="url(#bokeh)"/>
+  </g>
+  <g fill="none" stroke="#e9d5ff" stroke-opacity="0.11" stroke-width="1.2">
+    <path d="M-60 760c180-90 320-60 460-150s260-200 560-230"/>
+    <path d="M-60 845c200-100 350-65 510-165s280-215 580-245"/>
+    <path d="M-60 930c220-110 380-70 560-180s300-230 600-260"/>
+  </g>
+</svg>

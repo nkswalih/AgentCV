@@ -3,11 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AgentCV</title>
+
+    <title>AgentCV: resume builder with live preview and PDF export</title>
+    <meta
+      name="description"
+      content="Build a resume in the browser with ATS-safe templates, photo layouts and a live page preview, then export a clean PDF or DOCX."
+    />
+    <meta name="robots" content="index, follow" />
+    <meta name="application-name" content="AgentCV" />
+    <meta name="theme-color" content="#f6f3ee" />
+    <meta name="color-scheme" content="light" />
+
+    <!-- Icons. The SVG is the source; the PNG and ICO fallbacks cover tabs,
+         bookmarks and home screens that still ask for a raster file. The ICO
+         carries 16, 24, 32 and 48 px so the shell can pick a native size. -->
+    <link rel="icon" href="/favicon.ico" sizes="16x16 24x24 32x32 48x48" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/icon-16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <!-- Link previews. The image path is root-relative; add an absolute
+         og:url alongside an og:image URL once the app has a public origin. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AgentCV" />
+    <meta property="og:title" content="AgentCV: resume builder with live preview" />
+    <meta
+      property="og:description"
+      content="ATS-safe templates, photo layouts and a live page preview, with clean PDF and DOCX export."
+    />
+    <meta property="og:image" content="/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="AgentCV wordmark and the line: a resume builder that keeps the page and the person in sync."
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AgentCV: resume builder with live preview" />
+    <meta
+      name="twitter:description"
+      content="ATS-safe templates, photo layouts and a live page preview, with clean PDF and DOCX export."
+    />
+    <meta name="twitter:image" content="/og.png" />
+
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebApplication",
+        "name": "AgentCV",
+        "applicationCategory": "BusinessApplication",
+        "operatingSystem": "Windows, macOS, Linux",
+        "description": "A resume builder with a live page preview, ATS-safe templates, photo layouts and PDF or DOCX export."
+      }
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Noto+Serif:wght@400;600;700&family=Libre+Baskerville:wght@400;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Lato:wght@400;700&family=Merriweather:wght@400;700&family=IBM+Plex+Sans:wght@400;500;600;700&family=Roboto:wght@400;500;700&family=Open+Sans:wght@400;600;700&family=Noto+Serif:wght@400;600;700&family=Libre+Baskerville:wght@400;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
   </head>

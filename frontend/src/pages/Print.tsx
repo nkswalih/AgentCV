@@ -3,26 +3,47 @@
  *
  * It renders the resume page alone: no editor chrome, no preview scaling, no
  * placeholder text. The `data-print-ready` flag is the handshake the backend
- * waits on, so a PDF is never captured mid-load.
+ * waits on, so a PDF is never captured mid-load -- which now also means: not
+ * before the one-page fit has settled and the webfonts have loaded, since both
+ * change the height the fit is measured against.
  */
 
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams } from 'react-router-dom'
 
 import { api } from '../api'
+import { PageMeta } from '../components/PageMeta'
+import { normalizeSettings } from '../factories'
+import { useFitToPage } from '../fit'
 import { ResumePage } from '../templates/ResumePage'
 import type { ResumeDocument } from '../types'
+
+/** However the measurement is going, print after this long. A hung handshake
+    would surface as an export timeout, which is worse than a page that is a
+    few millimetres off. */
+const SETTLE_TIMEOUT_MS = 3000
 
 export function Print() {
   const { id } = useParams<{ id: string }>()
   const [doc, setDoc] = useState<ResumeDocument | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [fontsReady, setFontsReady] = useState(false)
+  const [timedOut, setTimedOut] = useState(false)
+  const [bgReady, setBgReady] = useState(false)
+  const [headerReady, setHeaderReady] = useState(false)
+  const [borderReady, setBorderReady] = useState(false)
+  const pageRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!id) return
     api
       .get(id)
-      .then((r) => setDoc(r.document))
+      .then((r) => {
+        // Same hydration the editor applies, so the PDF is rendered from
+        // exactly the settings the editor was showing.
+        r.document.settings = normalizeSettings(r.document.settings)
+        setDoc(r.document)
+      })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)))
   }, [id])
 
@@ -36,6 +57,95 @@ export function Print() {
     }
   }, [])
 
+  // Fonts change every line box, so the fit is only trustworthy once they are
+  // in. The backend waits on document.fonts too, but the measurement here has
+  // to happen after them, not alongside.
+  useEffect(() => {
+    let live = true
+    void document.fonts.ready.then(() => {
+      if (live) setFontsReady(true)
+    })
+    return () => {
+      live = false
+    }
+  }, [])
+
+  // CSS background images do not participate in document.fonts or the fit
+  // measurement. Preload the backdrop so the PDF never captures a blank sheet.
+  const bgImage = doc?.settings.colors?.bgImage
+  useEffect(() => {
+    if (!bgImage) {
+      setBgReady(true)
+      return
+    }
+    setBgReady(false)
+    let live = true
+    const img = new Image()
+    const settle = () => {
+      if (live) setBgReady(true)
+    }
+    img.onload = settle
+    img.onerror = settle
+    img.src = bgImage
+    return () => {
+      live = false
+    }
+  }, [bgImage])
+
+  // Same handshake for the Header · Image band, which is a separate field.
+  const headerImage = doc?.settings.colors?.headerBgImage
+  useEffect(() => {
+    if (!headerImage) {
+      setHeaderReady(true)
+      return
+    }
+    setHeaderReady(false)
+    let live = true
+    const img = new Image()
+    const settle = () => {
+      if (live) setHeaderReady(true)
+    }
+    img.onload = settle
+    img.onerror = settle
+    img.src = headerImage
+    return () => {
+      live = false
+    }
+  }, [headerImage])
+
+  // And for the Border · Image frame: border-image is painted by CSS, so the
+  // backend must not screenshot before the photograph has decoded.
+  const borderImage = doc?.settings.colors?.borderBgImage
+  useEffect(() => {
+    if (!borderImage) {
+      setBorderReady(true)
+      return
+    }
+    setBorderReady(false)
+    let live = true
+    const img = new Image()
+    const settle = () => {
+      if (live) setBorderReady(true)
+    }
+    img.onload = settle
+    img.onerror = settle
+    img.src = borderImage
+    return () => {
+      live = false
+    }
+  }, [borderImage])
+
+  useEffect(() => {
+    const timer = setTimeout(() => setTimedOut(true), SETTLE_TIMEOUT_MS)
+    return () => clearTimeout(timer)
+  }, [])
+
+  const { fit, settled } = useFitToPage({
+    ref: pageRef,
+    paper: doc?.settings.paperSize ?? 'A4',
+    watch: `${id}:${fontsReady}`,
+  })
+
   if (error) {
     // Surfaced as text rather than thrown: the backend reports the render
     // failure with this message rather than a blank PDF.
@@ -43,9 +153,14 @@ export function Print() {
   }
   if (!doc) return null
 
+  const ready = fontsReady && bgReady && headerReady && borderReady && (settled || timedOut)
+
   return (
-    <div data-print-ready="true">
-      <ResumePage doc={doc} forExport />
+    <div data-print-ready={ready ? 'true' : 'false'}>
+      <PageMeta title="Print: AgentCV" noindex />
+      <div ref={pageRef}>
+        <ResumePage doc={doc} forExport fit={fit} />
+      </div>
     </div>
   )
 }

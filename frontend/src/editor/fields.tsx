@@ -1,6 +1,6 @@
 /** Small controlled inputs shared by the section forms. */
 
-import type { ChangeEvent } from 'react'
+import type { ChangeEvent, KeyboardEvent, ReactNode } from 'react'
 
 import { looksLikeList, parseSkillList, type ParsedSkills } from '../skills'
 
@@ -98,6 +98,112 @@ export function Segmented<T extends string | number>({
           </button>
         ))}
       </div>
+    </div>
+  )
+}
+
+/**
+ * A one-of-N choice shown as miniature previews rather than words. Spatial
+ * settings (columns, header position) are easier to pick by seeing the page
+ * than by reading a label, so each option draws the result it produces.
+ */
+export function ChoiceTiles<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+  hint,
+}: {
+  label: string
+  value: T
+  options: {
+    value: T
+    label: string
+    visual: ReactNode
+    /** Shown muted and skipped, with `note` explaining why. */
+    disabled?: boolean
+    note?: string
+  }[]
+  onChange: (value: T) => void
+  /** One line under the tiles, for the rule behind the disabled options. */
+  hint?: ReactNode
+}) {
+  const enabled = options
+    .map((option, index) => ({ option, index }))
+    .filter((entry) => !entry.option.disabled)
+  const activeEnabled = options.some((o) => o.value === value && !o.disabled)
+  const firstEnabled = options.findIndex((o) => !o.disabled)
+
+  /** Radio-group keyboard model: arrows move and select, Home/End jump. The
+   *  move lands on an enabled tile, so a disabled arrangement is never chosen
+   *  by a keypress; focus follows the tile the value actually moved to. */
+  function onKeyDown(e: KeyboardEvent<HTMLButtonElement>) {
+    if (enabled.length === 0) return
+    const index = options.findIndex((o) => o.value === value)
+    const at = enabled.findIndex((entry) => entry.index === index)
+    let nextAt = at
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      nextAt = at <= 0 ? enabled.length - 1 : at - 1
+    } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      nextAt = at < 0 || at === enabled.length - 1 ? 0 : at + 1
+    } else if (e.key === 'Home') {
+      nextAt = 0
+    } else if (e.key === 'End') {
+      nextAt = enabled.length - 1
+    } else {
+      return
+    }
+    e.preventDefault()
+    const next = enabled[nextAt].option
+    onChange(next.value)
+    const group = e.currentTarget.parentElement
+    const target = group?.querySelector<HTMLElement>(
+      `[data-value="${String(next.value).replace(/"/g, '\\"')}"]`,
+    )
+    target?.focus()
+  }
+
+  return (
+    <div className="field">
+      <span className="field-label">{label}</span>
+      <div className="choice-tiles" data-count={options.length} role="radiogroup" aria-label={label}>
+        {options.map((option) => {
+          const active = option.value === value
+          const disabled = !!option.disabled
+          return (
+            <button
+              key={option.value}
+              type="button"
+              className="choice-tile"
+              data-value={option.value}
+              data-active={active}
+              data-disabled={disabled || undefined}
+              role="radio"
+              aria-checked={active}
+              aria-disabled={disabled || undefined}
+              aria-label={option.label}
+              title={disabled ? option.note : undefined}
+              tabIndex={
+                disabled
+                  ? -1
+                  : active
+                    ? 0
+                    : !activeEnabled && options.indexOf(option) === firstEnabled
+                      ? 0
+                      : -1
+              }
+              onClick={() => {
+                if (!disabled) onChange(option.value)
+              }}
+              onKeyDown={onKeyDown}
+            >
+              <span className="choice-tile-visual">{option.visual}</span>
+              <span className="choice-tile-label">{option.label}</span>
+            </button>
+          )
+        })}
+      </div>
+      {hint && <p className="choice-tiles-hint">{hint}</p>}
     </div>
   )
 }
