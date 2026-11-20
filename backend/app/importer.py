@@ -983,9 +983,35 @@ def _new_experience() -> dict:
     return {"parts": [], "bullets": [], "startDate": "", "endDate": "", "current": False}
 
 
+def _split_glued_header(value: str) -> list[str] | None:
+    """Split an employer off a title when the PDF lost the space between them.
+
+    A text layer that switches font mid-line -- title in bold, employer in
+    italics -- can return both as one run ("Full Stack DeveloperBridgeon").
+    Only split where the head reads as a title and the tail reads as an
+    employer, so ordinary one-part headers stay untouched.
+    """
+    for match in re.finditer(r"[A-Z]", value):
+        head = _clean(value[: match.start()])
+        tail = _clean(value[match.start() :])
+        if len(head.split()) < 2:
+            continue
+        if _looks_like_title(head) and _looks_like_company(tail):
+            return [head, tail]
+    return None
+
+
 def _finish_experience(work: dict) -> dict | None:
     parts = list(work["parts"])
     position = company = location = ""
+
+    # The header can arrive as one run with the employer glued to the title.
+    # Splitting it first keeps the remaining parts meaning what they say: the
+    # date line's place stays a place instead of being read as the employer.
+    if parts:
+        glued = _split_glued_header(parts[0])
+        if glued:
+            parts = glued + parts[1:]
 
     if len(parts) == 1:
         single = parts[0]
