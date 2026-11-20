@@ -15,7 +15,8 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 FRONT = 'http://localhost:5173'
-OUT = Path(r'C:\Users\MOHAMM~1\AppData\Local\Temp\opencode')
+OUT = Path(__file__).resolve().parent / 'artifacts'
+OUT.mkdir(parents=True, exist_ok=True)
 PX_PER_MM = 96 / 25.4
 SHEET_W = int(210 * PX_PER_MM)   # 794
 SHEET_H = int(297 * PX_PER_MM)   # 1123

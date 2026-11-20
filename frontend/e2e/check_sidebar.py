@@ -1,5 +1,5 @@
 """
-E2E: the home shell sidebar -- three sections, active states, placeholders,
+E2E: the home shell sidebar -- navigation, active states, placeholders,
 and the sub-720px fold into a top bar.
 """
 
@@ -9,7 +9,8 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 FRONT = 'http://localhost:5173'
-OUT = Path(r'C:\Users\MOHAMM~1\AppData\Local\Temp\opencode')
+OUT = Path(__file__).resolve().parent / 'artifacts'
+OUT.mkdir(parents=True, exist_ok=True)
 
 
 def main() -> int:
@@ -19,12 +20,13 @@ def main() -> int:
         page.goto(FRONT + '/')
         page.wait_for_selector('.home-side')
 
-        # Sidebar structure: brand, CTA, exactly three nav items.
+        # Sidebar structure: brand, More menu, exactly three nav items.
         items = page.locator('.nav-item')
         assert items.count() == 3, f'expected 3 nav items, got {items.count()}'
         labels = [items.nth(i).inner_text().strip() for i in range(3)]
-        assert labels == ['Resume', 'Cover Letter', 'Job Track'], labels
-        assert page.locator('.side-cta').inner_text().strip() == 'New resume'
+        assert labels == ['Resume', 'Cover Letter', 'Job Tracker'], labels
+        assert page.locator('.side-more-btn').inner_text().strip() == 'More'
+        assert page.locator('.new-resume-card').inner_text().strip() == 'New resume'
 
         # Landing on / : Resume active, gallery present.
         assert 'active' in (items.nth(0).get_attribute('class') or '')
@@ -58,7 +60,7 @@ def main() -> int:
         page.wait_for_timeout(150)
         box = page.locator('.home-side').bounding_box()
         assert box['height'] < 90, f'sidebar did not fold flat: {box}'
-        assert not page.locator('.side-cta').is_visible(), 'CTA should hide on narrow'
+        assert not page.locator('.side-more').is_visible(), 'More menu should hide on narrow'
         page.screenshot(path=str(OUT / 'side_narrow.png'))
 
         browser.close()

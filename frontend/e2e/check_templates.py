@@ -12,7 +12,8 @@ from playwright.sync_api import sync_playwright
 
 FRONT = 'http://localhost:5173'
 API = 'http://localhost:8000/api/resumes'
-OUT = Path(r'C:\Users\MOHAMM~1\AppData\Local\Temp\opencode')
+OUT = Path(__file__).resolve().parent / 'artifacts'
+OUT.mkdir(parents=True, exist_ok=True)
 
 
 def cleanup(created: list[str]) -> None:
@@ -37,11 +38,11 @@ def run(created: list[str]) -> int:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={'width': 1440, 'height': 900})
         page.goto(FRONT + '/')
-        page.wait_for_selector('.side-cta')
+        page.wait_for_selector('.new-resume-card')
 
-        # -- dialog opens from the sidebar CTA --
-        page.click('.side-cta')
-        page.wait_for_selector('.modal-wide')
+        # -- dialog opens from the new-resume card --
+        page.click('.new-resume-card')
+        page.wait_for_selector('.new-dialog[data-step="design"]')
         cards = page.locator('.tp-card')
         n_all = cards.count()
         assert n_all == 17, f'expected 17 templates under All, got {n_all}'
@@ -54,7 +55,7 @@ def run(created: list[str]) -> int:
         assert page.locator('.tp-card:has(.tpl-portal-pro .doc-rail)').count() == 1, 'portal-pro rail missing'
         assert page.locator('.tp-card:has(.tpl-modern-deep .doc-rail)').count() == 1, 'modern-deep rail missing'
         assert page.locator('.tp-card:has(.tpl-timeline .tl-item)').count() == 1, 'timeline spine missing'
-        assert page.locator('.tp-card:has(.tpl-photo-pro img.doc-portrait)').count() == 1, 'portrait missing'
+        assert page.locator('.tp-card:has(.tpl-photo-pro img.doc-photo)').count() == 1, 'portrait missing'
         assert page.locator('.tp-card:has(.tpl-creative .doc-band)').count() == 1, 'creative band missing'
         assert page.locator('.tp-card:has(.tpl-executive .doc-header)').count() >= 1
         page.screenshot(path=str(OUT / 'dlg_all.png'))
@@ -76,6 +77,8 @@ def run(created: list[str]) -> int:
 
         # -- create with Two Column; editor must render the right rail --
         page.click('.tp-card:has-text("Two Column")')
+        page.wait_for_selector('.new-dialog[data-step="preview"]')
+        page.locator('.new-choice', has_text='Create from scratch').click()
         page.wait_for_url('**/resume/**')
         created.append(page.url.rstrip('/').rsplit('/', 1)[-1])
         page.wait_for_selector('.page.tpl-two-col .doc-rail')
@@ -85,25 +88,27 @@ def run(created: list[str]) -> int:
         # -- back home, pick Photo Pro; masthead must render (fresh resumes
         #    have no photoUrl -- the portrait itself is covered by check_fit) --
         page.goto(FRONT + '/')
-        page.wait_for_selector('.side-cta')
-        page.click('.side-cta')
-        page.wait_for_selector('.modal-wide')
+        page.wait_for_selector('.new-resume-card')
+        page.click('.new-resume-card')
+        page.wait_for_selector('.new-dialog[data-step="design"]')
         page.click('.tp-card:has-text("Photo Pro")')
+        page.wait_for_selector('.new-dialog[data-step="preview"]')
+        page.locator('.new-choice', has_text='Create from scratch').click()
         page.wait_for_url('**/resume/**')
         created.append(page.url.rstrip('/').rsplit('/', 1)[-1])
-        page.wait_for_selector('.page.tpl-photo-pro .doc-header')
+        page.wait_for_selector('.page.tpl-photo-pro .doc-photohead')
         page.wait_for_timeout(400)
         page.screenshot(path=str(OUT / 'tpl_photopro.png'))
 
         # -- Escape cancels without creating --
         page.goto(FRONT + '/')
-        page.wait_for_selector('.side-cta')
-        before = page.locator('.dash-card').count()
-        page.click('.side-cta')
-        page.wait_for_selector('.modal-wide')
+        page.wait_for_selector('.new-resume-card')
+        before = page.locator('.resume-card').count()
+        page.click('.new-resume-card')
+        page.wait_for_selector('.new-dialog[data-step="design"]')
         page.keyboard.press('Escape')
-        page.wait_for_selector('.modal-wide', state='detached')
-        assert page.locator('.dash-card').count() == before, 'Escape created a resume'
+        page.wait_for_selector('.new-dialog', state='detached')
+        assert page.locator('.resume-card').count() == before, 'Escape created a resume'
 
         browser.close()
     print('templates OK')

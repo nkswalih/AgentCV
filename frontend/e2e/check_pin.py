@@ -1,5 +1,6 @@
 """E2E: at high zoom -- zoom bar stays pinned, BOTH sidebars scroll fully."""
 
+import atexit
 import json
 import sys
 import urllib.request
@@ -20,15 +21,21 @@ def api(method, path, body=None):
         return json.loads(raw) if raw else None
 
 
+created: list[str] = []
+
+
 def cleanup():
-    for r in api("GET", "/resumes"):
-        if r["name"] == "Pin E2E":
-            api("DELETE", f"/resumes/{r['id']}")
+    for resume_id in created:
+        try:
+            api("DELETE", f"/resumes/{resume_id}")
+        except Exception as exc:
+            print(f"cleanup failed for {resume_id}: {exc}")
 
 
-cleanup()
 resume = api("POST", "/resumes", {"name": "Pin E2E"})
 rid = resume["id"]
+created.append(rid)
+atexit.register(cleanup)
 
 doc = resume["document"]
 exp = doc["sections"][1]
@@ -120,8 +127,6 @@ with sync_playwright() as p:
         failures.append("a sidebar grew beyond the viewport")
 
     browser.close()
-
-cleanup()
 
 if failures:
     print("\nFAILURES:")

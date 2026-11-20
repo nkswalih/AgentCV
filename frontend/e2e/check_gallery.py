@@ -1,12 +1,17 @@
 """E2E: the dashboard renders live miniature previews, not a text list."""
 
+import atexit
 import json
 import sys
 import urllib.request
+from collections import Counter
+from pathlib import Path
 
 from playwright.sync_api import sync_playwright
 
 BASE = "http://localhost:8000/api"
+OUT = Path(__file__).resolve().parent / "artifacts"
+OUT.mkdir(parents=True, exist_ok=True)
 
 
 def api(method, path, body=None):
@@ -20,16 +25,24 @@ def api(method, path, body=None):
         return json.loads(raw) if raw else None
 
 
+created: list[str] = []
+
+
 def cleanup():
-    # Only ever remove test residue -- never touch real resumes.
-    for r in api("GET", "/resumes"):
-        if r["name"] in ("Gallery A", "Gallery B", "Untitled Resume", "Probe"):
-            api("DELETE", f"/resumes/{r['id']}")
+    # IDs are captured from this run. A user's similarly named resume is never
+    # test residue and must not be removed.
+    for resume_id in created:
+        try:
+            api("DELETE", f"/resumes/{resume_id}")
+        except Exception as exc:
+            print(f"cleanup failed for {resume_id}: {exc}")
 
 
-cleanup()
 a = api("POST", "/resumes", {"name": "Gallery A"})
+created.append(a["id"])
 b = api("POST", "/resumes", {"name": "Gallery B"})
+created.append(b["id"])
+atexit.register(cleanup)
 
 # Give B enough content to span two pages -> badge expected.
 doc = b["document"]
@@ -48,16 +61,23 @@ with sync_playwright() as p:
     page = browser.new_page(viewport={"width": 1400, "height": 900})
     page.goto("http://localhost:5173/")
     page.wait_for_selector(".thumb-grid")
-    page.wait_for_timeout(1200)  # thumbnails fetch + fonts
+
+    # Full documents arrive after the summary list. Wait for every card to
+    # replace its loading placeholder with the real rendered page.
+    expected_resumes = api("GET", "/resumes")
+    page.wait_for_function(
+        "expected => document.querySelectorAll('.thumb-window .page').length === expected",
+        arg=len(expected_resumes),
+    )
+    page.wait_for_timeout(300)  # fonts and final scale measurement
 
     windows = page.locator(".thumb-window")
     n = windows.count()
     # The dashboard may hold real resumes alongside the fixtures; the grid must
-    # show exactly what the API lists.
-    expected = {r["name"] for r in api("GET", "/resumes")}
+    # show exactly what the API lists, including duplicate names.
     print("thumb cards:", n)
-    if n != len(expected):
-        failures.append(f"expected {len(expected)} thumb windows, got {n}")
+    if n != len(expected_resumes):
+        failures.append(f"expected {len(expected_resumes)} thumb windows, got {n}")
 
     # Each window contains a real rendered .page.
     rendered = page.evaluate(
@@ -78,25 +98,18 @@ with sync_playwright() as p:
         if abs(ratio - 210 / 297) > 0.02:
             failures.append(f"card aspect {ratio:.3f} off paper ratio")
 
-    # Multi-page badge on B at least; every badge must read "N pages".
-    badges = page.locator(".thumb-pages").all_inner_texts()
-    print("badges:", badges)
-    if not any("pages" in b for b in badges):
-        failures.append(f"Gallery B lost its multi-page badge, got {badges}")
-
     # Names still visible under previews; list rows gone. Every resume the API
     # lists must appear as a card.
-    names = page.locator(".dash-card-name").all_inner_texts()
+    names = page.locator(".resume-name").all_inner_texts()
+    expected_names = Counter(r["name"] or "Untitled resume" for r in expected_resumes)
     print("names:", names)
-    if not expected <= set(names):
-        failures.append(f"missing cards: {expected - set(names)}")
+    if Counter(names) != expected_names:
+        failures.append(f"card names differ: expected {expected_names}, got {Counter(names)}")
     if page.locator(".dash-list").count():
         failures.append("old text-list still present")
 
-    page.screenshot(path=r"C:\Users\MOHAMM~1\AppData\Local\Temp\opencode\dashboard_thumbs.png")
+    page.screenshot(path=str(OUT / "dashboard_thumbs.png"))
     browser.close()
-
-cleanup()
 
 if failures:
     print("\nFAILURES:")

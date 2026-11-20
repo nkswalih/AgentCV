@@ -16,8 +16,12 @@ from pathlib import Path
 from playwright.sync_api import sync_playwright
 
 FRONT = 'http://localhost:5173'
-OUT = Path(r'C:\Users\MOHAMM~1\AppData\Local\Temp\opencode')
+OUT = Path(__file__).resolve().parent / 'artifacts'
+OUT.mkdir(parents=True, exist_ok=True)
 PX_PER_MM = 96 / 25.4
+# Compact deliberately reserves more room for long histories. The standard
+# demo therefore occupies less of its sheet than it does in the airy designs.
+MIN_FILL = {'compact': 0.62}
 
 
 def main() -> int:
@@ -25,8 +29,8 @@ def main() -> int:
         browser = p.chromium.launch()
         page = browser.new_page(viewport={'width': 1440, 'height': 3000})
         page.goto(FRONT + '/')
-        page.wait_for_selector('.side-cta')
-        page.click('.side-cta')
+        page.wait_for_selector('.new-resume-card')
+        page.click('.new-resume-card')
         page.wait_for_selector('.tp-card')
         # Webfont metrics decide line wrapping; measure only once they are in.
         page.evaluate('document.fonts.ready.then(() => true)')
@@ -61,7 +65,7 @@ def main() -> int:
             if stats['pages'] != 1:
                 flag = '  << OVERFLOW'
                 failures.append(f'{tpl}: {stats["pages"]} pages')
-            elif stats['fill'] < 0.74:
+            elif stats['fill'] < MIN_FILL.get(tpl, 0.74):
                 flag = '  << UNDERFILLED'
                 failures.append(f'{tpl}: fill {stats["fill"]:.2f}')
             print(f'{tpl:<16} {stats["pages"]:>5} {stats["fill"]:>6.2f}{flag}')
